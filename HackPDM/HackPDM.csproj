@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
@@ -11,10 +11,31 @@
     <UseWinUI>true</UseWinUI>
     <EnableMsixTooling>true</EnableMsixTooling>
     <Nullable>enable</Nullable>
+	<WindowsTargetPlatformVersion>10.0.10240.0</WindowsTargetPlatformVersion>
+	<DefineConstants Condition="!('$(WindowsTargetPlatformVersion)' &gt;= '10.0.10240.0')">WINDOWS_LEGACY</DefineConstants>
   </PropertyGroup>
-  <ItemGroup>
+
+
+
+	<ItemGroup Condition="!('$(WindowsTargetPlatformVersion)' &gt;= '10.0.10240.0')">
+		<Compile Include="Properties\Settings.Designer.cs" />
+		<None Include="Properties\Settings.settings" />
+		<Compile Include="LegacySettingsProvider.cs" />
+	</ItemGroup>
+
+
+
+	<ItemGroup Condition="'$(WindowsTargetPlatformVersion)' &gt;= '10.0.10240.0'">
+		<Compile Include="ModernSettingsProvider.cs" />
+		<None Include="Properties\Settings.settings" />
+		<None Include="Properties\Settings.Designer.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
     <None Remove="Src\Forms\Hack\HackFileManager.xaml" />
     <None Remove="Src\Forms\Hack\HackSettings.xaml" />
+    <None Remove="Src\Forms\Helper\MessageBox.xaml" />
+    <None Remove="Src\Forms\Helper\MessageBoxWindow.xaml" />
     <None Remove="Src\Forms\Odoo\OdooFileTypeManager.xaml" />
     <None Remove="Src\Forms\Odoo\OdooSettings.xaml" />
     <None Remove="Src\Forms\Settings\ProfileManager.xaml" />
@@ -47,8 +68,45 @@
     <ProjectCapability Include="Msix" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Meziantou.Framework.Win32.CredentialManager" Version="1.7.4" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.4948" />
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.250606001" />
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="9.0.8" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="SolidWorks.Interop.sldworks">
+      <HintPath>..\..\lib\SolidWorks.Interop.sldworks.dll</HintPath>
+    </Reference>
+    <Reference Include="SolidWorks.Interop.swcommands">
+      <HintPath>..\..\lib\SolidWorks.Interop.swcommands.dll</HintPath>
+    </Reference>
+    <Reference Include="SolidWorks.Interop.swconst">
+      <HintPath>..\..\lib\SolidWorks.Interop.swconst.dll</HintPath>
+    </Reference>
+    <Reference Include="SolidWorks.Interop.swdocumentmgr">
+      <HintPath>..\..\lib\SolidWorks.Interop.swdocumentmgr.dll</HintPath>
+    </Reference>
+    <Reference Include="XmlRpcCs">
+      <HintPath>..\..\lib\XmlRpcCs.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Update="Properties\Settings.Designer.cs">
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Page Update="Src\Forms\Helper\MessageBoxWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
   <ItemGroup>
     <Page Update="Src\Forms\Settings\ThemeSettings.xaml">
@@ -95,6 +153,11 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
   </ItemGroup>
+  <ItemGroup>
+    <Page Update="Src\Forms\Helper\MessageBox.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
 
   <!--
     Defining the "HasPackageAndPublishMenuAddedByProject" property here allows the Solution
@@ -112,5 +175,7 @@
     <PublishTrimmed Condition="'$(Configuration)' == 'Debug'">False</PublishTrimmed>
     <PublishTrimmed Condition="'$(Configuration)' != 'Debug'">True</PublishTrimmed>
     <SupportedOSPlatformVersion>7.0</SupportedOSPlatformVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <LangVersion>preview</LangVersion>
   </PropertyGroup>
 </Project>
