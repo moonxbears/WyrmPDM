@@ -1,6 +1,4 @@
-﻿using HackPDM.ClientUtils;
-using SolidWorks.Interop.sldworks;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -9,16 +7,24 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices.WindowsRuntime;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
-using System.Windows.Forms;
+using Windows.Storage.Streams;
 
+using HackPDM.ClientUtils;
 using HackPDM.Extensions.General;
 using HackPDM.Extensions.Odoo;
+using HackPDM.Src.Forms.Helper;
+
+using Microsoft.UI.Xaml.Media.Imaging;
+using Windows.Graphics.Imaging;
+
+using SolidWorks.Interop.sldworks;
+
 
 using OClient = OdooRpcCs.OdooClient;
-using StatDialog = HackPDM.Forms.Settings.StatusDialog;
 
 namespace HackPDM
 {
@@ -368,14 +374,13 @@ namespace HackPDM
                 MessageBox.Show($"unable to open {folderPath}");
             }
         }
-		public static byte [] ImageToByteArray(Image imageIn)
+        
+    public static byte [] ImageToByteArray(Image imageIn)
 		{
-            using ( MemoryStream ms = new() )
-            {
-                imageIn.Save( ms, ImageFormat.Png );
-			    return ms.ToArray();
-            }
-		}
+            using MemoryStream ms = new();
+            imageIn.Save(ms, ImageFormat.Png);
+            return ms.ToArray();
+        }
         
 	}
 }

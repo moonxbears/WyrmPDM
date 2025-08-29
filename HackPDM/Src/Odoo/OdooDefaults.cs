@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 
 using HackPDM.Extensions.General;
 using HackPDM.Properties;
+using HackPDM.Src;
 
 using Meziantou.Framework.Win32;
 
@@ -54,7 +55,7 @@ namespace HackPDM
         public static string[] EntryFilterPatterns = [.. HpEntryNameFilters.Select(eFilter => eFilter.name_regex)];
         // lock asynchonous operations
         private static readonly object m_lockObject = new();
-        public static string OdooDb 
+        public static string? OdooDb 
         {
             get => Settings.Get<string>("OdooDb");
 
@@ -63,27 +64,26 @@ namespace HackPDM
                 Settings.Set("OdooDb", value);
 			}
         }
-        public static string OdooAddress
+        public static string? OdooAddress
         {
             get => Settings.Get<string>("OdooAddress");
 			set => Settings.Set("OdooAddress", value);
 		}
-		public static string OdooPort
+		public static string? OdooPort
 		{
 			get => Settings.Get<string>("OdooPort");
 			set => Settings.Set("OdooPort", value);
 		}
-		public static string OdooUrl 
+		public static string? OdooUrl 
         {
             get 
             {
                 if (field is null or "")
                 {
-                    string port = Settings.Get<string>("OdooPort");
-                    if (port is null or "") port = "";
-                    else port = $":{port}";
+                    string? port = Settings.Get<string>("OdooPort");
+                    port = port is null or "" ? "" : $":{port}";
 
-                    field = $"http://{OdooAddress}{port}";
+					field = $"http://{OdooAddress}{port}";
                 }
                 return field;
             }
@@ -93,51 +93,63 @@ namespace HackPDM
                 field = value;
 			}
         }
-        public static string OdooSwKey
+        public static string? OdooSwKey
         {
-            get => Settings.Get<string>("SwLicenseKey");
+            get => field ??= Settings.Get<string>("SwLicenseKey");
 
-            set => Settings.Set("SwLicenseKey", value);
+            set
+            {
+                Settings.Set("SwLicenseKey", value);
+                field = value;
+            }
         }
         public static decimal OdooAreaFactor
         {
-            get => Settings.Get<decimal>("AreaFactor");
+            get => field = Settings.Get<decimal>("AreaFactor");
 
-            set => Settings.Set("AreaFactor", value);
+            set
+            {
+                Settings.Set("AreaFactor", value);
+                field = value;
+            }
         }
-        public static string OdooCredentialTarget 
+        public static string? OdooCredentialTarget 
         { 
-            get => Settings.Get<string>("OdooCredentialTarget");
+            get => field ??= Settings.Get<string>("OdooCredentialTarget");
 
-            set => Settings.Set("OdooCredentialTarget", value);
+            set
+            {
+				Settings.Set("OdooCredentialTarget", value);
+                field = value;
+            }
         }
-        public static string OdooUser
+        public static string? OdooUser
         {
             get 
             {
-                var cm = CredentialManager.ReadCredential(OdooCredentialTarget, CredentialType.Generic);
+                var cm = CredentialManager.ReadCredential(OdooCredentialTarget ?? StorageBox.DEFAULT_ODOO_CREDENTIALS, CredentialType.Generic);
                 field = cm?.UserName;
                 return field;
             }
 
             set
             {
-                CredentialManager.WriteCredential(OdooCredentialTarget, value, OdooPass, CredentialPersistence.LocalMachine);
+                CredentialManager.WriteCredential(OdooCredentialTarget ?? StorageBox.DEFAULT_ODOO_CREDENTIALS, value, OdooPass, CredentialPersistence.LocalMachine);
                 field = value;
             }
         }
-        public static string OdooPass
+        public static string? OdooPass
         {
             get
             {
-                var cm = CredentialManager.ReadCredential(OdooCredentialTarget, CredentialType.Generic);
+                var cm = CredentialManager.ReadCredential(OdooCredentialTarget ?? StorageBox.DEFAULT_ODOO_CREDENTIALS, CredentialType.Generic);
                 field = cm?.Password;
                 return field;
             }
 
             set
             {
-                CredentialManager.WriteCredential(OdooCredentialTarget, OdooUser, value, CredentialPersistence.LocalMachine);
+                CredentialManager.WriteCredential(OdooCredentialTarget ?? StorageBox.DEFAULT_ODOO_CREDENTIALS, OdooUser, value, CredentialPersistence.LocalMachine);
                 field = value;
             }
         }
@@ -165,7 +177,7 @@ namespace HackPDM
         {
             get
             {
-                field ??= HpNodes.First(node => node.name == System.Environment.MachineName.ToLower());
+                field ??= HpNodes.First(node => node.name.Equals(System.Environment.MachineName));
                 return field;
             }
             set
@@ -244,8 +256,7 @@ namespace HackPDM
         {
             get
             {
-                if (field == null) 
-                    field = HpEntryNameFilter.GetAllRecords();
+                field ??= HpEntryNameFilter.GetAllRecords();
                 return field;
             } 
             set => field = value;
@@ -254,8 +265,7 @@ namespace HackPDM
         {
             get
             {
-                if (field == null) 
-                    field = HpCategory.GetAllRecords();
+                field ??= HpCategory.GetAllRecords();
                 return field;
             }
             set => field = value;
@@ -264,8 +274,7 @@ namespace HackPDM
 		{
 			get
 			{
-				if ( field == null )
-					field = HpType.GetAllRecords();
+				field ??= HpType.GetAllRecords();
 				return field;
 			}
 			set => field = value;
@@ -274,8 +283,7 @@ namespace HackPDM
 		{
 			get
 			{
-				if ( field == null )
-					field = HpProperty.GetAllRecords();
+				field ??= HpProperty.GetAllRecords();
 				return field;
 			}
 			set => field = value;
@@ -284,8 +292,7 @@ namespace HackPDM
 		{
 			get
 			{
-				if ( field == null )
-					field = HpNode.GetAllRecords();
+				field ??= HpNode.GetAllRecords();
 				return field;
 			}
 			set => field = value;
@@ -294,8 +301,7 @@ namespace HackPDM
         {
             get
 			{
-				if ( field == null )
-					field = HpUser.GetAllRecords();
+				field ??= HpUser.GetAllRecords();
 				return field;
 			}
 			set => field = value;
@@ -307,10 +313,7 @@ namespace HackPDM
         { 
             get
             {
-                if (field == null)
-                {
-                    field = ExtensionMapType( HpTypes );
-                }
+                field ??= ExtensionMapType( HpTypes );
                 return field;
             }
             set
@@ -322,10 +325,7 @@ namespace HackPDM
         {
 			get
 			{
-				if ( field == null )
-				{
-					field = ExtensionMapCategory( HpCategories, [ .. ExtToType.Values ] );
-				}
+				field ??= ExtensionMapCategory( HpCategories, [ .. ExtToType.Values ] );
 				return field;
 			}
 			set
@@ -363,10 +363,7 @@ namespace HackPDM
 		{
 			get
 			{
-				if ( field == null )
-				{
-					field = IDMapUser( HpUsers );
-				}
+				field ??= IDMapUser( HpUsers );
 				return field;
 			}
 			set => field = value;
@@ -375,10 +372,7 @@ namespace HackPDM
 		{
 			get
 			{
-				if ( field == null )
-				{
-					field = ExtensionMapFilter( HpEntryNameFilters );
-				}
+				field ??= ExtensionMapFilter( HpEntryNameFilters );
 				return field;
 			}
 			set => field = value;

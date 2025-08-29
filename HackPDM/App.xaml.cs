@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Runtime.InteropServices.WindowsRuntime;
+﻿using System.IO;
 
 using HackPDM.ClientUtils;
 using HackPDM.Src;
@@ -11,17 +6,6 @@ using HackPDM.Src.Forms.Settings;
 
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
-using Microsoft.UI.Xaml.Data;
-using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Navigation;
-using Microsoft.UI.Xaml.Shapes;
-
-using Windows.ApplicationModel;
-using Windows.ApplicationModel.Activation;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -31,19 +15,18 @@ namespace HackPDM
     /// <summary>
     /// Provides application-specific behavior to supplement the default Application class.
     /// </summary>
-    public partial class App : Application
+    public partial class HackApp : Application
     {
         public static Window? Window;
         public static Frame? RootFrame;
-        /// <summary>
-        /// Initializes the singleton application object.  This is the first line of authored code
-        /// executed, and as such is the logical equivalent of main() or WinMain().
-        /// </summary>
-        public App()
-        {
-            InitializeComponent();
-            Setup();
-        }
+		// To fix CS0121, fully qualify the InitializeComponent() call to specify the correct method.
+		// If your project has both a generated partial method and a user-defined method, use the global:: prefix.
+
+		public HackApp()
+		{
+			InitializeComponent();
+			Setup();
+		}
 
         /// <summary>
         /// Invoked when the application is launched.

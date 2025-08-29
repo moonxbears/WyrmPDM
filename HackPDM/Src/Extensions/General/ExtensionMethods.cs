@@ -12,6 +12,11 @@ namespace HackPDM.Extensions.General
 {
     public static class ExtensionMethods
     {
+        public static T GetAssign<T>(this T obj, Func<T> func) where T : class
+        {
+            obj ??= func();
+            return obj;
+        }
         public static T[] Populate<T>(this T[] values, Func<T> func)
         {
             for (int i = 0; i < values.Length; i++)

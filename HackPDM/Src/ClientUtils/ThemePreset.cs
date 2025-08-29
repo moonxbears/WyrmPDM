@@ -1,17 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
+using Windows.UI;
 using System.Drawing.Text;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 
 namespace HackPDM.ClientUtils
 {
     public static class ThemePreset
     {
+        
         public static readonly Theme DefaultTheme = new()
         {
             Name = "Default",
@@ -26,9 +24,9 @@ namespace HackPDM.ClientUtils
         public static readonly Theme DarkTheme = new()
         {
             Name = "Dark",
-            BackgroundColor = Color.FromArgb(31, 31, 31),// "#1E1E1E",
-            SecondaryBackgroundColor = Color.FromArgb(0, 122, 204),
-            ForegroundColor = Color.FromArgb(212, 212, 212),
+            BackgroundColor = Color.FromArgb(255, 31, 31, 31),// "#1E1E1E",
+            SecondaryBackgroundColor = Color.FromArgb(255, 0, 122, 204),
+            ForegroundColor = Color.FromArgb(255, 212, 212, 212),
             FontFamily = "Segoe UI",
             FontSize = 10,
             IsDarkMode = true,
@@ -38,7 +36,7 @@ namespace HackPDM.ClientUtils
         {
             Name = "Light",
             BackgroundColor = Color.White,
-            SecondaryBackgroundColor = Color.FromArgb(255, 255, 255),
+            SecondaryBackgroundColor = Color.FromArgb(255, 255, 255, 255),
             ForegroundColor = Color.Black,
             FontFamily = "Segoe UI",
             FontSize = 10,

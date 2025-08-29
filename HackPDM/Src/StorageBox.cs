@@ -1,9 +1,13 @@
 ﻿using System.Collections.Generic;
+using System.Drawing;
 using System.Text;
 
 using HackPDM.Properties;
 
+using Microsoft.UI.Xaml.Media;
+
 using Windows.Storage;
+using Windows.UI;
 
 
 namespace HackPDM.Src
@@ -38,13 +42,26 @@ namespace HackPDM.Src
         public const int HACK_FILE_MANAGER_WIDTH = 1280;
         public const int HACK_FILE_MANAGER_HEIGHT = 720;
         public const string HACK_FILE_MANAGER_TITLE = "Hack File Manager - HackPDM";
-    #endregion
-    }
+        public const string EMPTY_PLACEHOLDER = "-";
+		#endregion
+	#region OdooDefaults
+        public const string DEFAULT_ODOO_CREDENTIALS = "HackPDM-OdooUser";
+		#endregion
+	#region Color Settings
+        public static readonly Color WHITE              = Color.FromArgb(255, 255, 255, 255);
+        public static readonly Color BLACK              = Color.FromArgb(255, 0, 0, 0);
+        public static readonly Color LIGHT_GRAY         = Color.FromArgb(255, 211, 211, 211);
+        public static readonly Color GRAY               = Color.FromArgb(255, 128, 128, 128);
+        public static readonly Color DARK_GRAY          = Color.FromArgb(255, 64, 64, 64);
 
-    public interface ISettingsProvider
-    {
-        T Get<T>(string key, T defaultValue = default);
-        void Set<T>(string key, T value);
-    }
+		public static readonly SolidColorBrush BRUSH_WHITE      = new(WHITE);
+		public static readonly SolidColorBrush BRUSH_LIGHT_GRAY = new(LIGHT_GRAY);
+		public static readonly SolidColorBrush BRUSH_GRAY       = new(GRAY);
+		public static readonly SolidColorBrush BRUSH_DARK_GRAY  = new(DARK_GRAY);
+		public static readonly SolidColorBrush BRUSH_BLACK      = new(BLACK);
+		#endregion
+	}
+
+
 
 }

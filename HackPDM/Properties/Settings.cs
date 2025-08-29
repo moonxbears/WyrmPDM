@@ -20,7 +20,7 @@ namespace HackPDM.Properties
 #pragma warning restore CA1416 // Validate platform compatibility
         }
 
-        public static T Get<T>(string key, T defaultValue = default) => Provider.Get(key, defaultValue);
+        public static T? Get<T>(string key, T? defaultValue = default) => Provider.Get(key, defaultValue);
         public static void Set<T>(string key, T value) => Provider.Set(key, value);
     }
 

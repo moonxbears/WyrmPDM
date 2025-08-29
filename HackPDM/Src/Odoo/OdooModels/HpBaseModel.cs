@@ -322,7 +322,7 @@ namespace HackPDM
         }
         public virtual T GetRecord(int recordID)
         {
-            Hashtable ht = (Hashtable)OClient.Read(HpModel, [recordID], GetFields())[0];
+            Hashtable ht = OClient.Read(HpModel, [recordID], GetFields())[0] as Hashtable;
             return RecordPopulation(ht);
         }
         //public virtual ArrayList GetAllFields()
@@ -458,7 +458,7 @@ namespace HackPDM
             return [.. records];
         }
 
-        internal static T RecordPopulation(Hashtable ht, string[] excludedFields = null, HashedValueStoring hashStoreType = HashedValueStoring.None, Dictionary<string, string> RemapNames = null)
+        internal static T? RecordPopulation(Hashtable ht, string[] excludedFields = null, HashedValueStoring hashStoreType = HashedValueStoring.None, Dictionary<string, string> RemapNames = null)
         {
             if (ht is null) return null;
 

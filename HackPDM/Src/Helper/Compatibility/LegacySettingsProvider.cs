@@ -1,6 +1,6 @@
 ﻿using HackPDM.Src;
 
-namespace HackPDM
+namespace HackPDM.Src.Helper.Compatibility
 {
     public class LegacySettingsProvider : ISettingsProvider
     {

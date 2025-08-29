@@ -7,6 +7,8 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
+using Microsoft.UI.Xaml.Media.Imaging;
+
 namespace HackPDM.ClientUtils
 {
 	internal static class ImageUtils
@@ -70,5 +72,9 @@ namespace HackPDM.ClientUtils
 				return false;
 			}
 		}
-	}
+
+        public static BitmapImage Load(string name) =>
+            new(new Uri($"ms-appx:///Assets/{name}.png"));
+       
+    }
 }

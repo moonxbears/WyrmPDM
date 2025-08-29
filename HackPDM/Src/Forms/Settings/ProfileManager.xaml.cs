@@ -38,17 +38,17 @@ namespace HackPDM.Src.Forms.Settings
         }
         public void OnLoaded(object sender, RoutedEventArgs e)
         {
-            if (App.Window != null)
+            if (HackApp.Window != null)
             {
-                App.Window.Title = "Profile Manager - HackPDM";
+                HackApp.Window.Title = "Profile Manager - HackPDM";
             }
             odooSettingsBtn.Click += (s, e) =>
             {
-                App.RootFrame?.Navigate(typeof(OdooSettings));
+                HackApp.RootFrame?.Navigate(typeof(OdooSettings));
             };
             HackSettingsBtn.Click += (s, e) =>
             {
-                App.RootFrame?.Navigate(typeof(HackSettings));
+                HackApp.RootFrame?.Navigate(typeof(HackSettings));
             };
             OdooLoginBtn.Click += (s, e) =>
             {

@@ -6,8 +6,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Microsoft.Build.Experimental.BuildCheck;
-
 using Newtonsoft.Json.Linq;
 
 using StatDialog = HackPDM.Forms.Settings.StatusDialog;

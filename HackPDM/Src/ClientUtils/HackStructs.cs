@@ -2,7 +2,7 @@
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Data.Entity.Core.Metadata.Edm;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 
 using HackPDM.Properties;
+using HackPDM.Src;
 using HackPDM.Src.Forms.Hack;
 
 using Microsoft.UI.Xaml;
@@ -20,22 +21,43 @@ using static System.Net.Mime.MediaTypeNames;
 
 namespace HackPDM.ClientUtils
 {
+    public class NotifyIcon
+    {
+        public ToolTipIcon BalloonTipIcon;
+        public string? BalloonTipText;
+        public string? BalloonTipTitle;
+        public string? Text;
+        public System.Drawing.Icon? Icon;
+        public void ShowBalloonTip(int timeout) { }
+    }
+    public enum ToolTipIcon
+    {
+        None,
+        Info,
+        Warning,
+        Error
+    }
     public class Notifier
     {
         private static CancellationTokenSource FileSystemCancel = new();
         public static ConcurrentQueue<FileCheck> QueueFileCheck = new();
-        public static FileSystemWatcher FileWatcher { get; set; }
+        public static DirectoryInfo Directory;
+        public static FileSystemWatcher? FileWatcher { get; set; }
         public static NotifyIcon Notify { get; set; } = null;
         public static bool IsRunning { get; private set; } = false;
         static Notifier()
         {
+            Directory = new(StorageBox.PWAPathAbsolute);
+            FileWatcher = null;
+            if (!Directory.Exists) return;
             FileWatcher = new()
             {
                 IncludeSubdirectories = true,
                 NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.CreationTime | NotifyFilters.Attributes,
-                Path = HackPDM.Properties.Settings.Default["PWAPathAbsolute"] ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), System.Windows.Forms.Application.ProductName, "pwa"),
+                Path = StorageBox.PWAPathAbsolute,
                 EnableRaisingEvents = true,
             };
+            
             FileWatcher.Created += (s, e) => QueueFileCheck.Enqueue(new FileCheck(e));
             FileWatcher.Deleted += (s, e) => QueueFileCheck.Enqueue(new FileCheck(e));
             FileWatcher.Changed += (s, e) => QueueFileCheck.Enqueue(new FileCheck(e));
@@ -59,13 +81,15 @@ namespace HackPDM.ClientUtils
             try
             {
                 while (!cToken.IsCancellationRequested)
-                { 
-                    if (Notify is not null && QueueFileCheck.Count == 1)
+                {
+                    // Notify is not null &&
+                    if (QueueFileCheck.Count == 1)
                     {
                         QueueFileCheck.TryDequeue(out FileCheck fileCheck);
                         fileCheck.Notify();
                     }
-                    else if (Notify is not null && QueueFileCheck.Count > 1)
+                    // Notify is not null &&
+                    else if (QueueFileCheck.Count > 1)
                     {
                         //string commonPath = FileCheck.FindCommonPath(QueueFileCheck);
                         FileCheck.Notify("Files Changed", $"{QueueFileCheck.Count} files were changed");
@@ -346,13 +370,14 @@ namespace HackPDM.ClientUtils
             _                               => ColumnMap.RowWidths,
         };
     }
+    public class ColumnInfo<T> { }
     public class ColumnInfo
     {
         public const int DefaultWidth = 75;
         public readonly ColumnGroup Group;
         public string Name;
         public int Width;
-        public ColumnHeader Header;
+        public HorizontalAlignment Align;
         public ComparerSort Sort;
 
         // order rank amongst the other columns
@@ -363,85 +388,35 @@ namespace HackPDM.ClientUtils
             Rank = rank;
             Sort = sort;
             sort?.Group = group;
-
+            
             switch (value)
             {
-                case ColumnHeader column:
-                    this.Name = column.Name;
-                    this.Width = column.Width;
-                    this.Header = column;
-                    break;
-
                 case Tuple<int, HorizontalAlignment> values:
                     this.Name = Name;
                     this.Width = values.Item1;
-                    this.Header = new ColumnHeader
-                    {
-                        Name = Name,
-                        Text = Name,
-                        Width = values.Item1,
-                        TextAlign = values.Item2
-                    };
+                    this.Align = values.Item2;
                     break;
 
                 case Tuple<string, int, HorizontalAlignment> values:
                     this.Name = values.Item1;
                     this.Width = values.Item2;
-                    this.Header = new ColumnHeader
-                    {
-                        Name = Name,
-                        Text = values.Item1,
-                        Width = values.Item2,
-                        TextAlign = values.Item3
-                    };
+                    this.Align = values.Item3;
                     break;
 
                 case Tuple<string, int> values:
                     this.Name = Name;
                     this.Width = values.Item2;
-                    this.Header = new ColumnHeader
-                    {
-                        Name = Name,
-                        Text = values.Item1,
-                        Width = values.Item2,
-                        TextAlign = HorizontalAlignment.Left
-                    };
                     break;
 
                 case int width:
                     this.Name = Name;
                     this.Width = width;
-                    this.Header = new ColumnHeader
-                    {
-                        Name = Name,
-                        Text = Name,
-                        Width = width,
-                        TextAlign = HorizontalAlignment.Left
-                    };
                     break;
 
                 case string text:
-                    this.Name = Name;
-                    this.Width = DefaultWidth;
-                    this.Header = new ColumnHeader
-                    {
-                        Name = Name,
-                        Text = text,
-                        Width = DefaultWidth,
-                        TextAlign = HorizontalAlignment.Left
-                    };
-                    break;
-
                 default:
                     this.Name = Name;
                     this.Width = DefaultWidth;
-                    this.Header = new ColumnHeader
-                    {
-                        Name = Name,
-                        Text = Name,
-                        Width = DefaultWidth,
-                        TextAlign = HorizontalAlignment.Left
-                    };
                     break;
             }
 
@@ -606,8 +581,8 @@ namespace HackPDM.ClientUtils
                     return 
                     xItem is not null ? 
                         yItem is not null ? 
-                            xItem == HackFileManager.EmptyPlaceholder ? 
-                                yItem == HackFileManager.EmptyPlaceholder ?
+                            xItem == StorageBox.EMPTY_PLACEHOLDER ? 
+                                yItem == StorageBox.EMPTY_PLACEHOLDER ?
                                     0
                                     : AscOrDesc()
                             : SwitchAsc(string.Compare(xItem.ToUpper(), yItem.ToUpper())) 
