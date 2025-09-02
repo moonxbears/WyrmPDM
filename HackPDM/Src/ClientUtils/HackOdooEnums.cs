@@ -140,7 +140,14 @@ namespace HackPDM.ClientUtils
         SS,
         TS
     }
-    [Serializable]
+    public enum HorizontalAlignment
+    {
+        Left,
+        Center,
+        Right,
+        Stretch
+	}
+	[Serializable]
     public enum ThemeType
     {
         Default,

@@ -103,9 +103,10 @@ namespace HackPDM
                 RecurseTravel(hdr, PWAPathAbsolute + "\\" + hdr.name);
             }
         }
-        public static string DefaultPath(string pathway, bool withAbsolute = false)
+        public static string DefaultPath(string? pathway, bool withAbsolute = false)
         {
-            string[] paths = pathway.Split('\\');
+            if (pathway is null || pathway == "") return withAbsolute ? PWAPathAbsolute : "root";
+			string[] paths = pathway.Split('\\');
             paths = [.. paths.Skip(1)];
 
             string relativePath = string.Join(@"\", paths);

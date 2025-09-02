@@ -9,6 +9,8 @@ using Microsoft.UI.Xaml.Media;
 using Windows.Storage;
 using Windows.UI;
 
+using Color = Windows.UI.Color;
+
 
 namespace HackPDM.Src
 {
@@ -59,7 +61,16 @@ namespace HackPDM.Src
 		public static readonly SolidColorBrush BRUSH_GRAY       = new(GRAY);
 		public static readonly SolidColorBrush BRUSH_DARK_GRAY  = new(DARK_GRAY);
 		public static readonly SolidColorBrush BRUSH_BLACK      = new(BLACK);
-		#endregion
+	#endregion
+	#region
+	    public const string ASSETSPREFIX    = "ms-appx:///";
+	    public const string LOCALPREFIX     = "ms-appdata:///local";
+        public const string ASSETSFOLDER    = "Assets";
+		public const string IMAGEFOLDER     = "Images";
+        public const string EXTENSIONFOLDER = "ExtensionIcons";
+        public const string FOLDERICONS    = "FolderIcons";
+        public const string STATUSFOLDER    = "StatusIcons";
+	#endregion
 	}
 
 

@@ -23,6 +23,7 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 
 using HackPDM.ClientUtils;
+using HackPDM.Src.Extensions.Controls;
 
 using static System.Net.Mime.MediaTypeNames;
 
@@ -31,6 +32,11 @@ using Image = System.Drawing.Image;
 using OClient = OdooRpcCs.OdooClient;
 using Path = System.IO.Path;
 using HackPDM.Src.Forms.Settings;
+using HackPDM.Extensions.General;
+using HackPDM.Data;
+using HackPDM.Properties;
+using Microsoft.UI.Xaml.Media.Imaging;
+using Windows.Storage.Streams;
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
 
@@ -72,7 +78,7 @@ namespace HackPDM.Src.Forms.Hack
 		private static int MaxCount;
 
 		// if EntryPollingMs is set to less than or equal to 0 then it will not poll for changes
-		public TreeViewNode LastSelectedNode { get; set; } = null;
+		public TreeViewNode? LastSelectedNode { get; set; } = null;
 		public string LastSelectedNodePath { get; set; } = null;
 		public int EntryPollingMs { get; set; } = 5000;
 
@@ -87,6 +93,9 @@ namespace HackPDM.Src.Forms.Hack
 		private delegate void BackgroundCompleteDel(object sender, RunWorkerCompletedEventArgs e);
 
 		public const string EmptyPlaceholder = "-";
+
+		// temp
+		public ListView OdooEntryList = new();
 		#endregion
 
 		#region TEST_VARIABLES
@@ -120,28 +129,34 @@ namespace HackPDM.Src.Forms.Hack
 			InitializeComponent();
 			this.SetFormTheme(ProfileManager.MyTheme);
 			previewImage = OdooEntryImage.Image;
-			this.OdooDirectoryTree.LostFocus += TreeView_LostFocus;
-			
 			ResetListViews();
-			OdooDirectoryTree.SelectedNode.
+			
 			OdooDirectoryTree.LostFocus += (s, e) =>
 			{
 				if (OdooDirectoryTree.SelectedNode is not null)
 				{
 					LastSelectedNode = OdooDirectoryTree.SelectedNode;
-					LastSelectedNodePath = LastSelectedNode.;
+					LastSelectedNodePath = LastSelectedNode.FullPath;
 				}
 			};
-			this.WindowState = FormWindowState.Maximized;
-			this.FormClosing += (s, e) => isClosing = true;
-
-			this.Load += new EventHandler(FormLoaded);
+			this.Unloaded += (s, e) =>
+			{
+				isClosing = true;
+				cSource.Cancel();
+				cTreeSource.Cancel();
+				backgroundWorker.CancelAsync();
+			};
+			this.Loaded += HackFileManager_Load;
 			this.Root = HpBaseModel<HpDirectory>.GetRecordByID(1);
+		}
+
+		private void HackFileManager_Load(object sender, RoutedEventArgs e)
+		{
+			CreateTreeViewBackground();
 		}
 
 		private void FormLoaded(object sender, EventArgs e)
 		{
-			CreateTreeViewBackground();
 		}
 		private void CreateTreeViewBackground()
 		{
@@ -170,7 +185,7 @@ namespace HackPDM.Src.Forms.Hack
 			SafeInvoke(OdooDirectoryTree, () =>
 			{
 				OdooDirectoryTree.Sort();
-				if (LastSelectedNode is not null) LastSelectedNode.EnsureVisible();
+				LastSelectedNode?.EnsureVisible(OdooDirectoryTree);
 			});
 
 			IsTreeLoaded = true;
@@ -331,25 +346,26 @@ namespace HackPDM.Src.Forms.Hack
 
 		#region TreeView functions
 		// tree view directories
-		private async Task<(Hashtable entries, Dictionary<string, Task<HackFile>> hackmap)> GetHackAndEntry(int directoryID)
+		private async Task<(Hashtable entries, Dictionary<string, Task<HackFile>> hackmap)> GetHackAndEntry(int? directoryID)
 		{
+			if (directoryID is null) return (null, null);
 			Hashtable entries = await Task.Run(() => HpDirectory.GetEntries(directoryID, IsActive));
 			Dictionary<string, Task<HackFile>> hackFileMap = await GetFileMap(entries);
 			return (entries, hackFileMap);
 		}
-		private async Task TreeSelectItem(TreeNode node, CancellationToken token = default)
+		private async Task TreeSelectItem(TreeViewNode node, CancellationToken token = default)
 		{
 			IsListLoaded = false;
-
 			await AsyncHelper.WaitUntil(() => IsTreeLoaded, 100, -1, token);
-			node.EnsureVisible();
+			node.EnsureVisible(OdooDirectoryTree);
 			InitListViewInternal(OdooEntryList, ColumnMap.RowWidths);
 
 			try
 			{
-				if (node?.Tag is int directoryID)
+				TreeData? tData = node?.Content as TreeData;
+				if (tData is not null)
 				{
-					if (directoryID == 0)
+					if (tData?.DirectoryID is null or 0)
 					{
 						// add file entries to folder
 						AddLocalEntries(node);
@@ -357,7 +373,7 @@ namespace HackPDM.Src.Forms.Hack
 					}
 
 					token.ThrowIfCancellationRequested();
-					var (entries, hackmap) = await GetHackAndEntry(directoryID);
+					(Hashtable entries, Dictionary<string, Task<HackFile>> hackmap) = await GetHackAndEntry(tData.DirectoryID);
 					token.ThrowIfCancellationRequested();
 					AddRemoteEntries(entries, hackmap);
 					AddLocalEntries(LastSelectedNode, hackmap);
@@ -490,7 +506,7 @@ namespace HackPDM.Src.Forms.Hack
 		#endregion
 
 		#region Tree Item Selection
-		private void FindUpdatedEntries(TreeNode node, Hashtable entries, Dictionary<string, Task<HackFile>> hackFileMap)
+		private void FindUpdatedEntries(TreeViewNode node, Hashtable entries, Dictionary<string, Task<HackFile>> hackFileMap)
 		{
 			// things to check for:
 			// 1. if the entry is in the entries hashtable
@@ -502,25 +518,24 @@ namespace HackPDM.Src.Forms.Hack
 			// 7. if the entry is in both the entries hashtable and the hackFileMap but has been modified remotely
 
 			HackFile[] files = GetHackNonEntries(node, hackFileMap);
-
-			foreach (ListViewItem item in OdooEntryList.Items)
+			
+			foreach (ListViewItem item in OdooEntryList.ItemsSource)
 			{
+				EntryRow? er = item.Content as EntryRow;
 				// this means that the item is not in the entries hashtable
-				string id = item.SubItems[NameConfig.RowID.Name].Text;
-				if (id == EmptyPlaceholder)
+				if (er?.ID is null or 0)
 				{
-					Hashtable entry = entries.TakeWhere(e => e.Value is Hashtable ht && ht["id"].ToString() == id);
 				}
 				else
 				{
-
+					Hashtable entry = entries.TakeWhere(e => e.Value is Hashtable ht && ht["id"]?.ToString() == er?.ID);
 				}
 			}
 
 		}
-		private HackFile[] GetHackNonEntries(TreeNode node, Dictionary<string, Task<HackFile>> hackFileMap)
+		private HackFile[]? GetHackNonEntries(TreeViewNode node, Dictionary<string, Task<HackFile>> hackFileMap)
 		{
-			string path = HackDefaults.DefaultPath(node.FullPath, true);
+			string path = HackDefaults.DefaultPath((node.Content as TreeData)?.FullPath, true);
 			if (!Directory.Exists(path)) return null;
 
 			HackFile[] files;
@@ -548,23 +563,22 @@ namespace HackPDM.Src.Forms.Hack
 		{
 			if (pair.Value is not Hashtable table) return;
 
-			ListViewItem item = EmptyListItemInternal(OdooEntryList);
-			item.SubItems[NameConfig.RowID.Name].Text = ((int)table["id"]).ToString();
+			//ListViewItem item = EmptyListItemInternal(OdooEntryList);
+			EntryRow item =	new();
+			item.ID = (int)table["id"];
 
 			//item.SubItems.Add(((int)table["id"]).ToString());
-			item.SubItems[NameConfig.RowName.Name].Text = pair.Key.ToString();
+			item.Name = pair.Key.ToString();
 
 			object ttype = table["type"];
-			string type = ttype is string ttypeString ? ttypeString : EmptyPlaceholder;
-			item.SubItems[NameConfig.RowType.Name].Text = type;
+			item.Type = ttype is string ttypeString ? ttypeString : EmptyPlaceholder;
 
 			//double size = (double)( Convert.ToDouble(table["size"]) * HackDefaults.ByteSizeMultiplier );
-			item.SubItems[NameConfig.RowSize.Name].Text = FileOperations.FileSizeReformat(Convert.ToInt64(table["size"]));
+			item.Size = Convert.ToInt64(table["size"]);
 
 
-			string checkout = (string)table["checkout"];
-			checkout = checkout == "False:False" ? EmptyPlaceholder : checkout;
-			item.SubItems[NameConfig.RowCheckOut.Name].Text = checkout;
+			string? checkout = (string)table["checkout"];
+			item.Checkout = checkout is null or "False:False" ? null : OdooDefaults.IDToUser.TryGetValue(int.TryParse(checkout.Split(":")?[0], out int ID) ? ID : 0, out HpUser? user) ? user : null;
 
 			// check if latest checksum
 			string status = "";
@@ -572,14 +586,12 @@ namespace HackPDM.Src.Forms.Hack
 			HackFile hack = hackFileMap[fullName].Result;
 
 			//string latest = EmptyPlaceholder;
-			string latest = table["latest_date"] as string;
-			string datePlace = latest is null ? EmptyPlaceholder : latest;
+			string datePlace = table["latest_date"] is not string latest ? EmptyPlaceholder : latest;
 
-			datePlace = DateTime.TryParse(datePlace, out DateTime remoteDate) && remoteDate != default ? remoteDate.ToShortDateString() : EmptyPlaceholder;
-
+			item.RemoteDate = DateTime.TryParse(datePlace, out DateTime remoteDate) && remoteDate != default ? remoteDate : null;
 			// 2006-12-15 01:43:49.623
-			item.SubItems[NameConfig.RowRemoteDate.Name].Text = datePlace;
-			item.SubItems[NameConfig.RowLocalDate.Name].Text = hack?.ModifiedDate.Year is null or 1 ? EmptyPlaceholder : hack?.ModifiedDate.ToShortDateString();
+
+			item.LocalDate = hack?.ModifiedDate.Year is null or 1 ? null : hack?.ModifiedDate;
 
 			// remote only
 			// local only
@@ -611,7 +623,7 @@ namespace HackPDM.Src.Forms.Hack
 							}
 						case string latestChecksum:
 							{
-								if (hack.Checksum == null) status = "ro";
+								if (hack?.Checksum == null) status = "ro";
 								else if (hack.Checksum == latestChecksum) status = "ok";
 								else
 								{
@@ -633,29 +645,47 @@ namespace HackPDM.Src.Forms.Hack
 
 			// get or add image key
 
-			string strKey = status != "ok" ? $"{type}.{status}" : type;
-			if (ListIcons.Images[strKey] == null)
+			string strKey = status != "ok" ? $"{item.Type}.{status}" : item.Type;
+			BitmapImage? image = Assets.GetImage(strKey) as BitmapImage;
+
+			if (image is null)
 			{
 				// image key not present in ilListIcons
-				Image imgExt = ListIcons.Images[type];
+				BitmapImage? imgExt = Assets.GetImage(item.Type) as BitmapImage;
+				
 				if (imgExt == null)
 				{
-					if (OdooDefaults.ExtToType.TryGetValue($".{type}", out var hpType))
+					if (OdooDefaults.ExtToType.TryGetValue($".{item.Type}", out var hpType))
 					{
 						// get remote image
-						byte[] imgBytes = FileOperations.ConvertFromBase64(hpType.icon);
-						MemoryStream ms = new();
-						ms.Write(imgBytes, 0, imgBytes.Length);
-						imgExt = Image.FromStream(ms);
+						imgExt = new();
+						using (var stream = new InMemoryRandomAccessStream())
+						using (var writer = new DataWriter(stream))
+						{
+							try
+							{
+								byte[] imgBytes = FileOperations.ConvertFromBase64(hpType.icon);
+								writer.WriteBytes(imgBytes);
+								await writer.StoreAsync();
+								await writer.FlushAsync();
+								writer.DetachStream();
+
+								stream.Seek(0);
+								await imgExt.SetSourceAsync(stream);
+							}
+							catch
+							{
+							}
+						}						
 					}
 
 					if (imgExt == null)
 					{
-						imgExt = ListIcons.Images["default"];
+						imgExt = Assets.GetImage("default");
 					}
 					else
 					{
-						ListIcons.Images.Add(type, imgExt);
+						Assets.SetImage(item.Type, imgExt);
 					}
 				}
 
@@ -680,18 +710,17 @@ namespace HackPDM.Src.Forms.Hack
 					}
 				}
 			}
-
 			item.ImageKey = strKey;
 
-
-			item.SubItems[NameConfig.RowStatus.Name].Text = status;
+			item.Status = Enum.Parse<FileStatus>(status, true);
 			string category = table["category"] is string cat ? cat : EmptyPlaceholder;
-			item.SubItems[NameConfig.RowCategory.Name].Text = category;
-			item.SubItems[NameConfig.RowFullName.Name].Text = fullName;
+			item.Category = OdooDefaults.HpCategories.Where(c => c.name.Equals(category)).First();
+			
+			item.FullName = fullName;
 
 			SafeInvoke(OdooEntryList, () => OdooEntryList.Items.Add(item));
 		}
-		private void AddLocalEntries(TreeNode node, Dictionary<string, Task<HackFile>> hackFileMap = null)
+		private void AddLocalEntries(TreeViewNode node, Dictionary<string, Task<HackFile>> hackFileMap = null)
 		{
 #if DEBUG
 			stopwatch = Stopwatch.StartNew();
@@ -710,7 +739,7 @@ namespace HackPDM.Src.Forms.Hack
 			Console.WriteLine($"local entries time: {stopwatch.Elapsed}");
 #endif
 		}
-		private void AddLocalEntry(TreeNode node, HackFile file)
+		private void AddLocalEntry(TreeViewNode node, HackFile file)
 		{
 			if (file is null) return;
 			string type = file.TypeExt.ToLower();
@@ -727,19 +756,19 @@ namespace HackPDM.Src.Forms.Hack
 
 			type = type[1..];
 
-			ListViewItem item = EmptyListItemInternal(OdooEntryList);
-			item.SubItems[NameConfig.RowID.Name].Text = EmptyPlaceholder;
-			item.SubItems[NameConfig.RowName.Name].Text = file.Name;
+			EntryRow item = new();
+			item.ID = null;
+			item.Name = file.Name;
 
 
-			item.SubItems[NameConfig.RowType.Name].Text = type;
+			item.Type = type;
 
 			//double size =  (double)( file.FileSize * HackDefaults.ByteSizeMultiplier );
-			item.SubItems[NameConfig.RowSize.Name].Text = FileOperations.FileSizeReformat(file.FileSize);
+			item.Size = file.FileSize;
 
-			item.SubItems[NameConfig.RowLocalDate.Name].Text = file.ModifiedDate.ToShortDateString();
-			item.SubItems[NameConfig.RowRemoteDate.Name].Text = EmptyPlaceholder;
-			item.SubItems[NameConfig.RowStatus.Name].Text = "lo";
+			item.LocalDate = file.ModifiedDate;
+			item.RemoteDate = null;
+			item.Status = FileStatus.LO;
 
 
 			// get or add image key
@@ -795,10 +824,10 @@ namespace HackPDM.Src.Forms.Hack
 			item.ImageKey = strKey;
 
 
-			item.SubItems[NameConfig.RowCheckOut.Name].Text = EmptyPlaceholder;
-			string nameCategory = OdooDefaults.ExtToCat.TryGetValue($".{type}", out var cat) ? cat.name : EmptyPlaceholder;
-			item.SubItems[NameConfig.RowCategory.Name].Text = nameCategory;
-			item.SubItems[NameConfig.RowFullName.Name].Text = file.FullPath;
+			item.Checkout = null;
+			HpCategory nameCategory = OdooDefaults.ExtToCat.TryGetValue($".{type}", out var cat) ? cat : null;
+			item.Category = nameCategory;
+			item.FullName = file.FullPath;
 
 			//OdooEntryList.Items.Add(item);
 			UpdateListAsync(OdooEntryList, item);
@@ -1756,15 +1785,6 @@ namespace HackPDM.Src.Forms.Hack
 		#endregion
 
 		#region Form Event Handlers
-		// lost focus events
-		private void TreeView_LostFocus(object sender, EventArgs e)
-		{
-			// Reselect the last selected node when the TreeView loses focus
-			if (LastSelectedNode != null)
-			{
-				OdooDirectoryTree.SelectedNode = LastSelectedNode;
-			}
-		}
 		// after select events
 		private async void OdooDirectoryTree_AfterSelect(object sender, TreeViewEventArgs e)
 		{

@@ -485,17 +485,17 @@ namespace HackPDM
             Type type = typeof(T);
             string[] firstKeys = [.. hts.First().Keys.Cast<string>()];
 
-            (PropertyInfo, ValueConversion)[] propInfos
+            (PropertyInfo, ValueConversion)[]? propInfos
                 = mType == MethodType.PropertyOnly
                     ? new (PropertyInfo, ValueConversion)[firstKeys.Length]
                     : null;
-            (FieldInfo, ValueConversion)[] fieldInfos
+            (FieldInfo, ValueConversion)[]? fieldInfos
                 = mType == MethodType.FieldOnly
                     ? new (FieldInfo, ValueConversion)[firstKeys.Length]
                     : null;
 
-            string[] pkeys = propInfos is null ? null : firstKeys;
-            string[] fkeys = fieldInfos is null ? null : firstKeys;
+            string[]? pkeys = propInfos is null ? null : firstKeys;
+            string[]? fkeys = fieldInfos is null ? null : firstKeys;
 
             for (int i = 0; i < hts.Length; i++)
             {

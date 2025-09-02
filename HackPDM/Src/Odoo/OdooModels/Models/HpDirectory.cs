@@ -108,16 +108,14 @@ namespace HackPDM
             }
             return null;
         }
-        public static Dictionary<string, object> GetSubdirectories(int ID)
+        public static Dictionary<string, object>? GetSubdirectories(int ID)
         {
-            if (ID != 0)
-            {
-                return OClient.Command<Dictionary<string, object>>(GetHpModel(), "get_children_directories_by_id", new ArrayList(new ArrayList { ID, false }));
-            }
-            return null;
-        }
-        
-        public Hashtable GetSubdirectories(string pathway)
+			return ID != 0
+				? OClient.Command<Dictionary<string, object>>(GetHpModel(), "get_children_directories_by_id", new ArrayList(new ArrayList { ID, false }))
+				: null;
+		}
+
+		public Hashtable GetSubdirectories(string pathway)
         {
             string linuxPath = pathway.Replace(@"\", @" / ").Replace(@"\\", @" / ");
             return OClient.Command<Hashtable>(HpModel, "get_children_directories", new ArrayList(new string[] { linuxPath }));
@@ -130,7 +128,7 @@ namespace HackPDM
             }
             return null;
         }
-        public static Hashtable GetEntries(int directoryID, bool showInActive = false)
+        public static Hashtable GetEntries(int? directoryID, bool showInActive = false)
             => OClient.Command<Hashtable>(
                 GetHpModel(), 
                 "get_entries", 

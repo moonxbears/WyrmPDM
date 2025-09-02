@@ -7,6 +7,7 @@ using System.Windows.Forms;
 using System.Windows.Interop;
 
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Imaging;
 
 namespace HackPDM.Src.Helper.Compatibility
 {
@@ -20,11 +21,17 @@ namespace HackPDM.Src.Helper.Compatibility
 			_imageList = new();
 		}
 
-		public Bitmap? GetBitmap(string key) => _images.TryGetValue(key, out var bmp) ? bmp : null;
+		public Bitmap? GetBitmap(string key) => (Bitmap?)(_imageList.Images.ContainsKey(key) ? new Bitmap(_imageList.Images[key]) : null);
 
-		public ImageSource? GetImage(string key) => throw new ArgumentOutOfRangeException();
+		public ImageSource? GetImage(string key) => throw new NotSupportedException("ImageSource Isn't supported");
 
 		public IEnumerable<string> GetAvailableKeys() => _images.Keys;
+
+
+		public void SetImage(string key, byte[] imgBytes)
+		{
+			_imageList.Images.Add(key, imgBytes);
+		}
 	}
 
 }

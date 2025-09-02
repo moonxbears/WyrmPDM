@@ -19,6 +19,8 @@ using Microsoft.UI.Xaml;
 
 using static System.Net.Mime.MediaTypeNames;
 
+using HorizontalAlignment = Microsoft.UI.Xaml.HorizontalAlignment;
+
 namespace HackPDM.ClientUtils
 {
     public class NotifyIcon
@@ -388,7 +390,7 @@ namespace HackPDM.ClientUtils
             Rank = rank;
             Sort = sort;
             sort?.Group = group;
-            
+
             switch (value)
             {
                 case Tuple<int, HorizontalAlignment> values:
@@ -649,4 +651,5 @@ namespace HackPDM.ClientUtils
             return comp ? i : i * -1;
         }
     }
+    
 }

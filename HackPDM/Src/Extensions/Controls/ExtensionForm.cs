@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 using HackPDM.ClientUtils;
-using Microsoft.UI.Xaml.Controls;
+//using Microsoft.UI.Xaml.Controls;
 using Windows.UI;
 
 using Theme = HackPDM.ClientUtils.Theme;
@@ -12,6 +12,10 @@ using Control = Microsoft.UI.Xaml.Controls.Control;
 using HackPDM.Src.Extensions.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml;
+using HackPDM.Data;
+//using System.Windows.Controls;
+using System.Linq;
+using Microsoft.UI.Xaml.Controls;
 
 namespace HackPDM.Src.Extensions.Controls
 {
@@ -119,19 +123,32 @@ namespace HackPDM.Src.Extensions.Controls
                 return false;
             }
         }
-        public static TreeViewNode RecurseNode(this TreeViewNode node, ReadOnlySpan<string> paths)
+        public static TreeData? RecurseNode(this TreeData node, ReadOnlySpan<string> paths)
         {
-            
-        }
-        public static TreeViewNode FindTreeNode(this TreeView view, string path)
+			foreach (TreeData tNode in node.Children)
+			{
+				if (tNode.Name == paths[0])
+				{
+					return paths.Length == 1 ? node : node.RecurseNode(paths[1..]);
+				}
+			}
+			return null;
+		}
+        public static TreeViewNode? FindTreeNode(this TreeView view, string path)
         {
-            view.Item
             ArgumentNullException.ThrowIfNull(view, nameof(view));
             Span<string> pathSpan = path.Split("\\").AsSpan();
-            foreach(var node in view.RootNodes)
+            List<TreeViewNode>? children = view.RootNodes;
+
+            if (children is null) return null;
+			foreach (TreeData node in children)
             {
-                if (node.)
-            }
+				if (node.Name == pathSpan[0])
+                {
+					return pathSpan.Length == 1 ? node : node.RecurseNode(pathSpan[1..]);
+				}
+			}
+            return null;
 			//TreeNodeCollection nodes = null;
    //         TreeNode node = null;
    //         string[] paths = path.Split('\\');
@@ -163,23 +180,49 @@ namespace HackPDM.Src.Extensions.Controls
    //         {
    //             return null;
    //         }
+        
         }
-        
-        
-        extension(Form form)
+        public static string GetTreeNodePath(this TreeData node)
         {
-            public bool IsSingleton
+            ArgumentNullException.ThrowIfNull(node);
+            return node.FullPath;
+		}
+        public static T? ItemsSource<T>(this ItemsControl control) where T : class
+        {
+            ArgumentNullException.ThrowIfNull(control);
+            return control.ItemsSource as T;
+		}
+		//extension(Form form)
+		//{
+		//    public bool IsSingleton
+		//    {
+		//        get => _data.TryGetValue(form, out var holder) && holder.IsSingleton;
+		//        set => _data.GetOrCreateValue(form).IsSingleton = value;
+		//    }
+		//    public Form SingletonInstance
+		//    {
+		//        get => _data.TryGetValue(form, out var holder) ? holder.SingletonInstance : null;
+		//        set => _data.GetOrCreateValue(form).SingletonInstance = value;
+		//    }
+		//}
+		public static void EnsureVisible(this TreeData node, TreeView tree)
+        {
+			ArgumentNullException.ThrowIfNull(node);
+			ArgumentNullException.ThrowIfNull(tree);
+			TreeData? current = node;
+            TreeViewItem treeItem = new();
+            while (current != null)
             {
-                get => _data.TryGetValue(form, out var holder) && holder.IsSingleton;
-                set => _data.GetOrCreateValue(form).IsSingleton = value;
+                current.IsExpanded = true;
+                current = current.Parent;
             }
-            public Form SingletonInstance
-            {
-                get => _data.TryGetValue(form, out var holder) ? holder.SingletonInstance : null;
-                set => _data.GetOrCreateValue(form).SingletonInstance = value;
-            }
-        }
-        private class HolderValues
+            tree.SelectedNode = node;
+            TreeViewItem? item = tree.ContainerFromNode(node) as TreeViewItem;
+            
+			var container = tree.ContainerFromNode(node) as TreeViewItem;
+			container?.StartBringIntoView();
+		}
+		private class HolderValues
         {
             public bool IsSingleton { get; set; }=false;
             public Form SingletonInstance { get;set; }
