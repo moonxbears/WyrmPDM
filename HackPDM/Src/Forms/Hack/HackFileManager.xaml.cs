@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
@@ -12,25 +13,36 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Windows.Storage.Streams;
+
 using HackPDM.ClientUtils;
 using HackPDM.Data;
-using HackPDM.Extensions.General;
-using HackPDM.Properties;
+using HackPDM.Src.Extensions.General;
 using HackPDM.Src.Extensions.Controls;
+using HackPDM.Properties;
+using HackPDM.Src.ClientUtils;
+using HackPDM.Src.Forms.Helper;
 using HackPDM.Src.Forms.Settings;
+
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Imaging;
+
+using SolidWorks.Interop.sldworks;
+
+using Windows.Storage.Streams;
+
 using Directory = System.IO.Directory;
 using Image = System.Drawing.Image;
 using OClient = OdooRpcCs.OdooClient;
 using Path = System.IO.Path;
+using HackPDM.Src.Extensions.Odoo;
+using static HackPDM.Src.Forms.Helper.MessageBox;
+
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
 
-namespace HackPDM.Forms.Hack
+namespace HackPDM.Src.Forms.Hack
 {
     /// <summary>
     /// An empty page that can be used on its own or navigated to within a Frame.
@@ -38,10 +50,17 @@ namespace HackPDM.Forms.Hack
     public sealed partial class HackFileManager : Page
     {
 		#region Declarations
+		public static ObservableCollection<EntryRow> OEntries { get; internal set; } = new();
+		public static ObservableCollection<HistoryRow> OHistories { get; internal set; } = new();
+		public static ObservableCollection<ParentRow> OParents { get; internal set; } = new();
+		public static ObservableCollection<ChildrenRow> OChildren { get; internal set; } = new();
+		public static ObservableCollection<PropertiesRow> OProperties { get; internal set; } = new();
+		public static ObservableCollection<VersionRow> OVersions { get; internal set; } = new();
+		public static ObservableCollection<TreeData> ONodes { get; internal set; } = new();
+
 		public static NotifyIcon Notify { get; } = Notifier.Notify;
 		public static StatusDialog Dialog { get; set; }
 		public static ConcurrentQueue<string[]> QueueAsyncStatus = new();
-
 		public static ListDetail ActiveList { get; set; }
 		public static int DownloadBatchSize
 		{
@@ -51,8 +70,8 @@ namespace HackPDM.Forms.Hack
 		public static int SkipCounter { get; private set; }
 		private static Task EntryListChange = default;
 		private static Task TreeItemChange = default;
-		// private static (object sender, ListViewItemSelectionChangedEventArgs e) queuedEntryChange = (null, null);
-		// private static (object sender, TreeViewEventArgs e) queuedTreeChange = (null, null);
+		private static (object? sender, SelectionChangedEventArgs? e) queuedEntryChange = (null, null);
+		private static (TreeView? sender, TreeViewSelectionChangedEventArgs? args) queuedTreeChange = (null, null);
 
 		private static BackgroundWorker backgroundWorker = new()
 		{
@@ -98,27 +117,9 @@ namespace HackPDM.Forms.Hack
 		static HackFileManager() { }
 		public HackFileManager()
 		{
-			// --
-
-			//string filepath = @"C:\Users\jnjohnson\Documents\dev\testing\wigwam\Designed\Haggis\Frame\Base Weldment\X010166.Frame Base Weldment, Haggis.SLDASM";
-			//string temppath = @"C:\Users\jnjohnson\Documents\dev\testing\wigwam\temp\";
-			//string temppath2 = @"C:\Users\jnjohnson\Documents\dev\testing\wigwam\temp\X010166.Frame Base Weldment, Haggis.SLDASM";
-			//var dependencies = HackDefaults.docMgr.GetDependencies(filepath);
-			//var dependencies2 = HackDefaults.docMgr.GetDependencies(temppath2);
-			//var files = dependencies.Select(pathname =>
-			//{
-			//	string oldPath = pathname[1];
-			//	string newPath = Path.Combine(temppath, pathname[0]);
-			//	FileInfo fInfo = new(oldPath);
-			//	if (fInfo is null) return null;
-			//	return fInfo.CopyTo(newPath);
-			//});
-
-			// --
-
 			InitializeComponent();
-			this.SetFormTheme(ProfileManager.MyTheme);
-			previewImage = OdooEntryImage.Image;
+			InitializeEvents();
+			this.SetFormTheme(StorageBox.MyTheme ?? default);
 			ResetListViews();
 			OdooDirectoryTree.LostFocus += (s, e) =>
 			{
@@ -135,6 +136,25 @@ namespace HackPDM.Forms.Hack
 			};
 			this.Loaded += HackFileManager_Load;
 			this.Root = HpBaseModel<HpDirectory>.GetRecordByID(1);
+		}
+		private void InitializeEvents()
+		{
+			OdooDirectoryTree.SelectionChanged += OdooDirectoryTree_SelectionChanged;
+
+			ONodes.CollectionChanged		+= CollectionChanged;
+			OEntries.CollectionChanged		+= CollectionChanged;
+			OHistories.CollectionChanged	+= CollectionChanged;
+			OParents.CollectionChanged		+= CollectionChanged;
+			OChildren.CollectionChanged		+= CollectionChanged;
+			OProperties.CollectionChanged	+= CollectionChanged;
+			OVersions.CollectionChanged		+= CollectionChanged;
+
+			OdooEntryList.SelectionChanged	+= OdooEntryList_SelectionChanged;
+		}
+
+		private void CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+		{
+			// TASK: implement
 		}
 
 		private void HackFileManager_Load(object sender, RoutedEventArgs e)
@@ -166,21 +186,22 @@ namespace HackPDM.Forms.Hack
 
 			if (LastSelectedNode != null)
 			{
-				LastSelectedNode = OdooDirectoryTree.FindTreeNode(LastSelectedNodePath);
+				LastSelectedNode = OdooDirectoryTree.FindTreeNode(LastSelectedNodePath)?.Node;
 			}
 
-			SafeInvoke(OdooDirectoryTree, () =>
+			SafeInvoker(OdooDirectoryTree, () =>
 			{
-				OdooDirectoryTree.Sort();
-				LastSelectedNode?.EnsureVisible(OdooDirectoryTree);
+				var tData = OdooDirectoryTree.ItemsSource as List<TreeData>;
+				tData?.Sort((TreeData x, TreeData y) => string.Compare(x.Name, y.Name, StringComparison.OrdinalIgnoreCase));
+				LastSelectedNode?.LinkedData.EnsureVisible(OdooDirectoryTree);
 			});
 
 			IsTreeLoaded = true;
 
-			SafeInvoke(OdooEntryImage, () =>
-			{
-				OdooEntryImage.Image = null;
-			});
+			//SafeInvoke(OdooEntryImage, () =>
+			//{
+			//	//OdooEntryImage.Image = null;
+			//});
 		}
 		private Dictionary<string, object> ConvertSubDirectories(Hashtable ht)
 		{
@@ -206,92 +227,68 @@ namespace HackPDM.Forms.Hack
 		}
 		private void InitListViewInternal(ListView list, ListDetail rows)
 			=> InitListView(list, rows);
-		internal static void InitListView(ListView list, ListDetail rows)
+		internal static void InitListView(ItemsControl control, ListDetail rows) 
+			=> SafeInvoker(control, () => control.ItemsSource = null);
+		internal static void InitGridView(ItemsControl control) 
+			=> SafeInvoker(control, () => control.ItemsSource = null);
+		//internal static void InitListViewPercentage(ListView list, ListDetail rows)
+		//{
+		//	SafeInvokeGen(list, rows, (row) =>
+		//	{
+		//		list.ItemsSource = null;
+		//		List<ColumnHeader> offsets = [];
+		//		int unUsedPercentage = 100;
+		//		foreach (ColumnInfo item in row.SortColumnOrder)
+		//		{
+		//			if (item.Width == 0)
+		//			{
+		//				offsets.Add(list.Columns.Add(item.Name, item.Name));
+		//			}
+		//			else
+		//			{
+		//				int use = (int)(list.Size.Width * (item.Width / 100f));
+		//				list.Columns.Add(item.Name, item.Name, use);
+		//				unUsedPercentage -= item.Width;
+		//			}
+		//		}
+		//		int totalItems = offsets.Count;
+		//		int distNum = unUsedPercentage / totalItems;
+		//		foreach (var column in offsets)
+		//		{
+		//			if (distNum <= unUsedPercentage)
+		//			{
+		//				column.Width = (int)(list.Size.Width * (distNum / 100f));
+		//				unUsedPercentage -= distNum;
+		//			}
+		//			else
+		//			{
+		//				column.Width = (int)(list.Size.Width * (unUsedPercentage / 100f)); ;
+		//				unUsedPercentage = 0;
+		//			}
+		//		}
+		//		list.ListViewItemSorter = row.SortRowOrder.Sort;
+		//	});
+		//}
+		internal static T EmptyListItemInternal<T>(ListView list) where T : new()
+			=> EmptyListItem<T>(list);
+		internal static T EmptyGridTable<T>(ItemsControl grid) where T : new() 
+			=> EmptyListItem<T>(grid);
+		internal static T EmptyListItem<T>(ItemsControl list) where T : new()
 		{
-			SafeInvokeGen(list, rows, (row) =>
-			{
-				list.Clear();
-				foreach (ColumnInfo item in row.SortColumnOrder)
-				{
-					list.Columns.Add(item.Header);
-				}
-				list.ListViewItemSorter = row.SortRowOrder.Sort;
-			});
-		}
-		internal static void InitGridView(DataGridView gridView)
-		{
-			SafeInvoker(gridView, () =>
-			{
-				gridView.Columns.Clear();
-				gridView.DataSource = null;
-			});
-		}
-		internal static void InitListViewPercentage(ListView list, ListDetail rows)
-		{
-			SafeInvokeGen(list, rows, (row) =>
-			{
-				list.Clear();
-				List<ColumnHeader> offsets = [];
-				int unUsedPercentage = 100;
-				foreach (ColumnInfo item in row.SortColumnOrder)
-				{
-					if (item.Width == 0)
-					{
-						offsets.Add(list.Columns.Add(item.Name, item.Name));
-					}
-					else
-					{
-						int use = (int)(list.Size.Width * (item.Width / 100f));
-						list.Columns.Add(item.Name, item.Name, use);
-						unUsedPercentage -= item.Width;
-					}
-				}
-				int totalItems = offsets.Count;
-				int distNum = unUsedPercentage / totalItems;
-				foreach (var column in offsets)
-				{
-					if (distNum <= unUsedPercentage)
-					{
-						column.Width = (int)(list.Size.Width * (distNum / 100f));
-						unUsedPercentage -= distNum;
-					}
-					else
-					{
-						column.Width = (int)(list.Size.Width * (unUsedPercentage / 100f)); ;
-						unUsedPercentage = 0;
-					}
-				}
-				list.ListViewItemSorter = row.SortRowOrder.Sort;
-			});
-		}
-		internal ListViewItem EmptyListItemInternal(ListView list)
-			=> EmptyListItem(list);
-		internal static ListViewItem EmptyListItem(ListView list)
-		{
-			ListViewItem item = new();
-			item.SubItems.Clear();
+			T entry = new();
 			SafeInvoker(list, () =>
 			{
-				for (int i = 0; i < list.Columns.Count; i++)
+				if (list.ItemsSource is ObservableCollection<T> entries)
 				{
-					if (item.SubItems[0].Name != "") item.SubItems.Add(string.Empty);
-					item.SubItems[item.SubItems.Count - 1].Name = list.Columns[i].Text;
+					entries.Add(entry);
+					list.ItemsSource = entries;
+				}
+				else
+				{
+					list.ItemsSource = new ObservableCollection<T>() { entry };
 				}
 			});
-			return item;
-		}
-		internal static DataTable EmptyGridTable(DataGridView grid, Dictionary<string, DataColumnSettings> rows)
-		{
-			DataTable table = new();
-
-			SafeInvokeGen(grid, rows, (row) =>
-			{
-				foreach (var r in row)
-				{
-					table.Columns.Add(r.Value.NewInstance());
-				}
-			});
-			return table;
+			return entry;
 		}
 		private void ResetSubListViews()
 		{
@@ -323,7 +320,7 @@ namespace HackPDM.Forms.Hack
 		}
 		public void RefreshEntries()
 		{
-			SafeInvoke(OdooEntryList, () => OdooEntryList.Refresh());
+			SafeInvoker(OdooEntryList, () => OdooEntryList.UpdateLayout());
 		}
 		internal TreeView GetOdooDirectoryTree()
 			=> OdooDirectoryTree;
@@ -344,7 +341,7 @@ namespace HackPDM.Forms.Hack
 		{
 			IsListLoaded = false;
 			await AsyncHelper.WaitUntil(() => IsTreeLoaded, 100, -1, token);
-			node.EnsureVisible(OdooDirectoryTree);
+			node.LinkedData.EnsureVisible(OdooDirectoryTree);
 			InitListViewInternal(OdooEntryList, ColumnMap.RowWidths);
 
 			try
@@ -365,7 +362,7 @@ namespace HackPDM.Forms.Hack
 					AddRemoteEntries(entries, hackmap);
 					AddLocalEntries(LastSelectedNode, hackmap);
 
-					SafeInvoke(OdooEntryList, OdooEntryList.Sort);
+					SafeInvoker(OdooEntryList, ()=> OdooEntryList.Sort((EntryRow x, EntryRow y)=> string.Compare(x.Name, y.Name)));
 				}
 				IsListLoaded = true;
 			}
@@ -408,7 +405,7 @@ namespace HackPDM.Forms.Hack
 		private void AddLocalDirectories(TreeViewNode node, Span<string> pathway, Dictionary<string, TreeViewNode> treeDict)
 		{
 			string[] paths = pathway.ToArray();
-			SafeInvoke(OdooDirectoryTree, () =>
+			SafeInvoker(OdooDirectoryTree, () =>
 			{
 				for (int i = 0; i < paths.Length; i++)
 				{
@@ -432,7 +429,7 @@ namespace HackPDM.Forms.Hack
 		}
 		private void AddDirectoriesToTree(TreeView tree, Hashtable entries)
 		{
-			SafeInvoke(tree, () =>
+			SafeInvoker(tree, () =>
 			{
 				tree.RootNodes.Clear();
 				RecurseAddNodesAsync(null, entries, 0).Wait();
@@ -448,7 +445,7 @@ namespace HackPDM.Forms.Hack
 			if (treeNode == null)
 			{
 				treeNode = treeNodeName;
-				SafeInvoke(OdooDirectoryTree, () => OdooDirectoryTree.RootNodes.Add(treeNode));
+				SafeInvoker(OdooDirectoryTree, () => OdooDirectoryTree.RootNodes.Add(treeNode));
 			}
 			else
 			{
@@ -457,23 +454,20 @@ namespace HackPDM.Forms.Hack
 			}
 			
 			string path = HackDefaults.DefaultPath(dat.FullPath, true);
-			if (Directory.Exists(path))
+			if (!Directory.Exists(path))
 			{
-				treeNodeName.ImageIndex = 0;
-				treeNodeName.SelectedImageIndex = 0;
-			}
-			else
-			{
-				treeNodeName.ImageIndex = 2;
-				treeNodeName.SelectedImageIndex = 2;
+				dat.Icon = Assets.GetImage("folder-icon_remoteonly_32") as BitmapImage;
 			}
 
-			treeNodeName.Tag = (int)node["id"];
+			dat.DirectoryID = node["id"] as int?;
 
 			// refresh to show active changes
 
 			// add children
-			foreach (DictionaryEntry pair in (Hashtable)node["directories"])
+			var directory = node["directories"] as Hashtable;
+			if (directory is null or { Count: < 1 }) return;
+
+			foreach (DictionaryEntry pair in directory)
 			{
 				if (pair.Value is Hashtable childDirectory)
 				{
@@ -482,18 +476,18 @@ namespace HackPDM.Forms.Hack
 			}
 		}
 		public void RefreshTree()
-			=> SafeInvoke(OdooDirectoryTree, OdooDirectoryTree.Refresh);
+			=> SafeInvoker(OdooDirectoryTree, ()=> OdooDirectoryTree.UpdateLayout());
 		public void RestartTree()
 			=> CreateTreeViewBackground();
 		public void RestartEntries()
 		{
-			SafeInvoke(OdooDirectoryTree, async () => await TreeSelectItem(LastSelectedNode));
-			SafeInvoke(OdooEntryList, async () =>
+			SafeInvoker(OdooDirectoryTree, async () => await TreeSelectItem(LastSelectedNode));
+			SafeInvoker(OdooEntryList, async () =>
 			{
 				await AsyncHelper.WaitUntil(() => IsListLoaded);
 				if (OdooEntryList.SelectedItems.Count > 0)
 				{
-					OdooEntryList.SelectedItems[0].EnsureVisible();
+					(OdooEntryList.SelectedItems[0] as ListViewItem)?.StartBringIntoView();
 				}
 			});
 		}
@@ -512,17 +506,18 @@ namespace HackPDM.Forms.Hack
 			// 7. if the entry is in both the entries hashtable and the hackFileMap but has been modified remotely
 
 			HackFile[] files = GetHackNonEntries(node, hackFileMap);
-			
-			foreach (ListViewItem item in OdooEntryList.ItemsSource)
+			ObservableCollection<EntryRow> items = OdooEntryList.ItemsSource as ObservableCollection<EntryRow>;
+			if (items is null) return;
+
+			foreach (EntryRow item in items)
 			{
-				EntryRow? er = item.Content as EntryRow;
 				// this means that the item is not in the entries hashtable
-				if (er?.ID is null or 0)
+				if (item.ID is null or 0)
 				{
 				}
 				else
 				{
-					Hashtable entry = entries.TakeWhere(e => e.Value is Hashtable ht && (ht["id"] as int?) == er?.ID);
+					//Hashtable entry = entries.TakeWhere(e => e.Value is Hashtable ht && (ht["id"] as int?) == item.ID);
 				}
 			}
 
@@ -539,27 +534,27 @@ namespace HackPDM.Forms.Hack
 			else files = FileOperations.FilesInDirectory(path);
 			return files;
 		}
-		private void AddRemoteEntries(Hashtable entries, Dictionary<string, Task<HackFile>> hackFileMap)
+		private async void AddRemoteEntries(Hashtable entries, Dictionary<string, Task<HackFile>> hackFileMap)
 		{
 #if DEBUG
 			stopwatch = Stopwatch.StartNew();
 #endif
 			foreach (DictionaryEntry pair in entries)
 			{
-				AddRemoteEntry(pair, hackFileMap);
+				await AddRemoteEntry(pair, hackFileMap);
 			}
 #if DEBUG
 			stopwatch.Stop();
 			Console.WriteLine($"remote entries time: {stopwatch.Elapsed}");
 #endif
 		}
-		private async void AddRemoteEntry(DictionaryEntry pair, Dictionary<string, Task<HackFile>> hackFileMap)
+		private async Task AddRemoteEntry(DictionaryEntry pair, Dictionary<string, Task<HackFile>> hackFileMap)
 		{
 			if (pair.Value is not Hashtable table) return;
 
 			//ListViewItem item = EmptyListItemInternal(OdooEntryList);
 			EntryRow item =	new();
-			item.ID = (int)table["id"];
+			item.ID = table["id"] as int?;
 
 			//item.SubItems.Add(((int)table["id"]).ToString());
 			item.Name = pair.Key.ToString();
@@ -571,13 +566,14 @@ namespace HackPDM.Forms.Hack
 			item.Size = Convert.ToInt64(table["size"]);
 
 
-			string? checkout = (string)table["checkout"];
+			string? checkout = table["checkout"] as string;
 			item.Checkout = checkout is null or "False:False" ? null : OdooDefaults.IDToUser.TryGetValue(int.TryParse(checkout.Split(":")?[0], out int ID) ? ID : 0, out HpUser? user) ? user : null;
 
 			// check if latest checksum
 			string status = "";
-			string fullName = (string)table["fullname"];
-			HackFile hack = hackFileMap[fullName].Result;
+			string? fullName = table["fullname"] as string;
+			HackFile hack = null;
+			if (!string.IsNullOrWhiteSpace(fullName)) hack = hackFileMap[fullName].Result; 
 
 			//string latest = EmptyPlaceholder;
 			string datePlace = table["latest_date"] is not string latest ? EmptyPlaceholder : latest;
@@ -673,7 +669,7 @@ namespace HackPDM.Forms.Hack
 
 					if (imgExt == null)
 					{
-						imgExt = (BitmapImage?)Assets.GetImage("default");
+						imgExt = Assets.GetImage("default") as BitmapImage;
 					}
 					//else
 					//{
@@ -702,7 +698,7 @@ namespace HackPDM.Forms.Hack
 					}
 				}
 			}
-			item.ImageKey = strKey;
+			item.Icon = Assets.GetImage(strKey) as BitmapImage;
 
 			item.Status = Enum.Parse<FileStatus>(status, true);
 			string category = table["category"] is string cat ? cat : EmptyPlaceholder;
@@ -710,9 +706,9 @@ namespace HackPDM.Forms.Hack
 			
 			item.FullName = fullName;
 
-			SafeInvoke(OdooEntryList, () => OdooEntryList.Items.Add(item));
+			SafeInvoker(OdooEntryList, () => OdooEntryList.Items.Add(item));
 		}
-		private void AddLocalEntries(TreeViewNode node, Dictionary<string, Task<HackFile>> hackFileMap = null)
+		private async void AddLocalEntries(TreeViewNode node, Dictionary<string, Task<HackFile>> hackFileMap = null)
 		{
 #if DEBUG
 			stopwatch = Stopwatch.StartNew();
@@ -723,7 +719,7 @@ namespace HackPDM.Forms.Hack
 			if (files is null) return;
 			foreach (HackFile file in files)
 			{
-				AddLocalEntry(node, file);
+				await AddLocalEntry(node, file);
 			}
 
 #if DEBUG
@@ -731,7 +727,7 @@ namespace HackPDM.Forms.Hack
 			Console.WriteLine($"local entries time: {stopwatch.Elapsed}");
 #endif
 		}
-		private void AddLocalEntry(TreeViewNode node, HackFile file)
+		private async Task AddLocalEntry(TreeViewNode node, HackFile file)
 		{
 			if (file is null) return;
 			string type = file.TypeExt.ToLower();
@@ -765,24 +761,32 @@ namespace HackPDM.Forms.Hack
 
 			// get or add image key
 			string strKey = $"{type}.{status}";
+			BitmapImage? image = Assets.GetImage(strKey) as BitmapImage;
 
-			if (ListIcons.Images[strKey] == null)
+			if (image == null)
 			{
 				// image key not present in ilListIcons
-				Image imgExt = ListIcons.Images[type];
+				BitmapImage? imgExt = Assets.GetImage(item.Type) as BitmapImage;
 				if (imgExt == null)
 				{
-
 					// get remote image
-					if (hpType?.icon != null)
+					imgExt = new();
+					using var stream = new InMemoryRandomAccessStream();
+					using var writer = new DataWriter(stream);
+					try
 					{
 						byte[] imgBytes = FileOperations.ConvertFromBase64(hpType.icon);
-						MemoryStream ms = new();
-						ms.Write(imgBytes, 0, imgBytes.Length);
-						imgExt = Image.FromStream(ms);
+						writer.WriteBytes(imgBytes);
+						await writer.StoreAsync();
+						await writer.FlushAsync();
+						writer.DetachStream();
+
+						stream.Seek(0);
+						await imgExt.SetSourceAsync(stream);
 					}
-
-
+					catch
+					{
+					}
 					//string extPath = Path.Combine(ExtensionIconPath, $"{type}.png");
 					//if ( File.Exists( extPath ) )
 					//{
@@ -791,21 +795,17 @@ namespace HackPDM.Forms.Hack
 
 					if (imgExt == null)
 					{
-						imgExt = ListIcons.Images["default"];
-					}
-					else
-					{
-						ListIcons.Images.Add(type, imgExt);
+						imgExt = Assets.GetImage("default") as BitmapImage;
 					}
 				}
 
 				// get status image
-				Image imgStatus = ListIcons.Images[status];
+				BitmapImage? imgStatus = Assets.GetImage(status) as BitmapImage;
 
 				// combine images
 				if (imgExt is not null && imgStatus is not null)
 				{
-					ListIcons.Images.Add(strKey, ImageUtils.ImageOverlay(imgExt, imgStatus));
+					Assets.SetImage(strKey, (await ImageUtils.OverlayBitmapImagesAsync(imgExt, imgStatus)));
 				}
 				else
 				{
@@ -813,11 +813,11 @@ namespace HackPDM.Forms.Hack
 				}
 			}
 
-			item.ImageKey = strKey;
+			item.Icon = Assets.GetImage(strKey) as BitmapImage;
 
 
 			item.Checkout = null;
-			HpCategory nameCategory = OdooDefaults.ExtToCat.TryGetValue($".{type}", out var cat) ? cat : null;
+			HpCategory? nameCategory = OdooDefaults.ExtToCat.TryGetValue($".{type}", out var cat) ? cat : null;
 			item.Category = nameCategory;
 			item.FullName = file.FullPath;
 
@@ -835,16 +835,14 @@ namespace HackPDM.Forms.Hack
 			List<HpVersionProperty[]> versionProperties = [];
 			(HpVersion[], HpVersion[]) versionsRelation = ([], []);
 
-			bool success = int.TryParse(item.Text, out int ID);
-
-			if (!success)
-				return;
+			var entry = item.Content as EntryRow;
+			if (entry is null) return;
 
 
 			Task historyAndProperties = Task.Run(() =>
 			{
 				// get history list
-				versions = GetVersionsForEntry(ID, ["preview_image", "file_contents"], insertedFields: ["create_uid"]);
+				versions = GetVersionsForEntry(entry.ID ?? 0, ["preview_image", "file_contents"], insertedFields: ["create_uid"]);
 			})
 			.ContinueWith(task1 =>
 			{
@@ -854,7 +852,7 @@ namespace HackPDM.Forms.Hack
 				}
 			});
 
-			int? versionID = (int?)HpEntry.GetFieldValue(ID, "latest_version_id");
+			int? versionID = (int?)HpEntry.GetFieldValue(entry.ID ?? 0, "latest_version_id");
 			Task ParentTask = Task.Run(() =>
 			{
 				if (versionID != null)
@@ -929,10 +927,10 @@ namespace HackPDM.Forms.Hack
 				}
 			}
 		}
-		private async void UpdateListAsync(ListView list, ListViewItem item)
+		private async void UpdateListAsync<T>(ListView list, T item)
 		{
 			await Task.Yield();
-			SafeInvoke(list, () => list.Items.Add(item));
+			SafeInvoker(list, () => list.Items.Add(item));
 		}
 		private HpVersion[] GetVersionsForEntry(int EntryID, string[] excludedFields = null, string[] insertedFields = null)
 		{
@@ -984,7 +982,7 @@ namespace HackPDM.Forms.Hack
 			{
 
 				if (allProperties == null) return;
-				SafeInvokeGeneric(OdooProperties, allProperties, (allp) =>
+				SafeInvokeGen(OdooProperties, allProperties, (allp) =>
 				{
 					InitListViewInternal(OdooProperties, ColumnMap.PropertiesRows);
 					foreach (HpVersionProperty[] versionProperties in allp)
@@ -995,39 +993,22 @@ namespace HackPDM.Forms.Hack
 						{
 							if (versionProp == null || versionProp.ID == 0) continue;
 
-							ListViewItem item = EmptyListItemInternal(OdooProperties);
+							var item = EmptyListItemInternal<PropertiesRow>(OdooProperties);
 
-							item.SubItems[NameConfig.PropertiesVersion.Name].Text = versionProp.version_id.ToString();
-							item.SubItems[NameConfig.PropertiesConfiguration.Name].Text = versionProp.sw_config_name ?? EmptyPlaceholder;
-							item.SubItems[NameConfig.PropertiesName.Name].Text = versionProp.prop_name ?? EmptyPlaceholder;
-							item.SubItems[NameConfig.PropertiesProperty.Name].Text = versionProp.prop_id.ToString();
+							item.Version = versionProp.version_id;
+							item.Configuration = versionProp.sw_config_name;
+							item.Name = versionProp.prop_name;
+							item.Property = versionProp.prop_id;
 
-							string type = null;
-							string value = null;
-
-							if (versionProp.IsText(out string text))
+							item.Type = versionProp.GetValueType();
+							item.ValueData = item.Type switch
 							{
-								type = "Text";
-								value = text;
-							}
-							else if (versionProp.IsNumber(out float number))
-							{
-								type = "Number";
-								value = number.ToString();
-							}
-							else if (versionProp.IsDate(out string date))
-							{
-								type = "Date";
-								value = date.ToString();
-							}
-							else
-							{
-								type = "YesNo";
-								versionProp.IsYesNo(out bool yesNo);
-								value = yesNo ? "Yes" : "No";
-							}
-							item.SubItems[NameConfig.PropertiesValue.Name].Text = value;
-							item.SubItems[NameConfig.PropertiesType.Name].Text = type;
+								HpVersionProperty.PropertyType.yesno => versionProp.yesno_value,
+								HpVersionProperty.PropertyType.number => versionProp.number_value,
+								HpVersionProperty.PropertyType.text => versionProp.text_value,
+								HpVersionProperty.PropertyType.date => versionProp.date_value,
+								_ => null,
+							};
 
 							OdooProperties.Items.Add(item);
 						}
@@ -1044,15 +1025,15 @@ namespace HackPDM.Forms.Hack
 			{
 
 				if (versions == null) return;
-				SafeInvokeGeneric(OdooChildren, versions, (v) =>
+				SafeInvokeGen(OdooChildren, versions, (v) =>
 				{
 					InitListViewInternal(OdooChildren, ColumnMap.ChildrenRows);
 					foreach (HpVersion version in v)
 					{
-						ListViewItem item = EmptyListItemInternal(OdooChildren);
-						item.SubItems[NameConfig.ChildrenVersion.Name].Text = version.ID.ToString();
-						item.SubItems[NameConfig.ChildrenName.Name].Text = version.name;
-						item.SubItems[NameConfig.ChildrenBasePath.Name].Text = Path.Combine(/*HackDefaults.PWAPathAbsolute,*/ version.winPathway);
+						var item = EmptyListItemInternal<ChildrenRow>(OdooChildren);
+						item.Version = version.ID;
+						item.Name = version.name;
+						item.BasePath = Path.Combine(/*HackDefaults.PWAPathAbsolute,*/ version.winPathway);
 						OdooChildren.Items.Add(item);
 					}
 				});
@@ -1067,15 +1048,15 @@ namespace HackPDM.Forms.Hack
 			{
 
 				if (versions == null) return;
-				SafeInvokeGeneric(OdooParents, versions, (v) =>
+				SafeInvokeGen(OdooParents, versions, (v) =>
 				{
 					InitListViewInternal(OdooParents, ColumnMap.ParentRows);
 					foreach (HpVersion version in v)
 					{
-						ListViewItem item = EmptyListItemInternal(OdooParents);
-						item.SubItems[NameConfig.ParentVersion.Name].Text = version.ID.ToString();
-						item.SubItems[NameConfig.ParentName.Name].Text = version.name;
-						item.SubItems[NameConfig.ParentBasePath.Name].Text = version.winPathway;
+						var item = EmptyListItemInternal<ParentRow>(OdooParents);
+						item.Version = version.ID;
+						item.Name = version.name;
+						item.BasePath = version.winPathway;
 
 						OdooParents.Items.Add(item);
 					}
@@ -1094,26 +1075,26 @@ namespace HackPDM.Forms.Hack
 			{
 
 				if (versions == null) return;
-				SafeInvokeGeneric(OdooHistory, versions, (v) =>
+				SafeInvokeGen(OdooHistory, versions, (v) =>
 				{
 					InitListViewInternal(OdooHistory, ColumnMap.HistoryRows);
 					foreach (HpVersion version in v)
 					{
-						ListViewItem item = EmptyListItemInternal(OdooHistory);
+						var item = EmptyListItemInternal<HistoryRow>(OdooHistory);
 
-						item.SubItems[NameConfig.HistoryVersion.Name].Text = version.ID.ToString();
-						string moduser = EmptyPlaceholder;
+						item.Version = version.ID;
+						int? moduser = null;
 						if (version.HashedValues.TryGetValue("create_uid", out object obj))
 						{
 							if (obj is ArrayList al && al is not null)
 							{
-								moduser = $"{al[1]} : {al[0]}";
+								moduser = al[0] as int?;
 							}
 						}
-						item.SubItems[NameConfig.HistoryModUser.Name].Text = moduser;
-						item.SubItems[NameConfig.HistoryModDate.Name].Text = version.file_modify_stamp?.ToShortDateString();
-						item.SubItems[NameConfig.HistorySize.Name].Text = version.file_size?.ToString();
-						item.SubItems[NameConfig.HistoryRelDate.Name].Text = EmptyPlaceholder;
+						if (moduser is not null) item.ModUser = OdooDefaults.IDToUser.TryGetValue(moduser ?? 0, out var user) ? user : null;
+						item.ModDate = version.file_modify_stamp;
+						item.Size = version.file_size as long?;
+						item.RelDate = null;
 
 						OdooHistory.Items.Add(item);
 					}
@@ -1130,30 +1111,24 @@ namespace HackPDM.Forms.Hack
 
 
 				if (version == null) return;
-				SafeInvokeGeneric(OdooVersionInfoList, version, (v) =>
+				SafeInvokeGen(OdooVersionInfoList, version, (v) =>
 				{
 					InitListViewInternal(OdooVersionInfoList, ColumnMap.VersionInfoRows);
-					ListViewItem item = EmptyListItemInternal(OdooVersionInfoList);
+					var item = EmptyListItemInternal<VersionRow>(OdooVersionInfoList);
 
-					item.SubItems[NameConfig.VersionID.Name].Text = version.ID.ToString();
-					item.SubItems[NameConfig.VersionName.Name].Text = version.name;
-					item.SubItems[NameConfig.VersionChecksum.Name].Text = version.checksum;
-					item.SubItems[NameConfig.VersionFileSize.Name].Text = FileOperations.FileSizeReformat(version.file_size);
-					item.SubItems[NameConfig.VersionDirectoryID.Name].Text = version.dir_id?.ToString();
-					item.SubItems[NameConfig.VersionNodeID.Name].Text = version.node_id?.ToString();
-					item.SubItems[NameConfig.VersionEntryID.Name].Text = version.entry_id?.ToString();
-					item.SubItems[NameConfig.VersionAttachmentID.Name].Text = version.attachment_id?.ToString();
-					item.SubItems[NameConfig.VersionModifyDate.Name].Text = version.file_modify_stamp?.ToShortDateString();
-					string path;
-					if (version.HashedValues != null && version.HashedValues.ContainsKey("dir_id"))
-					{
-						path = ((ArrayList)version.HashedValues["dir_id"])[1].ToString();
-					}
-					else
-					{
-						path = "Not Found";
-					}
-					item.SubItems[NameConfig.VersionOdooCompletePath.Name].Text = path;
+					item.ID = version.ID;
+					item.Name = version.name;
+					item.Checksum = version.checksum;
+					item.FileSize = version.file_size;
+					item.DirectoryID = version.dir_id;
+					item.NodeID = version.node_id;
+					item.EntryID = version.entry_id;
+					item.AttachmentID = version.attachment_id;
+					item.ModifyDate = version.file_modify_stamp;
+					string? path = version.HashedValues != null && version.HashedValues.ContainsKey("dir_id")
+						? ((version.HashedValues["dir_id"] as ArrayList)?[1].ToString())
+						: "Not Found";
+					item.OdooCompletePath = path;
 
 					OdooVersionInfoList.Items.Add(item);
 				});
@@ -1168,23 +1143,15 @@ namespace HackPDM.Forms.Hack
 			{
 				Position = 0
 			};
-			OdooEntryImage.Image = Image.FromStream(ms);
+			OdooEntryImage.Source = Assets.GetBitmapFromBytes(previewImageBytes);
 		}
-		private void PreviewImage(int HpVersionID)
+		private void PreviewImage(int? HpVersionID)
 		{
 			const string previewImage = "preview_image";
-			//string previewImageB64 = null;
+			if (HpVersionID is null || HpVersionID == 0) return;
 
-			if (HpVersionID != 0)
-			{
-				//ArrayList result = OClient.Read(HpVersion.GetHpModel(), [HpVersionID], [previewImage]);
-				//Hashtable ht = (Hashtable)result[0];
-				//object value = ht[previewImage];
-				//previewImageB64 = value is string str ? str : null;
-
-				HpVersion version = HpVersion.GetRecordsByIDS([HpVersionID], includedFields: [previewImage]).FirstOrDefault();
-				PreviewImage(version);
-			}
+			HpVersion version = HpVersion.GetRecordsByIDS([HpVersionID], includedFields: [previewImage]).FirstOrDefault();
+			PreviewImage(version);
 		}
 		#endregion
 
@@ -1231,12 +1198,12 @@ namespace HackPDM.Forms.Hack
 			// section for checking if the existing remote file already has a version with the same checksum 
 			// or possibly an entry that has a newer version from that which is downloaded locally
 
-			ConcurrentBag<HpEntry> entries = Arguments.Item1.ConvertToBag();
+			ConcurrentBag<HpEntry> entries = Arguments.Item1.ToConcurrentBag();
 			ConcurrentSet<HackFile> hackFiles = Arguments.Item2;
 
 
 			// testing filter hacks..
-			if (entries is not null && entries.Count > 0)
+			if (entries is not null && !entries.IsEmpty)
 				entries = await FilterCommitEntries(entries);
 			else entries = new();
 
@@ -1359,7 +1326,7 @@ namespace HackPDM.Forms.Hack
 
 			// using DeleteEntry also deletes entries, versions, version props, version relationships, and ir attachment records
 			DialogResult result = MessageBox.Show($"Are you sure you want to permanently delete {ids.Count} entries from the database?\n" +
-				$"This will also permanently delete all associative versions, version properties, and version relationships", "Delete Entries and Other Records?", MessageBoxButtons.YesNoCancel);
+				$"This will also permanently delete all associative versions, version properties, and version relationships", "Delete Entries and Other Records?", MessageBoxType.YesNoCancel);
 
 			if (result is not DialogResult.Yes and not DialogResult.OK) return;
 
@@ -1371,7 +1338,7 @@ namespace HackPDM.Forms.Hack
 			}
 			else
 			{
-				MessageBox.Show("Was unable to delete entries", "Error", MessageBoxButtons.OKCancel, MessageBoxIcon.Error);
+				MessageBox.Show("Was unable to delete entries", "Error", type:MessageBoxType.OKCancel, icon:MessageBoxIcon.Error);
 				return;
 			}
 
@@ -1574,7 +1541,7 @@ namespace HackPDM.Forms.Hack
 				{
 					return taskPredicate.Result == null;
 				},
-				taskSelect => taskSelect.Result).ConvertToBag();
+				taskSelect => taskSelect.Result).ToConcurrentBag();
 		}
 		private async Task<ConcurrentSet<HackFile>> FilterCommitHackFiles(ConcurrentSet<HackFile> hackFiles)
 		{
@@ -1752,7 +1719,7 @@ namespace HackPDM.Forms.Hack
 			await Dialog.ShowWait("Get Latest");
 			object lockObject = new();
 
-			TreeNode tnCurrent = LastSelectedNode;
+			TreeViewNode? tnCurrent = LastSelectedNode;
 
 			if (tnCurrent == null)
 			{
@@ -1763,7 +1730,7 @@ namespace HackPDM.Forms.Hack
 			// directory only needs ID set to find that record's entries
 			HpDirectory directory = new("temp")
 			{
-				ID = (int)tnCurrent.Tag
+				ID = tnCurrent.LinkedData.DirectoryID ?? 0
 			};
 
 			lock (lockObject)
@@ -1778,12 +1745,12 @@ namespace HackPDM.Forms.Hack
 
 		#region Form Event Handlers
 		// after select events
-		private async void OdooDirectoryTree_AfterSelect(object sender, TreeViewEventArgs e)
+		private async void OdooDirectoryTree_SelectionChanged(TreeView sender, TreeViewSelectionChangedEventArgs args)
 		{
 			queuedTreeChange = (null, null);
 			if (TreeItemChange is not null and { IsCompleted: false })
 			{
-				queuedTreeChange = (sender, e);
+				queuedTreeChange = (sender, args);
 				return;
 			}
 
@@ -1792,18 +1759,18 @@ namespace HackPDM.Forms.Hack
 				cSource.Cancel();
 				cTreeSource = new();
 				// Store the currently selected node
-				LastSelectedNode = e.Node;
-				LastSelectedNodePath = e.Node.FullPath;
+				LastSelectedNode = args.AddedItems.First() as TreeViewNode;
+				LastSelectedNodePath = LastSelectedNode?.LinkedData.FullPath;
 				TreeItemChange = TreeSelectItem(LastSelectedNode, cTreeSource.Token);
 				await TreeItemChange;
-				if (queuedTreeChange.sender != null && queuedTreeChange.e != null)
+				if (queuedTreeChange.sender != null && queuedTreeChange.args != null)
 				{
-					OdooDirectoryTree_AfterSelect(sender, e);
+					OdooDirectoryTree_SelectionChanged(sender, args);
 				}
 			}
 		}
 		// item selection change events
-		private async void OdooEntryList_ItemSelectionChanged(object sender, ListViewItemSelectionChangedEventArgs e)
+		private async void OdooEntryList_SelectionChanged(object sender, SelectionChangedEventArgs e)
 		{
 			if (OdooEntryList.SelectedItems.Count > 1)
 				return;
@@ -1817,15 +1784,15 @@ namespace HackPDM.Forms.Hack
 			if (OdooEntryList.SelectedItems.Count == 0)
 				return;
 
-			OdooEntryImage.Image = null;
+			OdooEntryImage.Source = null;
 			if (EntryListChange is null or { IsCompleted: true })
 			{
 				cSource = new();
-				EntryListChange = Async_ListItemChange(e.Item, cSource.Token);
+				EntryListChange = Async_ListItemChange((e.AddedItems.First() as EntryRow)?.Node, cSource.Token);
 				await EntryListChange;
 				if (queuedEntryChange.sender != null && queuedEntryChange.e != null)
 				{
-					OdooEntryList_ItemSelectionChanged(queuedEntryChange.sender, queuedEntryChange.e);
+					OdooEntryList_SelectionChanged(queuedEntryChange.sender, queuedEntryChange.e);
 				}
 			}
 		}
@@ -1891,11 +1858,10 @@ namespace HackPDM.Forms.Hack
 		{
 			Dialog = new StatusDialog();
 
-			int dir_id = (int)LastSelectedNode.Tag;
-			string pathway = LastSelectedNodePath.Length < 5 ? HackDefaults.PWAPathAbsolute : Path.Combine(HackDefaults.PWAPathAbsolute, LastSelectedNodePath[5..]);
+			string pathway = LastSelectedNodePath?.Length < 5 ? HackDefaults.PWAPathAbsolute : Path.Combine(HackDefaults.PWAPathAbsolute, LastSelectedNodePath?[5..] ?? "");
 			HpDirectory HpDirectory;
-
-			if (dir_id == 0)
+			TreeData? dat = LastSelectedNode?.LinkedData;
+			if (dat?.DirectoryID is not null and not 0)
 			{
 				List<string> paths = [];
 				EndNodePaths(LastSelectedNode, paths);
@@ -1909,7 +1875,7 @@ namespace HackPDM.Forms.Hack
 					await HpDirectory.CreateNew(splitPaths);
 				}
 			}
-			else HpDirectory = new() { ID = dir_id };
+			else HpDirectory = new() { ID = dat?.DirectoryID ?? 0 };
 
 			ArrayList entryIDs = HpDirectory.GetDirectoryEntryIDs(HpDirectory.ID, true);
 
@@ -2586,15 +2552,7 @@ namespace HackPDM.Forms.Hack
 			else
 				page.Text = text;
 		}
-		internal void InvokeControls<T>(params (Control control, T data, Action<T> action)[] values)
-		{
-			foreach (var value in values)
-			{
-				SafeInvokeGeneric<T>(value.control, value.data, value.action);
-			}
-		}
-		internal void SafeInvokeGeneric<T>(Control control, T data, Action<T> action)
-			=> SafeInvokeGen(control, data, action);
+
 		internal static void SafeInvokeGen<T>(Control control, T data, Action<T> action)
 		{
 			if (control.InvokeRequired)
@@ -2602,8 +2560,7 @@ namespace HackPDM.Forms.Hack
 			else
 				action.Invoke(data);
 		}
-		internal void SafeInvoke(Control control, Action action)
-			=> SafeInvoker(control, action);
+
 		internal static void SafeInvoker(Control control, Action action)
 		{
 			if (control.InvokeRequired)
@@ -2611,8 +2568,6 @@ namespace HackPDM.Forms.Hack
 			else
 				action.Invoke();
 		}
-		internal ImageList GetImageList()
-			=> ListIcons;
 		private void OpenLocalFile(string path)
 		{
 			FileOperations.OpenFile(path);
@@ -2630,11 +2585,8 @@ namespace HackPDM.Forms.Hack
 		}
 		private void PreviewImageSelection(ListViewItem item, string nameConfigID)
 		{
-			string textID = item.SubItems[nameConfigID].Text;
-			if (int.TryParse(textID, out int result))
-			{
-				PreviewImage(result);
-			}
+			var dat = item.Content as EntryRow;
+			if (dat?.ID is not null) PreviewImage(dat?.ID);
 		}
 		public async Task FindSearchSelectionAsync(string pwaPath, string fileName, string delimiter = "\\")
 		{
@@ -2790,15 +2742,15 @@ namespace HackPDM.Forms.Hack
 			}
 			return null;
 		}
-		private void EndNodePaths(TreeNode node, in List<string> paths)
+		private void EndNodePaths(TreeViewNode node, in List<string> paths)
 		{
-			if (node.Nodes.Count == 0)
+			if (node.Children.Count == 0)
 			{
-				paths.Add(node.FullPath);
+				paths.Add(node.LinkedData.FullPath ?? "");
 			}
 			else
 			{
-				foreach (TreeNode cNode in node.Nodes)
+				foreach (TreeViewNode cNode in node.Children)
 				{
 					EndNodePaths(cNode, paths);
 				}

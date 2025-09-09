@@ -13,11 +13,14 @@ using HackPDM.Src.Extensions.Controls;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Imaging;
 
+using static HackPDM.HpVersionProperty;
+
 namespace HackPDM.Data
 {
     public class EntryRow : IListItem<EntryRow>, IRowData
     {
-        public int?          ID         { get; set; }
+        public BitmapImage? Icon        { get; set; } = Assets.GetImage("file-icon_32") as BitmapImage;
+		public int?          ID         { get; set; }
         public string?      Name        { get; set; }
         public string?      Type        { get; set; }
         public long?         Size       { get; set; }
@@ -36,7 +39,7 @@ namespace HackPDM.Data
         public int          Version     { get; set; }
         public HpUser?      ModUser     { get; set; }
         public DateTime?    ModDate     { get; set; }
-        public long         Size        { get; set; }
+        public long?         Size        { get; set; }
         public DateTime?    RelDate     { get; set; }
 		public HistoryRow? Value { get; }
 		public bool IsSelected { get; set; }
@@ -60,10 +63,11 @@ namespace HackPDM.Data
     public class PropertiesRow : IListItem<PropertiesRow>, IRowData
     {
         public int          Version     { get; set; }
-        public string?      Configuration {  get; set; }
+        public int?         Property    { get; set; }
+        public string?      Configuration{  get; set; }
         public string?      Name        { get; set; }
-        public string?      Property    { get; set; }
-        public string?      Type        { get; set; }
+        public PropertyType?Type        { get; set; }
+        public object?      ValueData       { get; set; }
 		public PropertiesRow? Value { get; }
 		public bool IsSelected { get; set; }
 	}
@@ -71,11 +75,11 @@ namespace HackPDM.Data
     {
         public int ID { get; set; }
         public string? Name { get; set; }
-        public long FileSize { get; set; }
-        public int DirectoryID { get; set; }
-        public int NodeID { get; set; }
-        public int EntryID { get; set; }
-        public int AttachmentID { get; set; }
+        public long? FileSize { get; set; }
+        public int? DirectoryID { get; set; }
+        public int? NodeID { get; set; }
+        public int? EntryID { get; set; }
+        public int? AttachmentID { get; set; }
         public DateTime? ModifyDate { get; set; }
         public string? Checksum { get; set; }
         public string? OdooCompletePath { get; set; }

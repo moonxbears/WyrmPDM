@@ -4,7 +4,7 @@ using System.Data;
 using System.Diagnostics;
 using System.Linq;
 
-using HackPDM.Extensions.General;
+using HackPDM.Src.Extensions.General;
 
 
 //using static System.Net.Mime.MediaTypeNames;
@@ -50,7 +50,8 @@ namespace HackPDM
             if (yesno_value != default) return PropertyType.yesno;
             return PropertyType.none;
         }
-        public bool IsText( out string text )
+        
+		public bool IsText( out string text )
         {
             PropertyType pType = GetValueType();
             text = null;

@@ -1,22 +1,28 @@
 ﻿
 using System.Collections.Generic;
+using System.Linq;
 
 using HackPDM.Properties;
 
+using Microsoft.UI.Xaml.Media;
+using Microsoft.Graphics.Canvas.Text;
 using Windows.UI;
+using Microsoft.UI.Xaml.Controls;
+using System;
+using System.Diagnostics;
 
 namespace HackPDM.ClientUtils
 {
     public static class ThemePreset
     {
-        
-        public static readonly Theme DefaultTheme = new()
+        public static List<string> Fonts { get; } = [.. CanvasTextFormat.GetSystemFontFamilies().OrderBy(f => f)];
+		public static readonly Theme DefaultTheme = new()
         {
             Name = "Default",
-            BackgroundColor =,
-            SecondaryBackgroundColor = Color.White,
-            ForegroundColor = Color.Black,
-            FontFamily = "Segoe UI",
+            BackgroundColor = Color.FromArgb(255, 235, 235, 235),
+            SecondaryBackgroundColor = Color.FromArgb(255, 255, 255, 255),
+			ForegroundColor = Color.FromArgb(255, 0, 0, 0),
+			FontFamily = "Segoe UI",
             FontSize = 10,
             IsDarkMode = false,
             IsActive = true // set as active by default
@@ -35,10 +41,10 @@ namespace HackPDM.ClientUtils
         public static readonly Theme LightTheme = new()
         {
             Name = "Light",
-            BackgroundColor = Color.White,
-            SecondaryBackgroundColor = Color.FromArgb(255, 255, 255, 255),
-            ForegroundColor = Color.Black,
-            FontFamily = "Segoe UI",
+            BackgroundColor = Color.FromArgb(255, 255, 255, 255),
+			SecondaryBackgroundColor = Color.FromArgb(255, 255, 255, 255),
+            ForegroundColor = Color.FromArgb(255, 0, 0, 0),
+			FontFamily = "Segoe UI",
             FontSize = 10,
             IsDarkMode = false,
             IsActive = false
@@ -46,39 +52,33 @@ namespace HackPDM.ClientUtils
         
         public static void AddThemes(params Theme[] themes)
         {
-            Debug.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(new ThemeRoot { Themes = [.. themes] }));
             if (themes == null || themes.Length == 0) throw new ArgumentNullException(nameof(themes), "No themes provided to add.");
-            string jsonTheme = Settings.Get<Theme>("Theme");
-            ThemeRoot themeRoot = Newtonsoft.Json.JsonConvert.DeserializeObject<ThemeRoot>(jsonTheme) ?? new ThemeRoot { Themes = [] };
-            foreach (var theme in themes)
+			ThemeRoot savedThemes = Settings.Get<ThemeRoot>("SavedThemes") ?? new();
+			foreach (var theme in themes)
             {
                 if (!ValidTheme(theme)) continue; // skip invalid themes
-                if (themeRoot.Themes.Any(t => t.Id == theme.Id)) continue; // skip existing themes
+                if (savedThemes?.Themes.Any(t => t.Id == theme.Id) == true) continue; // skip existing themes
                 theme.IsActive = false; // set new theme as inactive by default
-                themeRoot.Themes.Add(theme);
+                savedThemes?.Themes.Add(theme);
             }
-            string themeStr = Newtonsoft.Json.JsonConvert.SerializeObject(themeRoot);
-            HackPDM.Properties.AppSettings.Default.Theme = themeStr;
-            HackPDM.Properties.AppSettings.Default.Save();
-        }
+			Settings.Set("SavedThemes", savedThemes);
+		}
         public static void ClearThemes()
         {
-            HackPDM.Properties.AppSettings.Default.Theme = Newtonsoft.Json.JsonConvert.SerializeObject(new ThemeRoot { Themes = [] });
-            HackPDM.Properties.AppSettings.Default.Save();
-        }
+			Settings.Set<ThemeRoot>("SavedThemes", new());
+		}
         public static void SetTheme(Theme theme)
         {
             if (theme == null) throw new ArgumentNullException(nameof(theme));
 
-            string jsonTheme = HackPDM.Properties.AppSettings.Default.Theme;
-            ThemeRoot themeRoot = Newtonsoft.Json.JsonConvert.DeserializeObject<ThemeRoot>(jsonTheme);
-            if (!ValidTheme(theme)) return;
+			ThemeRoot? themes = Settings.Get<ThemeRoot>("SavedThemes");
+			if (!ValidTheme(theme)) return;
 
             // set theme properties
             bool isFound = false;
             theme.IsActive = true;
 
-            themeRoot.Themes.ForEach(t =>
+            themes?.Themes.ForEach(t =>
             {
                 if (t.Name == theme.Name)
                 {
@@ -90,33 +90,28 @@ namespace HackPDM.ClientUtils
                 }
             });
             
-            ThemeRoot themes = new()
+            ThemeRoot newThemes = new()
             {
-                Themes = isFound ? [.. themeRoot.Themes] : [.. themeRoot.Themes, theme]
+                Themes = isFound ? [.. themes?.Themes ?? []] : [..themes?.Themes ?? [], theme],
             };
-            string themeStr = Newtonsoft.Json.JsonConvert.SerializeObject(themes);
-            HackPDM.Properties.AppSettings.Default.Theme = themeStr;
-            HackPDM.Properties.AppSettings.Default.Save();
-        }
+			Settings.Set("SavedThemes", newThemes);
+		}
         public static Theme GetTheme(string presetName)
         {
-            string jsonTheme = HackPDM.Properties.AppSettings.Default.Theme;
-            ThemeRoot themeRoot = Newtonsoft.Json.JsonConvert.DeserializeObject<ThemeRoot>(jsonTheme);
-            return themeRoot?.Themes.First(theme => theme.Name == presetName) ?? DefaultTheme;
+			ThemeRoot? themes = Settings.Get<ThemeRoot>("SavedThemes");
+			return themes?.Themes.First(theme => theme.Name == presetName) ?? DefaultTheme;
         }
         public static Theme GetCurrentTheme()
         {
-            string jsonTheme = HackPDM.Properties.AppSettings.Default.Theme;
-            ThemeRoot themeRoot = Newtonsoft.Json.JsonConvert.DeserializeObject<ThemeRoot>(jsonTheme);
-            if (string.IsNullOrEmpty(jsonTheme) || !themeRoot.HasThemes())
+			ThemeRoot? themes = Settings.Get<ThemeRoot>("SavedThemes");
+			if (themes is not null && themes.HasThemes())
             {
                 AddThemes(DefaultTheme, DarkTheme, LightTheme); // ensure default themes are added if none exist
-                jsonTheme = HackPDM.Properties.AppSettings.Default.Theme; // re-fetch after adding defaults
             }
-            themeRoot = Newtonsoft.Json.JsonConvert.DeserializeObject<ThemeRoot>(jsonTheme);
-            try
+			themes = Settings.Get<ThemeRoot>("SavedThemes");
+			try
             {
-                return themeRoot?.Themes.First(theme => theme.IsActive == true) ?? DefaultTheme;
+                return themes?.Themes.First(theme => theme.IsActive == true) ?? DefaultTheme;
             }
             catch
             {
@@ -125,21 +120,20 @@ namespace HackPDM.ClientUtils
         }
         public static bool AnyActiveThemes()
         {
-            string jsonTheme = HackPDM.Properties.AppSettings.Default.Theme;
-            ThemeRoot themeRoot = Newtonsoft.Json.JsonConvert.DeserializeObject<ThemeRoot>(jsonTheme);
-            return themeRoot?.Themes.Any(theme => theme.IsActive) == true;
+			ThemeRoot? themes = Settings.Get<ThemeRoot>("SavedThemes");
+            return themes?.Themes.Any(theme => theme.IsActive) == true;
         }
         
         public static bool ValidTheme(Theme theme)
         {
-            string jsonTheme = HackPDM.Properties.AppSettings.Default.Theme;
-            ThemeRoot themeRoot = string.IsNullOrEmpty(jsonTheme) ? new ThemeRoot { } : Newtonsoft.Json.JsonConvert.DeserializeObject<ThemeRoot>(jsonTheme);
+            ThemeRoot? themes = Settings.Get<ThemeRoot>("SavedThemes");
 
-            try
+			try
             {
-                if (theme == null) throw new ArgumentException($"Theme is null");
+                if (themes == null) return false;
+				if (theme == null) throw new ArgumentException($"Theme is null");
                 if (string.IsNullOrEmpty(theme.Name)) throw new ArgumentException($"Theme has an invalid name of '{theme.Name}'.", nameof(theme));
-                if (themeRoot?.Themes?.Any(t => t.Id == theme.Id) == true)
+                if (themes?.Themes?.Any(t => t.Id == theme.Id) == true)
                 {
                     throw new ArgumentException($"Theme already exists with the same values.", nameof(theme));
                 }
@@ -160,10 +154,10 @@ namespace HackPDM.ClientUtils
         }
         public static bool IsFontFamilyAvailable(string fontName)
         {
-            InstalledFontCollection fonts = new();
-            foreach (FontFamily family in fonts.Families)
+            
+            foreach (string family in Fonts)
             {
-                if (string.Equals(family.Name, fontName, StringComparison.InvariantCultureIgnoreCase))
+                if (string.Equals(family, fontName, StringComparison.InvariantCultureIgnoreCase))
                 {
                     return true;
                 }
@@ -173,13 +167,13 @@ namespace HackPDM.ClientUtils
     }
     public class ThemeRoot
     {
-        public List<Theme> Themes { get; set; }
+        public List<Theme>? Themes { get; set; }
         public bool HasActiveTheme() => Themes?.Any(t => t.IsActive) == true;
         public bool HasThemes() => Themes?.Count > 0;
     }
     public class Theme
     {
-        public string Name { get; set; }
+        public required string Name { get; set; }
         public Color? BackgroundColor { get; set; }
         public Color? SecondaryBackgroundColor { get; set; }
         public Color? ForegroundColor { get; set; }

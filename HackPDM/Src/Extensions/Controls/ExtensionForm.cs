@@ -210,6 +210,12 @@ namespace HackPDM.Src.Extensions.Controls
             ArgumentNullException.ThrowIfNull(control);
             return control.ItemsSource as T;
 		}
+        public static void Sort<T>(this ItemsControl items, Comparison<T> comparison) 
+        {
+            var casted = items.ItemsSource as List<T>;
+            casted?.Sort(comparison.Invoke);
+            if (casted is not null) items.ItemsSource = casted;
+		}
 		//extension(Form form)
 		//{
 		//    public bool IsSingleton
@@ -239,6 +245,7 @@ namespace HackPDM.Src.Extensions.Controls
 
 			item?.StartBringIntoView();
 		}
+
 		private class HolderValues
         {
             public bool IsSingleton { get; set; }=false;

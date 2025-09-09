@@ -10,9 +10,9 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 
 using HackPDM.ClientUtils;
-using HackPDM.Extensions.General;
 using HackPDM.Forms;
 using HackPDM.Forms.Settings;
+using HackPDM.Src.Extensions.General;
 
 using StatusDialog = HackPDM.Forms.Settings.StatusDialog;
 namespace HackPDM.OdooClient.OdooMethods

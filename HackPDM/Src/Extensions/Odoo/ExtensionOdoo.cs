@@ -9,9 +9,11 @@ using System.Windows.Forms;
 using System.Xml;
 
 using XmlRpc.Goober;
-using HackPDM.Extensions.General;
+using HackPDM.Src.Extensions.General;
+using HackPDM.Src.Forms.Helper;
+using static HackPDM.Src.Forms.Helper.MessageBox;
 
-namespace HackPDM.Extensions.Odoo
+namespace HackPDM.Src.Extensions.Odoo
 { 
     public static class ExtensionOdoo
     {
@@ -34,7 +36,7 @@ namespace HackPDM.Extensions.Odoo
             {
                 string lst = string.Join("\n", entries.Where(entry => entry.IsLatest).Take(10).Select(entry => $"{entry.name}"));
                 string message = $"{lst}{(entries.Count() > 10 ? $"...\nincluding {entries.Count() - 10} other files\n" : "\n")}";
-                if (DialogResult.Yes == MessageBox.Show($"{message}would you like to recommit the latest versions?", "recommit latest?", MessageBoxButtons.YesNoCancel))
+                if (DialogResult.Yes == MessageBox.Show($"{message}would you like to recommit the latest versions?", "recommit latest?", MessageBoxType.YesNoCancel))
                 {
                     return true;
                 }
@@ -69,7 +71,7 @@ namespace HackPDM.Extensions.Odoo
         public async static Task<XmlRpcResponse> SendAsync(this XmlRpcRequest request, string url, int timeout = 0, IWebProxy proxy = null)
         {
             //HttpWebRequest httpWebRequest = (HttpWebRequest)WebRequest.Create(url);
-            HttpWebRequest httpWebRequest = HttpWebRequest.CreateHttp(url);
+            HttpWebRequest httpWebRequest = WebRequest.CreateHttp(url);
             if (httpWebRequest == null)
             {
                 throw new XmlRpcException(-32300, "Transport Layer Error: Could not create request with " + url);

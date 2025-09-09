@@ -14,8 +14,6 @@ using System.Threading.Tasks;
 using Windows.Storage.Streams;
 
 using HackPDM.ClientUtils;
-using HackPDM.Extensions.General;
-using HackPDM.Extensions.Odoo;
 using HackPDM.Src.Forms.Helper;
 
 using Microsoft.UI.Xaml.Media.Imaging;
@@ -25,6 +23,8 @@ using SolidWorks.Interop.sldworks;
 
 
 using OClient = OdooRpcCs.OdooClient;
+using HackPDM.Src.Extensions.General;
+using HackPDM.Src.Extensions.Odoo;
 
 namespace HackPDM
 {

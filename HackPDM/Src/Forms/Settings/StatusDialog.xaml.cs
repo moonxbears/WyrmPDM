@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
@@ -15,10 +14,13 @@ using Microsoft.UI.Xaml.Navigation;
 
 using Windows.Foundation;
 using Windows.Foundation.Collections;
-using HackPDM.Extensions.General;
+using HackPDM.Src.Extensions.General;
 using Setting = HackPDM.Properties.Settings;
 using System.Threading.Tasks;
 using HackPDM.ClientUtils;
+using System.Collections.Concurrent;
+using HackPDM.Src.Forms.Hack;
+using Windows.UI;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -30,14 +32,14 @@ namespace HackPDM.Src.Forms.Settings
     /// </summary>
     public sealed partial class StatusDialog : Page
     {
-        public static Color ColorProcessing { get; set; } = Color.Navy;
-        public static Color ColorSkip { get; set; } = Color.DarkGray;
-        public static Color ColorFound { get; set; } = Color.DarkGray;
-        public static Color ColorSuccess { get; set; } = Color.DarkOliveGreen;
-        public static Color ColorWarning { get; set; } = Color.Yellow;
-        public static Color ColorError { get; set; } = Color.Red;
-        public static Color ColorDefaultFore { get; set; } = Color.Black;
-        public static Color ColorDefaultBack { get; set; } = Color.White;
+        public static Brush ColorProcessing { get; set; } = StorageBox.BRUSH_DARK_BLUE;
+        public static Brush ColorSkip { get; set; } = StorageBox.BRUSH_DARK_GRAY;
+        public static Brush ColorFound { get; set; } = StorageBox.BRUSH_DARK_GRAY;
+        public static Brush ColorSuccess { get; set; } = StorageBox.BRUSH_DARK_OLIVE_GREEN;
+        public static Brush ColorWarning { get; set; } = StorageBox.BRUSH_MUSTARD_YELLOW;
+        public static Brush ColorError { get; set; } = StorageBox.BRUSH_DARK_RED;
+        public static Brush ColorDefaultFore { get; set; } = StorageBox.BRUSH_BLACK;
+        public static Brush ColorDefaultBack { get; set; } = StorageBox.BRUSH_WHITE;
 
         int ErrorCount = 0;
         public static bool? SkipText
@@ -109,9 +111,7 @@ namespace HackPDM.Src.Forms.Settings
         }
         public void ClearStatus()
         {
-            lvMessages.Clear();
-            lvMessages.Columns.Add("Action", 120, System.Windows.Forms.HorizontalAlignment.Left);
-            lvMessages.Columns.Add("Description", 1000, System.Windows.Forms.HorizontalAlignment.Left);
+            
         }
         public void AddStatusLine(string Action, string Description)
         {
@@ -168,8 +168,8 @@ namespace HackPDM.Src.Forms.Settings
             }
             else
             {
-                lvMessages.BeginUpdate();
-                int totalCount = lvMessages.Items.Count + values.Count;
+                MessageLog.BeginUpdate();
+                int totalCount = MessageLog.Items.Count + values.Count;
 
                 if (totalCount > HistoryLength)
                 {
@@ -182,18 +182,55 @@ namespace HackPDM.Src.Forms.Settings
                     int histOffset = totalCount - HistoryLength;
                     for (int i = 0; i < histOffset; i++)
                     {
-                        if (lvMessages.Items.Count > 0)
+                        if (MessageLog.Items.Count > 0)
                         {
-                            lvMessages.Items.RemoveAt(0);
+                            MessageLog.Items.RemoveAt(0);
                         }
                     }
                 }
                 foreach (var item in values)
                 {
                     ListViewItem lvItem = new(item);
-
+                    lvItem.Foreground
                     // set background color, based on status action
                     switch (item[0])
+                    {
+                        case "PROCESSING": lvItem.Foreground = ColorProcessing; break;
+                        case "SKIP": lvItem.Foreground = ColorSkip; break;
+                        case "FOUND": lvItem.Foreground = ColorFound; break;
+                        case "SUCCESS": lvItem.Foreground = ColorSuccess; break;
+                        case "WARNING": lvItem.Background = ColorWarning; break;
+                        case "ERROR": lvItem.Background = ColorError; ErrorCount++; break;
+                        default: break;
+                    }
+
+                    MessageLog.Items.Add(lvItem);
+                    MessageLog.EnsureVisible(MessageLog.Items.Count - 1);
+                }
+                MessageLog.EndUpdate();
+            }
+        }
+        private delegate void AddStatusLineDel(string[] Params);
+        private void AddStatusLine(string[] Params)
+        {
+            this.DispatcherQueue.TryEnqueue(() =>
+            {
+                if (this.InvokeRequired)
+                {
+
+                    // this is a worker thread so delegate the task to the UI thread
+                    AddStatusLineDel del = new(AddStatusLine);
+                    this.Invoke(del, (object)Params);
+
+                }
+                else
+                {
+
+                    // we are executing in the UI thread
+                    ListViewItem lvItem = new(Params);
+
+                    // set background color, based on status action
+                    switch (Params[0])
                     {
                         case "PROCESSING": lvItem.ForeColor = ColorProcessing; break;
                         case "SKIP": lvItem.ForeColor = ColorSkip; break;
@@ -203,47 +240,11 @@ namespace HackPDM.Src.Forms.Settings
                         case "ERROR": lvItem.BackColor = ColorError; ErrorCount++; break;
                         default: break;
                     }
+                    MessageLog.Items.Add(lvItem);
+                    MessageLog.EnsureVisible(MessageLog.Items.Count - 1);
 
-                    lvMessages.Items.Add(lvItem);
-                    lvMessages.EnsureVisible(lvMessages.Items.Count - 1);
                 }
-                lvMessages.EndUpdate();
-            }
-        }
-        private delegate void AddStatusLineDel(string[] Params);
-        private void AddStatusLine(string[] Params)
-        {
-
-            if (this.InvokeRequired)
-            {
-
-                // this is a worker thread so delegate the task to the UI thread
-                AddStatusLineDel del = new(AddStatusLine);
-                this.Invoke(del, (object)Params);
-
-            }
-            else
-            {
-
-                // we are executing in the UI thread
-                ListViewItem lvItem = new(Params);
-
-                // set background color, based on status action
-                switch (Params[0])
-                {
-                    case "PROCESSING": lvItem.ForeColor = ColorProcessing; break;
-                    case "SKIP": lvItem.ForeColor = ColorSkip; break;
-                    case "FOUND": lvItem.ForeColor = ColorFound; break;
-                    case "SUCCESS": lvItem.ForeColor = ColorSuccess; break;
-                    case "WARNING": lvItem.BackColor = ColorWarning; break;
-                    case "ERROR": lvItem.BackColor = ColorError; ErrorCount++; break;
-                    default: break;
-                }
-                lvMessages.Items.Add(lvItem);
-                lvMessages.EnsureVisible(lvMessages.Items.Count - 1);
-
-            }
-
+            });
         }
 
         private void CmdCancelClick(object sender, EventArgs e)
@@ -272,16 +273,16 @@ namespace HackPDM.Src.Forms.Settings
             new StatusSettings().Show();
         }
 
-        private void lvMessages_DrawItem(object sender, DrawListViewItemEventArgs e)
+        private void MessageLog_DrawItem(object sender, DrawListViewItemEventArgs e)
         {
 
         }
 
-        private void lvMessages_ItemCheck(object sender, ItemCheckEventArgs e)
+        private void MessageLog_ItemCheck(object sender, ItemCheckEventArgs e)
         {
-            if (lvMessages.Items.Count > HistoryLength)
+            if (MessageLog.Items.Count > HistoryLength)
             {
-                lvMessages.Items.RemoveAt(0);
+                MessageLog.Items.RemoveAt(0);
             }
         }
     }

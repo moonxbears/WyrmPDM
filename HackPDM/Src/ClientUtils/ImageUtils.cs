@@ -15,7 +15,7 @@ using Windows.Graphics.Imaging;
 using Windows.Storage.Streams;
 using Microsoft.Graphics.Canvas.UI.Xaml;
 
-namespace HackPDM.ClientUtils
+namespace HackPDM.Src.ClientUtils
 {
 	internal static class ImageUtils
 	{

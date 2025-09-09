@@ -7,9 +7,9 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 
-using HackPDM.Extensions.General;
 using HackPDM.Properties;
 using HackPDM.Src;
+using HackPDM.Src.Extensions.General;
 
 using Meziantou.Framework.Win32;
 

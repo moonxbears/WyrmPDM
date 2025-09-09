@@ -30,7 +30,7 @@ namespace HackPDM.Src.Forms.Helper
         {
             InitializeComponent();
         }
-        public static DialogResult Show(string message, string caption = "Info", MessageBoxType type = default) 
+        public static DialogResult Show(string message, string caption, MessageBoxType type = default) 
             => ShowInternal(new MessageBoxConfig(message, caption));
         public static DialogResult Show(MessageBoxConfig config)
             => ShowInternal(config);

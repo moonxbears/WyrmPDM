@@ -8,7 +8,7 @@ using System.Linq;
 
 using HackPDM.ClientUtils;
 
-namespace HackPDM.Extensions.General
+namespace HackPDM.Src.Extensions.General
 {
     public static class ExtensionMethods
     {

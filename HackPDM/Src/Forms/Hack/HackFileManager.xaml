@@ -1,15 +1,14 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<controls:Page
-    x:Class="HackPDM.Forms.Hack.HackFileManager"
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+<Page
+    x:Class="HackPDM.Src.Forms.Hack.HackFileManager"
+    xmlns="using:Microsoft.UI.Xaml.Controls"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:muxc="using:Microsoft.UI.Xaml.Controls"
+    xmlns:sys="using:System"
     xmlns:ui="using:CommunityToolkit.WinUI"
-    xmlns:controls="clr-namespace:Microsoft.UI.Xaml.Controls;assembly=Microsoft.WinUI"
-    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
     mc:Ignorable="d">
+
     <Grid Margin="12">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto" />
@@ -32,45 +31,35 @@
             Margin="0,0,10,0"
             VerticalAlignment="Stretch">
             <TreeView.ContextFlyout>
-                <controls:MenuFlyout>
-                    <MenuFlyoutSubItem Text="Get Latest">
-                        <controls:MenuFlyoutSubItem.Icon>
-                            <controls:FontIcon Glyph="&#xE7AD;" />
-                        </controls:MenuFlyoutSubItem.Icon>
-                        <controls:MenuFlyoutItem Text="Top Directory" />
-                        <controls:MenuFlyoutItem Text="All Directories" />
-                    </MenuFlyoutSubItem>
-                    <controls:MenuFlyoutSeparator />
-                    <controls:MenuFlyoutItem Text="Checkout" />
-                    <controls:MenuFlyoutItem Text="Commit" />
-                    <controls:MenuFlyoutItem Text="Undo Checkout" />
-                    <controls:MenuFlyoutSeparator />
-                    <controls:MenuFlyoutItem Text="Analyze" />
-                    <controls:MenuFlyoutSeparator />
-                    <controls:MenuFlyoutItem Text="Delete" />
-                    <controls:MenuFlyoutItem Text="Logical Delete" />
-                    <controls:MenuFlyoutItem Text="Permanent Delete" />
-                    <controls:MenuFlyoutItem Text="UnDelete" />
-                    <controls:MenuFlyoutItem Text="Local Delete" />
-                    <controls:MenuFlyoutSeparator />
-                    <controls:MenuFlyoutItem Text="Open Directory" />
-                </controls:MenuFlyout>
+                <MenuFlyout>
+                    <MenuFlyoutItem Text="Get Latest" />
+                    <MenuFlyoutSeparator />
+                    <MenuFlyoutItem Text="Checkout" />
+                    <MenuFlyoutItem Text="Commit" />
+                    <MenuFlyoutItem Text="Undo Checkout" />
+                    <MenuFlyoutSeparator />
+                    <MenuFlyoutItem Text="Analyze" />
+                    <MenuFlyoutSeparator />
+                    <MenuFlyoutItem Text="Delete" />
+                    <MenuFlyoutItem Text="Logical Delete" />
+                    <MenuFlyoutItem Text="Permanent Delete" />
+                    <MenuFlyoutItem Text="UnDelete" />
+                    <MenuFlyoutItem Text="Local Delete" />
+                    <MenuFlyoutSeparator />
+                    <MenuFlyoutItem Text="Open Directory" />
+                </MenuFlyout>
             </TreeView.ContextFlyout>
         </TreeView>
 
         <!--  TabView for file lists  -->
-        <muxc:TabView
+        <TabView
             x:Name="ListTabs"
             Grid.Row="0"
             Grid.RowSpan="2"
             Grid.Column="1"
             Margin="0,0,10,0">
-            <muxc:TabView.Resources>
-                <Style TargetType="muxc:TabViewItem">
-                    <Setter Property="Background" Value="Transparent" />
-                </Style>
-            </muxc:TabView.Resources>
-            <muxc:TabViewItem Header="Entries" IsClosable="False">
+
+            <TabViewItem Header="Entries" IsClosable="False">
                 <ListView x:Name="OdooEntryList">
                     <ListView.ContextFlyout>
                         <MenuFlyout>
@@ -87,8 +76,8 @@
                         </MenuFlyout>
                     </ListView.ContextFlyout>
                 </ListView>
-            </muxc:TabViewItem>
-            <muxc:TabViewItem Header="Changes" IsClosable="False">
+            </TabViewItem>
+            <TabViewItem Header="Changes" IsClosable="False">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -97,32 +86,32 @@
                     <ListView x:Name="HackChangesList" Grid.Column="0" />
                     <ListView x:Name="OdooChangesList" Grid.Column="1" />
                 </Grid>
-            </muxc:TabViewItem>
-        </muxc:TabView>
+            </TabViewItem>
+        </TabView>
 
         <!--  Right-side controls (image, version tabs)  -->
-        <muxc:TabView
+        <TabView
             x:Name="VersionTabs"
             Grid.Row="1"
             Grid.RowSpan="2"
             Grid.Column="2"
             Margin="10,0,0,0">
-            <muxc:TabViewItem Header="History">
+            <TabViewItem Header="History">
                 <ListView x:Name="OdooHistory" />
-            </muxc:TabViewItem>
-            <muxc:TabViewItem Header="Where Used">
+            </TabViewItem>
+            <TabViewItem Header="Where Used">
                 <ListView x:Name="OdooParents" />
-            </muxc:TabViewItem>
-            <muxc:TabViewItem Header="Dependents">
+            </TabViewItem>
+            <TabViewItem Header="Dependents">
                 <ListView x:Name="OdooChildren" />
-            </muxc:TabViewItem>
-            <muxc:TabViewItem Header="Properties">
+            </TabViewItem>
+            <TabViewItem Header="Properties">
                 <ListView x:Name="OdooProperties" />
-            </muxc:TabViewItem>
-            <muxc:TabViewItem Header="Info">
+            </TabViewItem>
+            <TabViewItem Header="Info">
                 <ListView x:Name="OdooVersionInfoList" />
-            </muxc:TabViewItem>
-        </muxc:TabView>
+            </TabViewItem>
+        </TabView>
 
         <!--  Image Panel  -->
         <Border
@@ -173,4 +162,4 @@
             </CommandBar>
         </Grid>
     </Grid>
-</controls:Page>
+</Page>

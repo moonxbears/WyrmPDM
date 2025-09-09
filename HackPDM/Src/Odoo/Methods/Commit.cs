@@ -7,13 +7,13 @@ using System.Text;
 using System.Threading.Tasks;
 
 using HackPDM.ClientUtils;
-using HackPDM.Extensions.General;
-using HackPDM.Extensions.Odoo;
 using SDat = HackPDM.Forms.Settings.StatusData;
 using HackPDM.Forms.Settings;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using System.IO;
+using HackPDM.Src.Extensions.General;
+using HackPDM.Src.Extensions.Odoo;
 
 namespace HackPDM.OdooClient.OdooMethods
 {
