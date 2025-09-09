@@ -19,7 +19,7 @@ namespace HackPDM
 	public interface ITreeItem
 	{
 		public object? Tag { get; set; }
-		public List<ITreeItem> Children { get; set; }
+		public List<ITreeItem>? Children { get; set; }
 	}
 	public interface IListItem<T>
 	{

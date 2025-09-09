@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<Page
-    x:Class="HackPDM.Src.Forms.Hack.HackFileManager"
+<controls:Page
+    x:Class="HackPDM.Forms.Hack.HackFileManager"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:muxc="using:Microsoft.UI.Xaml.Controls"
     xmlns:ui="using:CommunityToolkit.WinUI"
+    xmlns:controls="clr-namespace:Microsoft.UI.Xaml.Controls;assembly=Microsoft.WinUI"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
     mc:Ignorable="d">
     <Grid Margin="12">
@@ -22,7 +23,7 @@
         </Grid.RowDefinitions>
 
         <!--  TreeView for Directories  -->
-        <muxc:TreeView
+        <TreeView
             x:Name="OdooDirectoryTree"
             Grid.Row="0"
             Grid.RowSpan="2"
@@ -30,32 +31,32 @@
             Width="321"
             Margin="0,0,10,0"
             VerticalAlignment="Stretch">
-            <muxc:TreeView.ContextFlyout>
-                <MenuFlyout>
+            <TreeView.ContextFlyout>
+                <controls:MenuFlyout>
                     <MenuFlyoutSubItem Text="Get Latest">
-                        <MenuFlyoutSubItem.Icon>
-                            <FontIcon Glyph="&#xE7AD;" />
-                        </MenuFlyoutSubItem.Icon>
-                        <MenuFlyoutItem Text="Top Directory" />
-                        <MenuFlyoutItem Text="All Directories" />
+                        <controls:MenuFlyoutSubItem.Icon>
+                            <controls:FontIcon Glyph="&#xE7AD;" />
+                        </controls:MenuFlyoutSubItem.Icon>
+                        <controls:MenuFlyoutItem Text="Top Directory" />
+                        <controls:MenuFlyoutItem Text="All Directories" />
                     </MenuFlyoutSubItem>
-                    <MenuFlyoutSeparator />
-                    <MenuFlyoutItem Text="Checkout" />
-                    <MenuFlyoutItem Text="Commit" />
-                    <MenuFlyoutItem Text="Undo Checkout" />
-                    <MenuFlyoutSeparator />
-                    <MenuFlyoutItem Text="Analyze" />
-                    <MenuFlyoutSeparator />
-                    <MenuFlyoutItem Text="Delete" />
-                    <MenuFlyoutItem Text="Logical Delete" />
-                    <MenuFlyoutItem Text="Permanent Delete" />
-                    <MenuFlyoutItem Text="UnDelete" />
-                    <MenuFlyoutItem Text="Local Delete" />
-                    <MenuFlyoutSeparator />
-                    <MenuFlyoutItem Text="Open Directory" />
-                </MenuFlyout>
-            </muxc:TreeView.ContextFlyout>
-        </muxc:TreeView>
+                    <controls:MenuFlyoutSeparator />
+                    <controls:MenuFlyoutItem Text="Checkout" />
+                    <controls:MenuFlyoutItem Text="Commit" />
+                    <controls:MenuFlyoutItem Text="Undo Checkout" />
+                    <controls:MenuFlyoutSeparator />
+                    <controls:MenuFlyoutItem Text="Analyze" />
+                    <controls:MenuFlyoutSeparator />
+                    <controls:MenuFlyoutItem Text="Delete" />
+                    <controls:MenuFlyoutItem Text="Logical Delete" />
+                    <controls:MenuFlyoutItem Text="Permanent Delete" />
+                    <controls:MenuFlyoutItem Text="UnDelete" />
+                    <controls:MenuFlyoutItem Text="Local Delete" />
+                    <controls:MenuFlyoutSeparator />
+                    <controls:MenuFlyoutItem Text="Open Directory" />
+                </controls:MenuFlyout>
+            </TreeView.ContextFlyout>
+        </TreeView>
 
         <!--  TabView for file lists  -->
         <muxc:TabView
@@ -172,4 +173,4 @@
             </CommandBar>
         </Grid>
     </Grid>
-</Page>
+</controls:Page>

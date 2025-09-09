@@ -11,8 +11,11 @@ using System.Text;
 using System.Threading.Tasks;
 
 using HackPDM.ClientUtils;
+using HackPDM.Data;
 using HackPDM.Extensions.General;
 using HackPDM.Src.Forms.Helper;
+
+using Microsoft.UI.Xaml.Controls;
 
 using SolidWorks.Interop.sldworks;
 
@@ -42,32 +45,32 @@ namespace HackPDM
                 {
                     MessageBox.Show("Path is a null reference.  Could not find its parent.",
                             "Path Error",
-                            MessageBox.MessageBoxType.OK,
-                            MessageBoxIcon.Error);
+                            type: MessageBoxType.OK,
+                            icon: MessageBoxIcon.Error);
                     return ("");
                 }
                 catch (ArgumentException)
                 {
                     MessageBox.Show("Path is an empty string.  Could not find its parent.",
                             "Path Error",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Error);
+                            type: MessageBoxType.OK,
+                            icon: MessageBoxIcon.Error);
                     return ("");
                 }
                 catch (System.IO.DirectoryNotFoundException)
                 {
                     MessageBox.Show("The parent directory for path \"" + path + "\" could not be found.",
                             "Path Error",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Error);
+                            type: MessageBoxType.OK,
+                            icon: MessageBoxIcon.Error);
                     return ("");
                 }
                 catch
                 {
                     MessageBox.Show("Could not find the parent directory for \"" + path + "\".",
                             "Path Error",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Error);
+                            type: MessageBoxType.OK,
+                            icon: MessageBoxIcon.Error);
                     return ("");
                 }
             }
@@ -97,8 +100,8 @@ namespace HackPDM
             {
                 MessageBox.Show("Error getting Base Name from \"" + path + "\".",
                         "Path Error",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Error);
+						type: MessageBoxType.OK,
+                        icon: MessageBoxIcon.Error);
                 return ("");
             }
         }
@@ -120,8 +123,8 @@ namespace HackPDM
 			{
                 MessageBox.Show("Error finding local files.",
                         "File Discovery Error",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Error);
+                        type: MessageBoxType.OK,
+                        icon: MessageBoxIcon.Error);
             }
         }
         
@@ -188,14 +191,14 @@ namespace HackPDM
             }
             return results;
         }
-        public static (int, TreeNode) LastValidTreeIndex(in string combinedPath, in string[] paths, in Dictionary<string, TreeNode> nodeMap)
+        public static (int, TreeViewNode?) LastValidTreeIndex(in string combinedPath, in string[] paths, in Dictionary<string, TreeViewNode> nodeMap)
         {
             ReadOnlySpan<char> strArray = combinedPath.AsSpan();
             int pathLength = combinedPath.Length;
 
             for (int i = paths.Length - 1; i >= 0; i--)
             {
-                if (nodeMap.TryGetValue(strArray.Slice(0, pathLength).ToString(), out TreeNode node))
+                if (nodeMap.TryGetValue(strArray.Slice(0, pathLength).ToString(), out TreeViewNode? node))
                 {
                     return (i, node);
                 }
@@ -203,13 +206,14 @@ namespace HackPDM
             }
             return (-1, null);
         }
-		private static (int, TreeNode) RecurseNodePath(in TreeNode currentNode, string[] nodes, int index)
+		private static (int, TreeViewNode?) RecurseNodePath(in TreeViewNode currentNode, string[] nodes, int index)
         {
             if (currentNode == null)
             { 
                 return (index-1, null); 
             }
-            if (index >= nodes.Length || currentNode.Text != nodes[index])
+            var entry = currentNode.Content as EntryRow;
+			if (index >= nodes.Length || entry?.Name != nodes[index])
             {
                 return (index - 1, currentNode);
             }
@@ -218,9 +222,9 @@ namespace HackPDM
                 return (index, currentNode);
             }
             
-            if (currentNode.Text == nodes[index]) 
+            if (entry.Name == nodes[index]) 
             { 
-                foreach (TreeNode child in currentNode.Nodes) 
+                foreach (TreeViewNode child in currentNode.Children) 
                 {
                     var result = RecurseNodePath(child, nodes, index + 1);
                     if (result.Item1 != index) 
@@ -231,20 +235,23 @@ namespace HackPDM
             }
             return (index, currentNode);
         }
-        public static Dictionary<string, TreeNode> ConvertTreeToDictionary(in TreeView tree)
+        public static Dictionary<string, TreeViewNode>? ConvertTreeToDictionary(in TreeView tree)
         {
-            if (tree.Nodes.Count == 0) return null;
+            if (tree.RootNodes.Count == 0) return null;
 
-            Dictionary<string, TreeNode> treeDictionary = [];
-            RecurseNodesConvert(tree.Nodes[0], in treeDictionary);
+            Dictionary<string, TreeViewNode> treeDictionary = [];
+            foreach (var node in tree.RootNodes)
+                RecurseNodesConvert(node, in treeDictionary);
 
             return treeDictionary;
         }
-        private static void RecurseNodesConvert(in TreeNode node, in Dictionary<string, TreeNode> nodeMap)
+        private static void RecurseNodesConvert(in TreeViewNode node, in Dictionary<string, TreeViewNode>? nodeMap)
         {
-            nodeMap.Add(node.FullPath, node);
+            var content = node?.Content as EntryRow;
             
-            foreach (TreeNode child in node.Nodes)
+            nodeMap?.Add(content?.FullName, node);
+            
+            foreach (TreeViewNode child in node.Children)
             {
                 RecurseNodesConvert(in child, in nodeMap);
             }
@@ -346,7 +353,7 @@ namespace HackPDM
             }
             return val.CompareTo(max) > 0 ? max : val;
         }
-        public static Dictionary<string, ColumnHeader> DictExtAdd(params (string key, object value)[] pairs)
+        public static Dictionary<string, ColumnHeader?> DictExtAdd(params (string key, object value)[] pairs)
             => pairs.ToDictionary(p => p.key, p =>
                 p.value switch
                 {
@@ -512,17 +519,17 @@ namespace HackPDM
 
                         object value;
                         var cMethod = prop.Item2;
-                        var isDE = hts[i][j] is DictionaryEntry entry;
-
-                        if (isDE && prop.Item1 is not null && prop.Item1.CanWrite)
+                        var entry = hts[i][j] as DictionaryEntry?;
+                        if (entry is null) continue;
+                        if (prop.Item1 is not null && prop.Item1.CanWrite)
                         {
-                            if (cMethod == ValueConversion.NULL && entry.Value != null)
+                            if (cMethod == ValueConversion.NULL && entry?.Value != null)
                             {
                                 cMethod = ConvertValueMethod(entry.Value, prop.Item1.PropertyType);
                                 prop.Item2 = cMethod;
                                 propInfos[j] = prop;
                             }
-                            value = ConvertValue(entry.Value, prop.Item1.PropertyType, cMethod);
+                            value = ConvertValue(entry?.Value, prop.Item1.PropertyType, cMethod);
                             prop.Item1.SetValue(objs[i], value);
                         }
                         else
@@ -542,11 +549,12 @@ namespace HackPDM
 
                         object value;
                         var cMethod = field.Item2;
-                        var isDE = hts[i][j] is DictionaryEntry entry;
-                        hts[i][fkeys[j]] = cMethod;
-                        if (isDE && field.Item1 is not null)
+						var entry = hts[i][j] as DictionaryEntry?;
+						if (entry is null) continue;
+						hts[i][fkeys[j]] = cMethod;
+                        if (field.Item1 is not null)
                         {
-                            if (cMethod == ValueConversion.NULL && entry.Value != null)
+                            if (cMethod == ValueConversion.NULL && entry?.Value != null)
                             {
                                 cMethod = ConvertValueMethod(entry.Value, field.Item1.FieldType);
                                 field.Item2 = cMethod;
@@ -671,14 +679,14 @@ namespace HackPDM
 
             return valueOfType == typeof(bool) && !isEqual ? ValueConversion.NULL : isEqual ? ValueConversion.Nullable : ValueConversion.OtherConvert;
         }
-        internal static object ConvertValue(object value, Type targetType, ValueConversion conversion)
+        internal static object? ConvertValue(object? value, Type targetType, ValueConversion conversion)
         {
             return conversion switch
             {
                 ValueConversion.NULL => null,
                 ValueConversion.Assignable => value,
-                ValueConversion.Enum => Enum.Parse(targetType, value.ToString()),
-                ValueConversion.DateTime => DateTime.TryParse(value.ToString(), out DateTime dt) ? dt : null,
+                ValueConversion.Enum => Enum.Parse(targetType, value?.ToString() ?? ""),
+                ValueConversion.DateTime => DateTime.TryParse(value?.ToString() ?? "", out DateTime dt) ? dt : null,
                 ValueConversion.Nullable => value,
                 ValueConversion.OtherConvert => Convert.ChangeType(value, targetType),
                 _ => null,

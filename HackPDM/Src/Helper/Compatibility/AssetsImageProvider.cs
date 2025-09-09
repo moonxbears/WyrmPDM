@@ -19,7 +19,7 @@ namespace HackPDM.Src.Helper.Compatibility
 
 		internal readonly Dictionary<string, string>? AssetMap;
 		private static StorageFolder Storage => ApplicationData.Current.LocalFolder;
-		public AssetsImageProvider() : this(new Dictionary<string, string>()) {}
+		public AssetsImageProvider() : this([]) {}
 		public AssetsImageProvider(Dictionary<string, string>? assetMap)
 		{
 			this.AssetMap = assetMap;

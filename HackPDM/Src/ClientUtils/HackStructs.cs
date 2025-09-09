@@ -424,7 +424,24 @@ namespace HackPDM.ClientUtils
 
         }
     }
-    public struct FileCheck
+    public class ColumnHeader
+    {
+        public string Name = "";
+        public string Text = "";
+        public int Width;
+        public HorizontalAlignment TextAlign;
+        public ColumnHeader(string name, string text, int width = 75, HorizontalAlignment align = HorizontalAlignment.Left)
+        {
+            Name = name;
+            Width = width;
+            TextAlign = align;
+            Text = name;
+        }
+        public ColumnHeader() 
+        { 
+        }
+	}
+	public struct FileCheck
     {
         public readonly WatcherChangeTypes ChangeType { get; }
         public readonly string Name { get; }

@@ -1,9 +1,9 @@
-﻿using System;
+﻿
 using System.Collections.Generic;
-using System.Diagnostics;
+
+using HackPDM.Properties;
+
 using Windows.UI;
-using System.Drawing.Text;
-using System.Linq;
 
 namespace HackPDM.ClientUtils
 {
@@ -13,7 +13,7 @@ namespace HackPDM.ClientUtils
         public static readonly Theme DefaultTheme = new()
         {
             Name = "Default",
-            BackgroundColor = Color.WhiteSmoke,
+            BackgroundColor =,
             SecondaryBackgroundColor = Color.White,
             ForegroundColor = Color.Black,
             FontFamily = "Segoe UI",
@@ -48,7 +48,7 @@ namespace HackPDM.ClientUtils
         {
             Debug.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(new ThemeRoot { Themes = [.. themes] }));
             if (themes == null || themes.Length == 0) throw new ArgumentNullException(nameof(themes), "No themes provided to add.");
-            string jsonTheme = HackPDM.Properties.AppSettings.Default.Theme;
+            string jsonTheme = Settings.Get<Theme>("Theme");
             ThemeRoot themeRoot = Newtonsoft.Json.JsonConvert.DeserializeObject<ThemeRoot>(jsonTheme) ?? new ThemeRoot { Themes = [] };
             foreach (var theme in themes)
             {

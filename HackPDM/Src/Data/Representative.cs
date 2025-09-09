@@ -1,9 +1,17 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 using HackPDM.ClientUtils;
+using HackPDM.Properties;
+using HackPDM.Src;
+using HackPDM.Src.Extensions.Controls;
+
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media.Imaging;
 
 namespace HackPDM.Data
 {
@@ -127,21 +135,72 @@ namespace HackPDM.Data
 		public FileTypeLocDatRow? Value { get; }
 		public bool IsSelected { get; set; }
 	}
-	public class TreeData : ITreeItem
+	public partial class TreeData : ITreeItem, IEnumerable<TreeData>
 	{
-		public string Name { get; set; }
-		public string FullPath { get; set; }
-		public TreeData? Parent { get; set; }
+		public string? Name 
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(field))
+                {
+                    field = StorageBox.EMPTY_PLACEHOLDER;
+                }
+                return field;
+			} 
+            set; 
+        }
+		public string? FullPath 
+        {
+            get
+            {
+                if (Parent is null)
+                {
+                    field = Name;
+                    return field;
+                }
+                field = $"{Parent.FullPath}\\{Name}";
+				return field;
+			} 
+            set; 
+        }
+		public TreeData? Parent 
+        { 
+            get
+            {
+                field ??= Node?.Parent.LinkedData;
+                return field;
+			}
+            set; 
+        }
 		public object? Tag { get; set; }
 		public int? DirectoryID { get; set; }
-        public List<ITreeItem> Children { get; set; }
-
-		public TreeData(string name, TreeData? parent = null)
+        public BitmapImage? Icon { get; set; } = Assets.GetImage("simple-folder-icon_32") as BitmapImage;
+		public TreeViewNode? Node { get; internal set; }
+		public List<ITreeItem>? Children
+        {
+            get
+            {
+                field ??= Node?.Children.Select(n => n.LinkedData as ITreeItem).ToList();
+                return field;
+            }
+            set
+            {
+                field = value;
+            }
+        }
+        public bool IsLinked => Node is not null;
+        public bool HasChildren => Node?.HasChildren ?? false;
+        public bool IsExpanded
+        {
+            get => Node?.IsExpanded ?? false;
+            set => Node?.IsExpanded = value;
+		}
+		public TreeData(string? name, TreeData? parent = null)
 		{
 			Name = name;
 			Parent = parent;
 			Parent?.AddChild(this);
-			FullPath = Parent is null ? Name : Path.Combine(parent.FullPath, Name);
+			FullPath = Parent is null ? Name : $"{parent?.FullPath}\\{Name}";
             Children = [];
 			Tag = null;
 		}
@@ -150,17 +209,39 @@ namespace HackPDM.Data
 			child.Parent = this;
 			Children.Add(child);
 		}
-		public void RemoveChild(TreeData child)
+        public void AddChildren(IEnumerable<TreeData> children)
+        {
+            foreach (var child in children)
+            {
+                AddChild(child);
+            }
+        }
+        public void RemoveChild(TreeData child)
+        {
+            if (Children.Contains(child))
+            {
+                child.Parent = null;
+                Children.Remove(child);
+            }
+        }
+        public void RemoveChildren(IEnumerable<TreeData>? children)
+        {
+            if (children is null) return;
+			foreach (var child in children)
+            {
+                RemoveChild(child);
+            }
+		}
+        public void Clear() => RemoveChildren(Children as IEnumerable<TreeData>);
+
+		public IEnumerator<TreeData> GetEnumerator() => Children.Cast<TreeData>().GetEnumerator();
+		IEnumerator IEnumerable.GetEnumerator()
 		{
-			if (Children.Contains(child))
-			{
-				child.Parent = null;
-				Children.Remove(child);
-			}
+			return GetEnumerator();
 		}
 		public override string ToString()
 		{
-			return Name;
+			return Name ?? "";
 		}
 	}
 }

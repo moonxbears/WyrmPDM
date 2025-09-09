@@ -21,6 +21,8 @@ using Windows.Foundation;
 using Windows.Foundation.Collections;
 
 using static HackPDM.Src.Forms.Helper.MessageBox;
+using HackFileManager = HackPDM.Forms.Hack.HackFileManager;
+using HackSettings = HackPDM.Forms.Hack.HackSettings;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.

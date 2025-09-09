@@ -21,7 +21,7 @@ namespace HackPDM.Src.Extensions.Controls
 {
     public static class ExtensionForm
     {
-        private static ConditionalWeakTable<Control, HolderValues> _data = new();
+        private static ConditionalWeakTable<DependencyObject, HolderValues> _data = new();
         private static GradientStopCollection gradientStops;
 		private static GradientStop gradientStop;
 		private static GradientStop gradientStop2;
@@ -46,7 +46,56 @@ namespace HackPDM.Src.Extensions.Controls
 				EndPoint = new Windows.Foundation.Point(1, 1)
 			};
 		}
-        public static IEnumerable<Control> GetAllControls(this Control control)
+        extension (TreeViewNode node)
+        {
+			public TreeData LinkedData
+            {
+                get 
+                {
+                    if(!_data.TryGetValue(node, out var holder))
+                    {
+                        holder = new HolderValues();
+						_data.Add(node, holder);
+					}
+                    TreeData? dat = node.Content as TreeData;
+                    if (holder.TreeNodeData is not null && dat is not null && holder.TreeNodeData != dat)
+                    {
+                        holder.TreeNodeData.Name ??= dat.Name;
+                        holder.TreeNodeData.Node = node;
+						List<ITreeItem?> children = [.. holder.TreeNodeData.Children?.Union(dat.Children ?? []) ?? []];
+                        holder.TreeNodeData.Children = children?.Count is not null and > 0 ? children?.Distinct()?.ToList() : null;
+						holder.TreeNodeData.Parent ??= dat.Parent;
+                        holder.TreeNodeData.FullPath ??= dat.FullPath;
+                        holder.TreeNodeData.Tag ??= dat.Tag;
+                        holder.TreeNodeData.Icon ??= dat.Icon;
+					}
+
+					holder.TreeNodeData ??= dat ?? new("");
+                    node.Content = holder.TreeNodeData;
+
+					return holder.TreeNodeData;
+				} 
+                set
+                {
+                    if (!_data.TryGetValue(node, out var holder))
+                    {
+                        holder = new HolderValues();
+                        _data.Add(node, holder);
+                    }
+                    holder.TreeNodeData = value;
+                    node.Content = value;
+				}
+			}
+		}
+
+
+		public static T? Content<T>(this TreeViewNode node) where T : class
+		{   
+            ArgumentNullException.ThrowIfNull(node);
+            return node.Content as T;
+		}
+
+		public static IEnumerable<Control> GetAllControls(this Control control)
         {
 			ArgumentNullException.ThrowIfNull(control);
 			var controls = new List<Control> { control };
@@ -125,7 +174,7 @@ namespace HackPDM.Src.Extensions.Controls
         }
         public static TreeData? RecurseNode(this TreeData node, ReadOnlySpan<string> paths)
         {
-			foreach (TreeData tNode in node.Children)
+			foreach (TreeData tNode in node.Children ?? [])
 			{
 				if (tNode.Name == paths[0])
 				{
@@ -134,53 +183,22 @@ namespace HackPDM.Src.Extensions.Controls
 			}
 			return null;
 		}
-        public static TreeViewNode? FindTreeNode(this TreeView view, string path)
+        public static TreeData? FindTreeNode(this TreeView view, string path)
         {
             ArgumentNullException.ThrowIfNull(view, nameof(view));
             Span<string> pathSpan = path.Split("\\").AsSpan();
-            List<TreeViewNode>? children = view.RootNodes;
+            List<TreeViewNode>? children = view.RootNodes as List<TreeViewNode>;
 
             if (children is null) return null;
-			foreach (TreeData node in children)
+			foreach (TreeViewNode node in children)
             {
-				if (node.Name == pathSpan[0])
+                TreeData treeData = node.LinkedData;
+				if (treeData.Name == pathSpan[0])
                 {
-					return pathSpan.Length == 1 ? node : node.RecurseNode(pathSpan[1..]);
+					return pathSpan.Length == 1 ? treeData : treeData.RecurseNode(pathSpan[1..]);
 				}
 			}
-            return null;
-			//TreeNodeCollection nodes = null;
-   //         TreeNode node = null;
-   //         string[] paths = path.Split('\\');
-   //         try
-   //         {
-   //             for (int i = 0; i < paths.Length; i++)
-   //             {
-   //                 if (i == 0)
-   //                     nodes = view.Nodes;
-   //                 else
-   //                     nodes = node.Nodes;
-
-   //                 bool wasFound = false;
-   //                 foreach (TreeViewNode n in nodes)
-   //                 {
-   //                     if (n.Text == paths[i])
-   //                     {
-   //                         wasFound = true;
-   //                         node = n;
-   //                         break;
-   //                     }
-   //                 }
-   //                 if (!wasFound)
-   //                     return null;
-   //             }
-   //             return node;
-   //         }
-   //         catch
-   //         {
-   //             return null;
-   //         }
-        
+            return null;        
         }
         public static string GetTreeNodePath(this TreeData node)
         {
@@ -216,16 +234,15 @@ namespace HackPDM.Src.Extensions.Controls
                 current.IsExpanded = true;
                 current = current.Parent;
             }
-            tree.SelectedNode = node;
-            TreeViewItem? item = tree.ContainerFromNode(node) as TreeViewItem;
-            
-			var container = tree.ContainerFromNode(node) as TreeViewItem;
-			container?.StartBringIntoView();
+            tree.SelectedNode = node.Node;
+            TreeViewItem? item = tree.ContainerFromNode(node.Node) as TreeViewItem;
+
+			item?.StartBringIntoView();
 		}
 		private class HolderValues
         {
             public bool IsSingleton { get; set; }=false;
-            public Form SingletonInstance { get;set; }
-        }
+            public TreeData? TreeNodeData { get; set;  } = null;
+		}
     }
 }

@@ -1,46 +1,36 @@
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media;
-
-using Windows.Foundation;
-
 using System.Collections;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
 using System.Drawing;
-using System.Drawing.Drawing2D;
+using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml.Linq;
-
+using Windows.Storage.Streams;
 using HackPDM.ClientUtils;
+using HackPDM.Data;
+using HackPDM.Extensions.General;
+using HackPDM.Properties;
 using HackPDM.Src.Extensions.Controls;
-
-using static System.Net.Mime.MediaTypeNames;
-
+using HackPDM.Src.Forms.Settings;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media.Imaging;
 using Directory = System.IO.Directory;
 using Image = System.Drawing.Image;
 using OClient = OdooRpcCs.OdooClient;
 using Path = System.IO.Path;
-using HackPDM.Src.Forms.Settings;
-using HackPDM.Extensions.General;
-using HackPDM.Data;
-using HackPDM.Properties;
-using Microsoft.UI.Xaml.Media.Imaging;
-using Windows.Storage.Streams;
+
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
 
-namespace HackPDM.Src.Forms.Hack
+namespace HackPDM.Forms.Hack
 {
     /// <summary>
     /// An empty page that can be used on its own or navigated to within a Frame.
@@ -61,8 +51,8 @@ namespace HackPDM.Src.Forms.Hack
 		public static int SkipCounter { get; private set; }
 		private static Task EntryListChange = default;
 		private static Task TreeItemChange = default;
-		private static (object sender, ListViewItemSelectionChangedEventArgs e) queuedEntryChange = (null, null);
-		private static (object sender, TreeViewEventArgs e) queuedTreeChange = (null, null);
+		// private static (object sender, ListViewItemSelectionChangedEventArgs e) queuedEntryChange = (null, null);
+		// private static (object sender, TreeViewEventArgs e) queuedTreeChange = (null, null);
 
 		private static BackgroundWorker backgroundWorker = new()
 		{
@@ -79,7 +69,7 @@ namespace HackPDM.Src.Forms.Hack
 
 		// if EntryPollingMs is set to less than or equal to 0 then it will not poll for changes
 		public TreeViewNode? LastSelectedNode { get; set; } = null;
-		public string LastSelectedNodePath { get; set; } = null;
+		public string? LastSelectedNodePath { get; set; } = null;
 		public int EntryPollingMs { get; set; } = 5000;
 
 		internal bool IsTreeLoaded { get; set; } = false;
@@ -95,7 +85,7 @@ namespace HackPDM.Src.Forms.Hack
 		public const string EmptyPlaceholder = "-";
 
 		// temp
-		public ListView OdooEntryList = new();
+		//public ListView OdooEntryList = new();
 		#endregion
 
 		#region TEST_VARIABLES
@@ -130,14 +120,11 @@ namespace HackPDM.Src.Forms.Hack
 			this.SetFormTheme(ProfileManager.MyTheme);
 			previewImage = OdooEntryImage.Image;
 			ResetListViews();
-			
 			OdooDirectoryTree.LostFocus += (s, e) =>
 			{
-				if (OdooDirectoryTree.SelectedNode is not null)
-				{
-					LastSelectedNode = OdooDirectoryTree.SelectedNode;
-					LastSelectedNodePath = LastSelectedNode.FullPath;
-				}
+				if (OdooDirectoryTree.SelectedNode is null) return;
+				LastSelectedNode = OdooDirectoryTree.SelectedNode;
+				LastSelectedNodePath = LastSelectedNode?.LinkedData.FullPath;
 			};
 			this.Unloaded += (s, e) =>
 			{
@@ -402,14 +389,14 @@ namespace HackPDM.Src.Forms.Hack
 		}
 		private void CreateLocalTree(in TreeView treeView)
 		{
-			Dictionary<string, TreeNode> treeDict = Utils.ConvertTreeToDictionary(treeView);
+			Dictionary<string, TreeViewNode> treeDict = Utils.ConvertTreeToDictionary(treeView);
 			IEnumerable<string> pathways = Directory.EnumerateDirectories(HackDefaults.PWAPathAbsolute, "*", SearchOption.AllDirectories);
 			pathways = Utils.FastSlice(pathways, HackDefaults.PWAPathAbsolute.Length, prependText: "root");
 
 			foreach (string pathway in pathways)
 			{
 				string[] paths = pathway.Split('\\');
-				(int, TreeNode) validIndexNode = Utils.LastValidTreeIndex(in pathway, in paths, treeDict);
+				(int, TreeViewNode?) validIndexNode = Utils.LastValidTreeIndex(in pathway, in paths, treeDict);
 				// the last valid index does not go to the end meaning it didn't find the
 				// remaining paths
 				if (validIndexNode.Item1 != paths.Length - 1)
@@ -418,19 +405,27 @@ namespace HackPDM.Src.Forms.Hack
 				}
 			}
 		}
-		private void AddLocalDirectories(TreeNode node, Span<string> pathway, Dictionary<string, TreeNode> treeDict)
+		private void AddLocalDirectories(TreeViewNode node, Span<string> pathway, Dictionary<string, TreeViewNode> treeDict)
 		{
 			string[] paths = pathway.ToArray();
 			SafeInvoke(OdooDirectoryTree, () =>
 			{
 				for (int i = 0; i < paths.Length; i++)
 				{
-					node = node.Nodes.Add(paths[i]);
-					node.ImageIndex = 1;
-					node.SelectedImageIndex = 1;
-					node.Tag = 0;
+					TreeData? parentData = node?.Content as TreeData;
+					TreeData newNode = new(paths[i], parentData)
+					{
+						Icon = Assets.GetImage("simple-folder-icon_32.gif") as BitmapImage,
+						Tag = 0
+					};
 
-					treeDict.Add(node.FullPath, node);
+					TreeViewNode tNode = new()
+					{
+						Content = newNode
+					};
+
+					node.Children.Add(tNode);
+					treeDict.Add(parentData.FullPath, node);
 				}
 			});
 
@@ -439,30 +434,29 @@ namespace HackPDM.Src.Forms.Hack
 		{
 			SafeInvoke(tree, () =>
 			{
-				tree.Nodes.Clear();
+				tree.RootNodes.Clear();
 				RecurseAddNodesAsync(null, entries, 0).Wait();
 			});
 		}
-		private async Task RecurseAddNodesAsync(TreeNode treeNode, Hashtable node, int depth)
+		private async Task RecurseAddNodesAsync(TreeViewNode treeNode, Hashtable node, int depth)
 		{
 			// add container node (directory name)
-			TreeNode treeNodeName = new((string)node["name"]);
+			TreeData dat = new(node["name"] as string);
+			TreeViewNode treeNodeName = new();
 
 			// if treeNode == null then it will be the root node
 			if (treeNode == null)
 			{
 				treeNode = treeNodeName;
-				SafeInvoke(OdooDirectoryTree, () =>
-				{
-					OdooDirectoryTree.Nodes.Add(treeNode);
-				});
+				SafeInvoke(OdooDirectoryTree, () => OdooDirectoryTree.RootNodes.Add(treeNode));
 			}
 			else
 			{
-				treeNode.Nodes.Add(treeNodeName);
+				dat.Parent = treeNode.Content<TreeData>();
+				treeNode.Children.Add(treeNodeName);
 			}
-
-			string path = HackDefaults.DefaultPath(treeNodeName.FullPath, true);
+			
+			string path = HackDefaults.DefaultPath(dat.FullPath, true);
 			if (Directory.Exists(path))
 			{
 				treeNodeName.ImageIndex = 0;
@@ -528,7 +522,7 @@ namespace HackPDM.Src.Forms.Hack
 				}
 				else
 				{
-					Hashtable entry = entries.TakeWhere(e => e.Value is Hashtable ht && ht["id"]?.ToString() == er?.ID);
+					Hashtable entry = entries.TakeWhere(e => e.Value is Hashtable ht && (ht["id"] as int?) == er?.ID);
 				}
 			}
 
@@ -559,7 +553,7 @@ namespace HackPDM.Src.Forms.Hack
 			Console.WriteLine($"remote entries time: {stopwatch.Elapsed}");
 #endif
 		}
-		private void AddRemoteEntry(DictionaryEntry pair, Dictionary<string, Task<HackFile>> hackFileMap)
+		private async void AddRemoteEntry(DictionaryEntry pair, Dictionary<string, Task<HackFile>> hackFileMap)
 		{
 			if (pair.Value is not Hashtable table) return;
 
@@ -659,34 +653,32 @@ namespace HackPDM.Src.Forms.Hack
 					{
 						// get remote image
 						imgExt = new();
-						using (var stream = new InMemoryRandomAccessStream())
-						using (var writer = new DataWriter(stream))
+						using var stream = new InMemoryRandomAccessStream();
+						using var writer = new DataWriter(stream);
+						try
 						{
-							try
-							{
-								byte[] imgBytes = FileOperations.ConvertFromBase64(hpType.icon);
-								writer.WriteBytes(imgBytes);
-								await writer.StoreAsync();
-								await writer.FlushAsync();
-								writer.DetachStream();
+							byte[] imgBytes = FileOperations.ConvertFromBase64(hpType.icon);
+							writer.WriteBytes(imgBytes);
+							await writer.StoreAsync();
+							await writer.FlushAsync();
+							writer.DetachStream();
 
-								stream.Seek(0);
-								await imgExt.SetSourceAsync(stream);
-							}
-							catch
-							{
-							}
-						}						
+							stream.Seek(0);
+							await imgExt.SetSourceAsync(stream);
+						}
+						catch
+						{
+						}
 					}
 
 					if (imgExt == null)
 					{
-						imgExt = Assets.GetImage("default");
+						imgExt = (BitmapImage?)Assets.GetImage("default");
 					}
-					else
-					{
-						Assets.SetImage(item.Type, imgExt);
-					}
+					//else
+					//{
+					//	Assets.SetImage(item.Type, imgExt);
+					//}
 				}
 
 				// get status image
@@ -697,12 +689,12 @@ namespace HackPDM.Src.Forms.Hack
 				}
 				else
 				{
-					Image imgStatus = ListIcons.Images[status];
+					BitmapImage? imgStatus = Assets.GetImage(status) as BitmapImage;
 
 					// combine images
 					if (imgExt is not null && imgStatus is not null)
 					{
-						ListIcons.Images.Add(strKey, ImageUtils.ImageOverlay(imgExt, imgStatus));
+						Assets.SetImage(strKey, (await ImageUtils.OverlayBitmapImagesAsync(imgExt, imgStatus)));
 					}
 					else
 					{
@@ -3105,135 +3097,5 @@ namespace HackPDM.Src.Forms.Hack
 
 
 		#endregion
-
-		private void ListTabs_SelectedIndexChanged(object sender, EventArgs e)
-		{
-
-		}
-
-		private void TreeAnalyze_Click(object sender, EventArgs e)
-		{
-
-		}
-
-		private void TreeDelete_Click(object sender, EventArgs e)
-		{
-
-		}
-
-		private void OdooEntryList_SelectedIndexChanged(object sender, EventArgs e)
-		{
-
-		}
-
-		private void ListContextEntry_Opening(object sender, CancelEventArgs e)
-		{
-
-		}
-
-		private void toolStripMenuItem6_Click(object sender, EventArgs e)
-		{
-
-		}
-
-		private void VersionTabs_SelectedIndexChanged(object sender, EventArgs e)
-		{
-
-		}
-
-		private void OdooHistoryPage_Click(object sender, EventArgs e)
-		{
-
-		}
-
-		private void OdooHistory_SelectedIndexChanged(object sender, EventArgs e)
-		{
-
-		}
-
-		private void OdooVersionHistoryMenu_Opening(object sender, CancelEventArgs e)
-		{
-
-		}
-
-		private void moveToolStripMenuItem_Click(object sender, EventArgs e)
-		{
-
-		}
-
-		private void OdooParentsPage_Click(object sender, EventArgs e)
-		{
-
-		}
-
-		private void OdooParents_SelectedIndexChanged(object sender, EventArgs e)
-		{
-
-		}
-
-		private void OdooChildrenPage_Click(object sender, EventArgs e)
-		{
-
-		}
-
-		private void OdooChildren_SelectedIndexChanged(object sender, EventArgs e)
-		{
-
-		}
-
-		private void OdooPropertiesPage_Click(object sender, EventArgs e)
-		{
-
-		}
-
-		private void OdooProperties_SelectedIndexChanged(object sender, EventArgs e)
-		{
-
-		}
-
-		private void OdooVersionPage_Click(object sender, EventArgs e)
-		{
-
-		}
-
-		private void OdooVersionInfoList_SelectedIndexChanged(object sender, EventArgs e)
-		{
-
-		}
-
-		private void panel1_Paint(object sender, PaintEventArgs e)
-		{
-
-		}
-
-		private void MoreTools_ItemClicked(object sender, ToolStripItemClickedEventArgs e)
-		{
-
-		}
-
-		private void EntriesTab_Click(object sender, EventArgs e)
-		{
-
-		}
-
-		private void Changes_Click(object sender, EventArgs e)
-		{
-
-		}
-
-		private void HackChangesList_SelectedIndexChanged(object sender, EventArgs e)
-		{
-
-		}
-
-		private void AdditionalTools_Click(object sender, EventArgs e)
-		{
-
-		}
-
-		private void OdooEntryImage_Click(object sender, EventArgs e)
-		{
-
-		}
 	}
 }

@@ -7,7 +7,13 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
+using Microsoft.Graphics.Canvas;
 using Microsoft.UI.Xaml.Media.Imaging;
+
+using Windows.Graphics.Imaging;
+
+using Windows.Storage.Streams;
+using Microsoft.Graphics.Canvas.UI.Xaml;
 
 namespace HackPDM.ClientUtils
 {
@@ -73,7 +79,31 @@ namespace HackPDM.ClientUtils
 			}
 		}
 
-        public static BitmapImage Load(string name) =>
+		public async static Task<SoftwareBitmap> OverlayBitmapImagesAsync(BitmapImage baseImage, BitmapImage overlayImage, int width = 32, int height = 32)
+		{
+			var device = CanvasDevice.GetSharedDevice();
+			var renderTarget = new CanvasRenderTarget(device, width, height, 96);
+
+			using (var ds = renderTarget.CreateDrawingSession())
+			{
+				var baseBitmap = await LoadCanvasBitmapAsync(device, baseImage);
+				var overlayBitmap = await LoadCanvasBitmapAsync(device, overlayImage);
+
+				ds.DrawImage(baseBitmap);
+				ds.DrawImage(overlayBitmap);
+			}
+
+			return await SoftwareBitmap.CreateCopyFromSurfaceAsync(renderTarget);
+		}
+
+		private async static Task<CanvasBitmap> LoadCanvasBitmapAsync(CanvasDevice device, BitmapImage bitmapImage)
+		{
+			var streamRef = RandomAccessStreamReference.CreateFromUri(bitmapImage.UriSource);
+			using var stream = await streamRef.OpenReadAsync();
+			return await CanvasBitmap.LoadAsync(device, stream);
+		}
+
+	public static BitmapImage Load(string name) =>
             new(new Uri($"ms-appx:///Assets/{name}.png"));
        
     }

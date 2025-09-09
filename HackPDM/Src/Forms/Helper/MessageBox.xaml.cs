@@ -30,20 +30,36 @@ namespace HackPDM.Src.Forms.Helper
         {
             InitializeComponent();
         }
-        public static DialogResult Show(string message) 
-            => ShowInternal(new MessageBoxConfig(message));
+        public static DialogResult Show(string message, string caption = "Info", MessageBoxType type = default) 
+            => ShowInternal(new MessageBoxConfig(message, caption));
         public static DialogResult Show(MessageBoxConfig config)
             => ShowInternal(config);
-        public static DialogResult Show(string message, MessageBoxTemplate template = MessageBoxTemplate.Simple, MessageBoxType type = MessageBoxType.OKCancel, MessageBoxIcon icon = MessageBoxIcon.Info, ElementTheme theme = ElementTheme.Default)
-            => ShowInternal(DefaultConfig(message, template), type, icon);
-        public static async Task<DialogResult> ShowAsync(string message)
-            => await ShowInternalAsync(new MessageBoxConfig(message));
+        public static DialogResult Show(
+            string message, 
+            string caption = "Info",
+            MessageBoxTemplate template = MessageBoxTemplate.Simple, 
+            MessageBoxType type = MessageBoxType.OKCancel, 
+            MessageBoxIcon icon = MessageBoxIcon.Info, 
+            ElementTheme theme = ElementTheme.Default)
+            => ShowInternal(DefaultConfig(message, caption, template), type, icon);
+        public static async Task<DialogResult> ShowAsync(string message, string caption = "Info")
+            => await ShowInternalAsync(new MessageBoxConfig(message, caption));
         public static async Task<DialogResult> ShowAsync(MessageBoxConfig config)
             => await ShowInternalAsync(config);
-        public static async Task<DialogResult> ShowAsync(string message, MessageBoxTemplate template = MessageBoxTemplate.Simple, MessageBoxType type = MessageBoxType.OKCancel, MessageBoxIcon icon = MessageBoxIcon.Info, ElementTheme theme = ElementTheme.Default)
-            => await ShowInternalAsync(DefaultConfig(message, template), type, icon);
+        public static async Task<DialogResult> ShowAsync(
+            string message, 
+            string caption = "Info",
+            MessageBoxTemplate template = MessageBoxTemplate.Simple, 
+            MessageBoxType type = MessageBoxType.OKCancel, 
+            MessageBoxIcon icon = MessageBoxIcon.Info, 
+            ElementTheme theme = ElementTheme.Default)
+            => await ShowInternalAsync(DefaultConfig(message, caption, template), type, icon);
 
-        private static DialogResult ShowInternal(MessageBoxConfig config, MessageBoxType type = MessageBoxType.OKCancel, MessageBoxIcon icon = MessageBoxIcon.Info, ElementTheme theme = ElementTheme.Default)
+        private static DialogResult ShowInternal(
+            MessageBoxConfig config, 
+            MessageBoxType type = MessageBoxType.OKCancel, 
+            MessageBoxIcon icon = MessageBoxIcon.Info, 
+            ElementTheme theme = ElementTheme.Default)
         {
             bool isClosed = false;
             var MessageBoxWindow = new MessageBoxWindow();
@@ -52,7 +68,11 @@ namespace HackPDM.Src.Forms.Helper
             var result = cd.ShowAsync().GetResults();
             return isClosed ? DialogResult.Cancel : TransformResult(result, type);
         }
-        private static async Task<DialogResult> ShowInternalAsync(MessageBoxConfig config, MessageBoxType type = MessageBoxType.OKCancel, MessageBoxIcon icon = MessageBoxIcon.Info, ElementTheme theme = ElementTheme.Default)
+        private static async Task<DialogResult> ShowInternalAsync(
+            MessageBoxConfig config, 
+            MessageBoxType type = MessageBoxType.OKCancel, 
+            MessageBoxIcon icon = MessageBoxIcon.Info, 
+            ElementTheme theme = ElementTheme.Default)
         {
             bool isClosed = false;
             var MessageBoxWindow = new MessageBoxWindow();
@@ -88,9 +108,9 @@ namespace HackPDM.Src.Forms.Helper
             },
             _ => DialogResult.None,
         };
-        public static MessageBoxConfig DefaultConfig(string message, MessageBoxTemplate template = MessageBoxTemplate.Simple) => template switch
+        public static MessageBoxConfig DefaultConfig(string message, string caption = "Info", MessageBoxTemplate template = MessageBoxTemplate.Simple) => template switch
         {
-            MessageBoxTemplate.Simple   => new MessageBoxConfig(message),
+            MessageBoxTemplate.Simple   => new MessageBoxConfig(message, TitleBar: caption),
             MessageBoxTemplate.Detailed => new MessageBoxConfig(message, StorageBox.MESSAGE_BOX_WIDTH + 100, StorageBox.MESSAGE_BOX_HEIGHT + 100, StorageBox.MESSAGE_BOX_TITLE,    MessageBoxType.OKCancel,   MessageBoxIcon.Info),
             MessageBoxTemplate.List     => new MessageBoxConfig(message, StorageBox.MESSAGE_BOX_WIDTH + 200, StorageBox.MESSAGE_BOX_HEIGHT + 200, StorageBox.MESSAGE_BOX_TITLE,    MessageBoxType.OKCancel,   MessageBoxIcon.Info),
             MessageBoxTemplate.Warning  => new MessageBoxConfig(message, StorageBox.MESSAGE_BOX_WIDTH,       StorageBox.MESSAGE_BOX_HEIGHT,       "Warning",                  MessageBoxType.OKCancel,   MessageBoxIcon.Warning),
@@ -137,6 +157,8 @@ namespace HackPDM.Src.Forms.Helper
             public MessageBoxTemplate Template;
             public ElementTheme Theme;
             public MessageBoxConfig(string Message) : this(Message, Type: MessageBoxType.OKCancel) { }
+            public MessageBoxConfig(string Message, string TitleBar) 
+                : this(Message, StorageBox.MESSAGE_BOX_WIDTH, StorageBox.MESSAGE_BOX_HEIGHT, TitleBar, MessageBoxType.OKCancel) { }
             public MessageBoxConfig(string Message, int Width = StorageBox.MESSAGE_BOX_WIDTH, int Height = StorageBox.MESSAGE_BOX_HEIGHT, string TitleBar = StorageBox.MESSAGE_BOX_TITLE) 
                 : this(Message, Width, Height, TitleBar, MessageBoxType.OKCancel) { }
             public MessageBoxConfig(

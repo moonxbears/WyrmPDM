@@ -68,7 +68,7 @@ namespace HackPDM.Src
         public const string ASSETSFOLDER    = "Assets";
 		public const string IMAGEFOLDER     = "Images";
         public const string EXTENSIONFOLDER = "ExtensionIcons";
-        public const string FOLDERICONS    = "FolderIcons";
+        public const string FOLDERICONS     = "FolderIcons";
         public const string STATUSFOLDER    = "StatusIcons";
 	#endregion
 	}

@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Text;
 using System.Windows;
 using System.Windows.Forms;
 using System.Windows.Interop;
 
+using Microsoft.Maui;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 
@@ -28,9 +30,12 @@ namespace HackPDM.Src.Helper.Compatibility
 		public IEnumerable<string> GetAvailableKeys() => _images.Keys;
 
 
-		public void SetImage(string key, byte[] imgBytes)
+		public async void SetImage(string key, byte[] imgBytes)
 		{
-			_imageList.Images.Add(key, imgBytes);
+			MemoryStream ms = new();
+			await ms.WriteAsync(imgBytes);
+			var Img = Image.FromStream(ms);
+			_imageList.Images.Add(key, Img);
 		}
 	}
 

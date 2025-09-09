@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Configuration;
 using System.IO;
+using System.Runtime.InteropServices.WindowsRuntime;
+using System.Threading.Tasks;
 
 using HackPDM.Src;
 using HackPDM.Src.Helper.Compatibility;
@@ -10,6 +12,8 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 
 using Windows.Storage;
+using Windows.Storage.Streams;
+
 using SB = HackPDM.Src.StorageBox;
 
 namespace HackPDM.Properties
@@ -199,5 +203,13 @@ namespace HackPDM.Properties
 		public static System.Drawing.Bitmap? GetBitmap(string key)				=> ImageProvider.GetBitmap(key);
 		public static IEnumerable<string> GetAvailableKeys()					=> ImageProvider.GetAvailableKeys();
 		public static void SetImage(string key, byte[] imgBytes)				=> ImageProvider.SetImage(key, imgBytes);
+		public async static Task<byte[]> GetImageBytes(BitmapImage img)
+		{
+			var streamref = RandomAccessStreamReference.CreateFromUri(img.UriSource);
+			using var stream = await streamref.OpenReadAsync();
+			byte[] buffer = new byte[stream.Size];
+			await stream.ReadAsync(buffer.AsBuffer(), (uint)stream.Size, InputStreamOptions.None);
+			return buffer;
+		}
 	}
 }
