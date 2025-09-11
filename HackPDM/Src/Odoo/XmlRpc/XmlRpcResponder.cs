@@ -1,88 +1,83 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net.Sockets;
-using System.Text;
-using System.Threading.Tasks;
 using System.Xml;
 
-namespace XmlRpc.Goober
+namespace HackPDM.Odoo.XmlRpc;
+
+public class XmlRpcResponder
 {
-	public class XmlRpcResponder
+	private TcpClient _client;
+
+	private readonly XmlRpcRequestDeserializer _deserializer = new XmlRpcRequestDeserializer();
+
+	private readonly XmlRpcResponseSerializer _serializer = new XmlRpcResponseSerializer();
+
+	private readonly XmlRpcServer _server;
+
+	public SimpleHttpRequest HttpReq
 	{
-		private TcpClient _client;
+		get; private set;
+	}
 
-		private readonly XmlRpcRequestDeserializer _deserializer = new XmlRpcRequestDeserializer();
+	public XmlRpcResponder( XmlRpcServer server, TcpClient client )
+	{
+		_server = server;
+		_client = client;
+		HttpReq = new SimpleHttpRequest( _client );
+	}
 
-		private readonly XmlRpcResponseSerializer _serializer = new XmlRpcResponseSerializer();
+	~XmlRpcResponder()
+	{
+		Close();
+	}
 
-		private readonly XmlRpcServer _server;
+	public void Respond()
+	{
+		Respond( HttpReq );
+	}
 
-		public SimpleHttpRequest HttpReq
+	public void Respond( SimpleHttpRequest httpReq )
+	{
+		XmlRpcRequest req = (XmlRpcRequest)_deserializer.Deserialize(httpReq.Input);
+		XmlRpcResponse xmlRpcResponse = new XmlRpcResponse();
+		try
 		{
-			get; private set;
+			xmlRpcResponse.Value = _server.Invoke( req );
+		}
+		catch ( XmlRpcException ex )
+		{
+			xmlRpcResponse.SetFault( ex.FaultCode, ex.FaultString );
+		}
+		catch ( Exception ex2 )
+		{
+			xmlRpcResponse.SetFault( -32500, "Application Error: " + ex2.Message );
 		}
 
-		public XmlRpcResponder( XmlRpcServer server, TcpClient client )
+		if ( Logger.Delegate != null )
 		{
-			_server = server;
-			_client = client;
-			HttpReq = new SimpleHttpRequest( _client );
+			Logger.WriteEntry( xmlRpcResponse.ToString(), LogLevel.Information );
 		}
 
-		~XmlRpcResponder()
+		XmlRpcServer.HttpHeader( httpReq.Protocol, "text/xml", 0L, " 200 OK", httpReq.Output );
+		httpReq.Output.Flush();
+		XmlTextWriter xmlTextWriter = new XmlTextWriter(httpReq.Output);
+		_serializer.Serialize( xmlTextWriter, xmlRpcResponse );
+		xmlTextWriter.Flush();
+		httpReq.Output.Flush();
+	}
+
+	public void Close()
+	{
+		if ( HttpReq != null )
 		{
-			Close();
+			HttpReq.Close();
+			HttpReq = null;
 		}
 
-		public void Respond()
+		if ( _client != null )
 		{
-			Respond( HttpReq );
-		}
-
-		public void Respond( SimpleHttpRequest httpReq )
-		{
-			XmlRpcRequest req = (XmlRpcRequest)_deserializer.Deserialize(httpReq.Input);
-			XmlRpcResponse xmlRpcResponse = new XmlRpcResponse();
-			try
-			{
-				xmlRpcResponse.Value = _server.Invoke( req );
-			}
-			catch ( XmlRpcException ex )
-			{
-				xmlRpcResponse.SetFault( ex.FaultCode, ex.FaultString );
-			}
-			catch ( Exception ex2 )
-			{
-				xmlRpcResponse.SetFault( -32500, "Application Error: " + ex2.Message );
-			}
-
-			if ( Logger.Delegate != null )
-			{
-				Logger.WriteEntry( xmlRpcResponse.ToString(), LogLevel.Information );
-			}
-
-			XmlRpcServer.HttpHeader( httpReq.Protocol, "text/xml", 0L, " 200 OK", httpReq.Output );
-			httpReq.Output.Flush();
-			XmlTextWriter xmlTextWriter = new XmlTextWriter(httpReq.Output);
-			_serializer.Serialize( xmlTextWriter, xmlRpcResponse );
-			xmlTextWriter.Flush();
-			httpReq.Output.Flush();
-		}
-
-		public void Close()
-		{
-			if ( HttpReq != null )
-			{
-				HttpReq.Close();
-				HttpReq = null;
-			}
-
-			if ( _client != null )
-			{
-				_client.Close();
-				_client = null;
-			}
+			_client.Close();
+			_client = null;
 		}
 	}
 }

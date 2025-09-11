@@ -1,22 +1,21 @@
 ﻿//using static System.Net.Mime.MediaTypeNames;
 
-namespace HackPDM
-{
-    public class HpReleaseVersionRel : HpBaseModel<HpReleaseVersionRel>
-    {
-        public int release_id;
-        public int release_version;
-        public int release_user;
+namespace HackPDM.Odoo.OdooModels.Models;
 
-        public HpReleaseVersionRel() { }
-        public HpReleaseVersionRel(
-            int release_id = 0,
-            int release_version = 0,
-            int release_user = 0)
-        {
-            this.release_id = release_id;
-            this.release_version = release_version;
-            this.release_user = release_user;
-        }
+public class HpReleaseVersionRel : HpBaseModel<HpReleaseVersionRel>
+{
+    public int ReleaseId;
+    public int ReleaseVersion;
+    public int ReleaseUser;
+
+    public HpReleaseVersionRel() { }
+    public HpReleaseVersionRel(
+        int releaseId = 0,
+        int releaseVersion = 0,
+        int releaseUser = 0)
+    {
+        this.ReleaseId = releaseId;
+        this.ReleaseVersion = releaseVersion;
+        this.ReleaseUser = releaseUser;
     }
 }

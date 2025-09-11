@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <Page
-    x:Class="HackPDM.Src.Forms.Hack.HackFileManager"
+    x:Class="HackPDM.Forms.Hack.HackFileManager"
     xmlns="using:Microsoft.UI.Xaml.Controls"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -32,21 +32,21 @@
             VerticalAlignment="Stretch">
             <TreeView.ContextFlyout>
                 <MenuFlyout>
-                    <MenuFlyoutItem Text="Get Latest" />
+                    <MenuFlyoutItem x:Name="TreeGetLatest" Text="Get Latest" />
                     <MenuFlyoutSeparator />
-                    <MenuFlyoutItem Text="Checkout" />
-                    <MenuFlyoutItem Text="Commit" />
-                    <MenuFlyoutItem Text="Undo Checkout" />
+                    <MenuFlyoutItem x:Name="TreeCheckout" Text="Checkout" />
+                    <MenuFlyoutItem x:Name="TreeCommit" Text="Commit" />
+                    <MenuFlyoutItem x:Name="TreeUndoCheckout" Text="Undo Checkout" />
                     <MenuFlyoutSeparator />
-                    <MenuFlyoutItem Text="Analyze" />
+                    <MenuFlyoutItem x:Name="TreeAnalyze" Text="Analyze" />
                     <MenuFlyoutSeparator />
-                    <MenuFlyoutItem Text="Delete" />
-                    <MenuFlyoutItem Text="Logical Delete" />
-                    <MenuFlyoutItem Text="Permanent Delete" />
-                    <MenuFlyoutItem Text="UnDelete" />
-                    <MenuFlyoutItem Text="Local Delete" />
+                    <MenuFlyoutItem x:Name="TreeDelete" Text="Delete" />
+                    <MenuFlyoutItem x:Name="TreeLogicalDelete" Text="Logical Delete" />
+                    <MenuFlyoutItem x:Name="TreePermanentDelete" Text="Permanent Delete" />
+                    <MenuFlyoutItem x:Name="TreeUndelete" Text="UnDelete" />
+                    <MenuFlyoutItem x:Name="TreeLocalDelete" Text="Local Delete" />
                     <MenuFlyoutSeparator />
-                    <MenuFlyoutItem Text="Open Directory" />
+                    <MenuFlyoutItem x:Name="TreeOpenDirectory" Text="Open Directory" />
                 </MenuFlyout>
             </TreeView.ContextFlyout>
         </TreeView>
@@ -63,15 +63,15 @@
                 <ListView x:Name="OdooEntryList">
                     <ListView.ContextFlyout>
                         <MenuFlyout>
-                            <MenuFlyoutItem Text="Get Latest" />
-                            <MenuFlyoutItem Text="Checkout" />
-                            <MenuFlyoutItem Text="Commit" />
-                            <MenuFlyoutItem Text="Undo Checkout" />
-                            <MenuFlyoutItem Text="Delete" />
-                            <MenuFlyoutSubItem Text="Open">
-                                <MenuFlyoutItem Text="Preview Latest Remote" />
-                                <MenuFlyoutItem Text="Latest Local" />
-                                <MenuFlyoutItem Text="File Directory" />
+                            <MenuFlyoutItem x:Name="ListGetLatest" Text="Get Latest" />
+                            <MenuFlyoutItem x:Name="ListCheckout" Text="Checkout" />
+                            <MenuFlyoutItem x:Name="ListCommit" Text="Commit" />
+                            <MenuFlyoutItem x:Name="ListUndoCheckout" Text="Undo Checkout" />
+                            <MenuFlyoutItem x:Name="ListDelete" Text="Delete" />
+                            <MenuFlyoutSubItem x:Name="ListOpen" Text="Open">
+                                <MenuFlyoutItem x:Name="ListPreview" Text="Preview Latest Remote" />
+                                <MenuFlyoutItem x:Name="ListLocal" Text="Latest Local" />
+                                <MenuFlyoutItem x:Name="ListFileDirectory" Text="File Directory" />
                             </MenuFlyoutSubItem>
                         </MenuFlyout>
                     </ListView.ContextFlyout>

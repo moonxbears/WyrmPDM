@@ -1,20 +1,18 @@
-﻿using HackPDM.Src;
+﻿using HackPDM.ClientUtils;
 
-namespace HackPDM.Src.Helper.Compatibility
+namespace HackPDM.Helper.Compatibility;
+
+public class LegacySettingsProvider : ISettingsProvider
 {
-    public class LegacySettingsProvider : ISettingsProvider
+    public T Get<T>(string key, T defaultValue = default)
     {
-        public T Get<T>(string key, T defaultValue = default)
-        {
-            var value = Properties.Settings.Default[key];
-            return value is T typed ? typed : defaultValue;
-        }
-
-        public void Set<T>(string key, T value)
-        {
-            Properties.Settings.Default[key] = value;
-            Properties.Settings.Default.Save();
-        }
+        var value = Properties.Settings.Default[key];
+        return value is T typed ? typed : defaultValue;
     }
 
+    public void Set<T>(string key, T value)
+    {
+        Properties.Settings.Default[key] = value;
+        Properties.Settings.Default.Save();
+    }
 }

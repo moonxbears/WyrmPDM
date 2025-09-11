@@ -1,19 +1,18 @@
 ﻿//using static System.Net.Mime.MediaTypeNames;
 
-namespace HackPDM
-{
-    public class HpCategoryProperty : HpBaseModel<HpCategoryProperty>
-    {
-        public int cat_id;
-        public int prop_id;
+namespace HackPDM.Odoo.OdooModels.Models;
 
-        public HpCategoryProperty() { }
-        public HpCategoryProperty(
-            int cat_id = 0,
-            int prop_id = 0)
-        {
-            this.cat_id = cat_id;
-            this.prop_id = prop_id;
-        }
+public class HpCategoryProperty : HpBaseModel<HpCategoryProperty>
+{
+    public int CatId;
+    public int PropId;
+
+    public HpCategoryProperty() { }
+    public HpCategoryProperty(
+        int catId = 0,
+        int propId = 0)
+    {
+        this.CatId = catId;
+        this.PropId = propId;
     }
 }

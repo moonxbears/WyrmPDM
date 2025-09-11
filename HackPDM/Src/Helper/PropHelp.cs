@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿namespace HackPDM.Helper;
 
-namespace HackPDM.Src.Helper
+public static class PropHelp
 {
-    public static class PropHelp
-    {
         
-    }
 }

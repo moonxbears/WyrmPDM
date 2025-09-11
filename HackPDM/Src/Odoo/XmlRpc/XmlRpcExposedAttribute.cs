@@ -1,49 +1,44 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace XmlRpc.Goober
+namespace HackPDM.Odoo.XmlRpc;
+
+[AttributeUsage( AttributeTargets.Class | AttributeTargets.Method )]
+public class XmlRpcExposedAttribute : Attribute
 {
-	[AttributeUsage( AttributeTargets.Class | AttributeTargets.Method )]
-	public class XmlRpcExposedAttribute : Attribute
+	public static bool ExposedObject( object obj )
 	{
-		public static bool ExposedObject( object obj )
+		return IsExposed( obj.GetType() );
+	}
+
+	public static bool ExposedMethod( object obj, string methodName )
+	{
+		Type type = obj.GetType();
+		MethodInfo method = type.GetMethod(methodName);
+		if ( method == null )
 		{
-			return IsExposed( obj.GetType() );
+			throw new MissingMethodException( "Method " + methodName + " not found." );
 		}
 
-		public static bool ExposedMethod( object obj, string methodName )
+		if ( !IsExposed( type ) )
 		{
-			Type type = obj.GetType();
-			MethodInfo method = type.GetMethod(methodName);
-			if ( method == null )
-			{
-				throw new MissingMethodException( "Method " + methodName + " not found." );
-			}
+			return true;
+		}
 
-			if ( !IsExposed( type ) )
+		return IsExposed( method );
+	}
+
+	public static bool IsExposed( MemberInfo mi )
+	{
+		object[] customAttributes = mi.GetCustomAttributes(inherit: true);
+		for ( int i = 0; i < customAttributes.Length; i++ )
+		{
+			if ( ( (Attribute)customAttributes [ i ] ) is XmlRpcExposedAttribute )
 			{
 				return true;
 			}
-
-			return IsExposed( method );
 		}
 
-		public static bool IsExposed( MemberInfo mi )
-		{
-			object[] customAttributes = mi.GetCustomAttributes(inherit: true);
-			for ( int i = 0; i < customAttributes.Length; i++ )
-			{
-				if ( ( (Attribute)customAttributes [ i ] ) is XmlRpcExposedAttribute )
-				{
-					return true;
-				}
-			}
-
-			return false;
-		}
+		return false;
 	}
 }

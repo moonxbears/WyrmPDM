@@ -1,17 +1,16 @@
-﻿namespace XmlRpc.Goober
-{
-	public class Logger
-	{
-		public delegate void LoggerDelegate( string message, LogLevel level );
+﻿namespace HackPDM.Odoo.XmlRpc;
 
-		public static LoggerDelegate Delegate;
+public class Logger
+{
+	public delegate void LoggerDelegate( string message, LogLevel level );
+
+	public static LoggerDelegate Delegate;
 		
-		public static void WriteEntry( string message, LogLevel level )
+	public static void WriteEntry( string message, LogLevel level )
+	{
+		if ( Delegate != null )
 		{
-			if ( Delegate != null )
-			{
-				Delegate( message, level );
-			}
+			Delegate( message, level );
 		}
 	}
 }

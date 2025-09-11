@@ -7,11 +7,10 @@ using System.Windows.Forms;
 
 using HackPDM.Extensions.Control;
 
-namespace HackPDM.ClientUtils
+namespace HackPDM.ClientUtils;
+
+public interface ISingletonForm<T>
+    where T : Form, new()
 {
-    public interface ISingletonForm<T>
-        where T : Form, new()
-    {
-        public static abstract T? Singleton { get; set; }   
-    }
+    public static abstract T? Singleton { get; set; }   
 }

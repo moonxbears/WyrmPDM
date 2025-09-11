@@ -4,10 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HackPDM.ClientUtils
-{
-    internal static class FormHelper
-    {
+namespace HackPDM.ClientUtils;
 
-    }
+internal static class FormHelper
+{
+
 }

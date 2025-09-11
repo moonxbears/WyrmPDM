@@ -1,15 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace HackPDM.Odoo.XmlRpc;
 
-namespace XmlRpc.Goober
+internal struct Context
 {
-	internal struct Context
-	{
-		public string Name;
+	public string Name;
 
-		public object Container;
-	}
+	public object Container;
 }

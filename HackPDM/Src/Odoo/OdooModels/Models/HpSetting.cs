@@ -5,40 +5,39 @@
 
 
 
-namespace HackPDM
-{
-    public class HpSetting : HpBaseModel<HpSetting>
-	{
-        public string name;
-        public string description;
-        public string type;
-        public bool bool_value;
-        public int int_value;
-        public string char_value;
-        public float float_value;
-        public DateTime date_value;
+namespace HackPDM.Odoo.OdooModels.Models;
 
-		public HpSetting()
-		{
-		}
-        public HpSetting(
-            string name,
-            string description,
-            string type,
-            bool bool_value=default,
-            int int_value=default,
-            string char_value=null,
-            float float_value=default,
-            DateTime date_value=default)
-		{
-			this.name = name;
-            this.description = description;
-            this.type = type;
-            this.bool_value = bool_value;
-            this.int_value = int_value;
-            this.char_value = char_value;
-            this.float_value = float_value;
-            this.date_value = date_value;
-		}
+public class HpSetting : HpBaseModel<HpSetting>
+{
+	public string Name;
+	public string Description;
+	public string Type;
+	public bool BoolValue;
+	public int IntValue;
+	public string CharValue;
+	public float FloatValue;
+	public DateTime DateValue;
+
+	public HpSetting()
+	{
+	}
+	public HpSetting(
+		string name,
+		string description,
+		string type,
+		bool boolValue=default,
+		int intValue=default,
+		string charValue=null,
+		float floatValue=default,
+		DateTime dateValue=default)
+	{
+		this.Name = name;
+		this.Description = description;
+		this.Type = type;
+		this.BoolValue = boolValue;
+		this.IntValue = intValue;
+		this.CharValue = charValue;
+		this.FloatValue = floatValue;
+		this.DateValue = dateValue;
 	}
 }

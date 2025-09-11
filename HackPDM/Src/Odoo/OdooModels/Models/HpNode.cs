@@ -1,33 +1,28 @@
 ﻿using System.Collections;
-
-using HackPDM.Src.Extensions.General;
-
-
-
+using HackPDM.Extensions.General;
 //using static System.Net.Mime.MediaTypeNames;
 
 
-using OClient = OdooRpcCs.OdooClient;
+using OClient = HackPDM.Odoo.OdooClient;
 
-namespace HackPDM
+namespace HackPDM.Odoo.OdooModels.Models;
+
+public class HpNode : HpBaseModel<HpNode>
 {
-    public class HpNode : HpBaseModel<HpNode>
-    {
-        public string name;
+    public string Name;
 
-        public HpNode() { }
-        public HpNode(
-            string name)
-        {
-            this.name = name;
-        }
-        internal void UpdateNodeLatestVersions(int[] version_ids)
-        {
-            OClient.Command<ArrayList>(GetHpModel(), "update_node_latest_versions", [version_ids.ToArrayList()], 1000000);
-        }
-		public override string ToString() 
-        {
-            return name;
-        }
-	}
+    public HpNode() { }
+    public HpNode(
+        string name)
+    {
+        this.Name = name;
+    }
+    internal void UpdateNodeLatestVersions(int[] versionIds)
+    {
+        OClient.Command<ArrayList>(GetHpModel(), "update_node_latest_versions", [versionIds.ToArrayList()], 1000000);
+    }
+    public override string ToString() 
+    {
+        return Name;
+    }
 }

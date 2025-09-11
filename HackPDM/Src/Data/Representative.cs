@@ -6,246 +6,229 @@ using System.Linq;
 using System.Text;
 
 using HackPDM.ClientUtils;
+using HackPDM.Odoo.OdooModels.Models;
 using HackPDM.Properties;
-using HackPDM.Src;
-using HackPDM.Src.Extensions.Controls;
-
+using HackPDM.Extensions.Controls;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Imaging;
 
-using static HackPDM.HpVersionProperty;
+using static HackPDM.Odoo.OdooModels.Models.HpVersionProperty;
 
-namespace HackPDM.Data
+namespace HackPDM.Data;
+
+public class EntryRow : ItemData, IRowData
 {
-    public class EntryRow : IListItem<EntryRow>, IRowData
-    {
-        public BitmapImage? Icon        { get; set; } = Assets.GetImage("file-icon_32") as BitmapImage;
-		public int?          ID         { get; set; }
-        public string?      Name        { get; set; }
-        public string?      Type        { get; set; }
-        public long?         Size       { get; set; }
-        public FileStatus   Status      { get; set; } = FileStatus.LO;
-        public HpUser?      Checkout    { get; set; }
-        public HpCategory?  Category    { get; set; }
-        public DateTime?    LocalDate   { get; set; }
-        public DateTime?    RemoteDate  { get; set; }
-        public string?      FullName    { get; set; }
-
-		public EntryRow?    Value       { get => this; }
-		public bool         IsSelected  { get; set; }
-	}
-    public class HistoryRow : IListItem<HistoryRow>, IRowData
-    {
-        public int          Version     { get; set; }
-        public HpUser?      ModUser     { get; set; }
-        public DateTime?    ModDate     { get; set; }
-        public long?         Size        { get; set; }
-        public DateTime?    RelDate     { get; set; }
-		public HistoryRow? Value { get; }
-		public bool IsSelected { get; set; }
-	}
-    public class ParentRow : IListItem<ParentRow>, IRowData
-    {
-        public int          Version     { get; set; }
-        public string?      Name        { get; set; }
-        public string?      BasePath    { get; set; }
-		public ParentRow? Value { get; }
-		public bool IsSelected { get; set; }
-	}
-    public class ChildrenRow : IListItem<ChildrenRow>, IRowData
-    {
-        public int          Version     { get; set; }
-        public string?      Name        { get; set; }
-        public string?      BasePath    { get; set; }
-		public ChildrenRow? Value { get; }
-		public bool IsSelected { get; set; }
-	}
-    public class PropertiesRow : IListItem<PropertiesRow>, IRowData
-    {
-        public int          Version     { get; set; }
-        public int?         Property    { get; set; }
-        public string?      Configuration{  get; set; }
-        public string?      Name        { get; set; }
-        public PropertyType?Type        { get; set; }
-        public object?      ValueData       { get; set; }
-		public PropertiesRow? Value { get; }
-		public bool IsSelected { get; set; }
-	}
-    public class VersionRow : IListItem<VersionRow>, IRowData
-    {
-        public int ID { get; set; }
-        public string? Name { get; set; }
-        public long? FileSize { get; set; }
-        public int? DirectoryID { get; set; }
-        public int? NodeID { get; set; }
-        public int? EntryID { get; set; }
-        public int? AttachmentID { get; set; }
-        public DateTime? ModifyDate { get; set; }
-        public string? Checksum { get; set; }
-        public string? OdooCompletePath { get; set; }
-		public VersionRow? Value { get; }
-		public bool IsSelected { get; set; }
-	}
-    public class SearchRow : IListItem<SearchRow>, IRowData
-    {
-        public int ID { get; set; }
-        public string? Name { get; set; }
-        public string? Directory { get; set; }
-		public SearchRow? Value { get; }
-		public bool IsSelected { get; set; }
-	}
-    public class SearchPropRow : IListItem<SearchPropRow>, IRowData
-    {
-        public string? Name { get; set; }
-        public string? Comparer { get; set; }
-        public string? Value { get; set; }
-		public bool IsSelected { get; set; }
-		SearchPropRow? IListItem<SearchPropRow>.Value { get; }
-	}
-    public class FileTypeRow : IListItem<FileTypeRow>, IRowData
-    {
-        public string? Extension { get; set; }
-        public string? Category { get; set; }
-        public string? RegEx { get; set; }
-        public string? Description { get; set; }
-		public FileTypeRow? Value { get; }
-		public bool IsSelected { get; set; }
-	}
-    public class FileTypeEntryFilterRow : IListItem<FileTypeEntryFilterRow>, IRowData
-    {
-        public int ID { get; set; }
-        public string? Proto { get; set; }
-        public string? RegEx { get; set; }
-        public string? Description { get; set; }
-		public FileTypeEntryFilterRow? Value { get; }
-		public bool IsSelected { get; set; }
-	}
-    public class FileTypeLocRow : IListItem<FileTypeLocRow>, IRowData
-    {
-        public string? Extension { get; set; }
-        public string? Status { get; set; }
-        public string? Example { get; set; }
-		public FileTypeLocRow? Value { get; }
-		public bool IsSelected { get; set; }
-	}
-    public class FileTypeLocDatRow : IListItem<FileTypeLocDatRow>, IRowData
-    {
-        public string? Extension { get; set; }
-        public string? RegEx { get; set; }
-        public string? Category { get; set; }
-        public string? Description { get; set; }
-        public object? Icon { get; set; } // Type is Unknown, so use object
-        public object? RemoveIcon { get; set; } // Type is Unknown, so use object
-		public FileTypeLocDatRow? Value { get; }
-		public bool IsSelected { get; set; }
-	}
-	public partial class TreeData : ITreeItem, IEnumerable<TreeData>
+	public BitmapImage? Icon        { get; set; } = Assets.GetImage("file-icon_32") as BitmapImage;
+	public int?          Id         { get; set; }
+	public string?      Type        { get; set; }
+	public long?         Size       { get; set; }
+	public FileStatus   Status      { get; set; } = FileStatus.Lo;
+	public HpUser?      Checkout    { get; set; }
+	public HpCategory?  Category    { get; set; }
+	public DateTime?    LocalDate   { get; set; }
+	public DateTime?    RemoteDate  { get; set; }
+	public string?      FullName    { get; set; }
+}
+public class HistoryRow : ItemData, IRowData
+{
+	public int          Version     { get; set; }
+	public HpUser?      ModUser     { get; set; }
+	public DateTime?    ModDate     { get; set; }
+	public long?         Size        { get; set; }
+	public DateTime?    RelDate     { get; set; }
+}
+public class ParentRow : ItemData, IRowData
+{
+	public int          Version     { get; set; }
+	public string?      BasePath    { get; set; }
+}
+public class ChildrenRow : ItemData, IRowData
+{
+	public int          Version     { get; set; }
+	public string?      BasePath    { get; set; }
+}
+public class PropertiesRow : ItemData, IRowData
+{
+	public int          Version     { get; set; }
+	public int?         Property    { get; set; }
+	public string?      Configuration{  get; set; }
+	public PropertyType?Type        { get; set; }
+	public object?      ValueData       { get; set; }
+}
+public class VersionRow : ItemData, IRowData
+{
+	public int Id { get; set; }
+	public long? FileSize { get; set; }
+	public int? DirectoryId { get; set; }
+	public int? NodeId { get; set; }
+	public int? EntryId { get; set; }
+	public int? AttachmentId { get; set; }
+	public DateTime? ModifyDate { get; set; }
+	public string? Checksum { get; set; }
+	public string? OdooCompletePath { get; set; }
+}
+public class SearchRow : ItemData, IRowData
+{
+	public int Id { get; set; }
+	public string? Directory { get; set; }
+}
+public class SearchPropRow : ItemData, IRowData
+{
+	public string? Comparer { get; set; }
+	public string? Value { get; set; }
+}
+public class FileTypeRow : ItemData, IRowData
+{
+	public string? Extension { get; set; }
+	public string? Category { get; set; }
+	public string? RegEx { get; set; }
+	public string? Description { get; set; }
+}
+public class FileTypeEntryFilterRow : ItemData, IRowData
+{
+	public int Id { get; set; }
+	public string? Proto { get; set; }
+	public string? RegEx { get; set; }
+	public string? Description { get; set; }
+}
+public class FileTypeLocRow : ItemData, IRowData
+{
+	public string? Extension { get; set; }
+	public string? Status { get; set; }
+	public string? Example { get; set; }
+}
+public class FileTypeLocDatRow : ItemData, IRowData
+{
+	public string? Extension { get; set; }
+	public string? RegEx { get; set; }
+	public string? Category { get; set; }
+	public string? Description { get; set; }
+	public object? Icon { get; set; } // Type is Unknown, so use object
+	public object? RemoveIcon { get; set; } // Type is Unknown, so use object
+}
+public partial class TreeData : ITreeItem, IEnumerable<TreeData>
+{
+	public string? Name 
 	{
-		public string? Name 
-        {
-            get
-            {
-                if (string.IsNullOrEmpty(field))
-                {
-                    field = StorageBox.EMPTY_PLACEHOLDER;
-                }
-                return field;
-			} 
-            set; 
-        }
-		public string? FullPath 
-        {
-            get
-            {
-                if (Parent is null)
-                {
-                    field = Name;
-                    return field;
-                }
-                field = $"{Parent.FullPath}\\{Name}";
-				return field;
-			} 
-            set; 
-        }
-		public TreeData? Parent 
-        { 
-            get
-            {
-                field ??= Node?.Parent.LinkedData;
-                return field;
+		get
+		{
+			if (string.IsNullOrEmpty(field))
+			{
+				field = StorageBox.EMPTY_PLACEHOLDER;
 			}
-            set; 
-        }
-		public object? Tag { get; set; }
-		public int? DirectoryID { get; set; }
-        public BitmapImage? Icon { get; set; } = Assets.GetImage("simple-folder-icon_32") as BitmapImage;
-		public TreeViewNode? Node { get; internal set; }
-		public List<ITreeItem>? Children
-        {
-            get
-            {
-                field ??= Node?.Children.Select(n => n.LinkedData as ITreeItem).ToList();
-                return field;
-            }
-            set
-            {
-                field = value;
-            }
-        }
-        public bool IsLinked => Node is not null;
-        public bool HasChildren => Node?.HasChildren ?? false;
-        public bool IsExpanded
-        {
-            get => Node?.IsExpanded ?? false;
-            set => Node?.IsExpanded = value;
-		}
-		public TreeData(string? name, TreeData? parent = null)
+			return field;
+		} 
+		set; 
+	}
+	public string? FullPath 
+	{
+		get
 		{
-			Name = name;
-			Parent = parent;
-			Parent?.AddChild(this);
-			FullPath = Parent is null ? Name : $"{parent?.FullPath}\\{Name}";
-            Children = [];
-			Tag = null;
-		}
-		public void AddChild(TreeData child)
+			if (Parent is null)
+			{
+				field = Name;
+				return field;
+			}
+			field = $"{Parent.FullPath}\\{Name}";
+			return field;
+		} 
+		set; 
+	}
+	public TreeData? Parent 
+	{ 
+		get
 		{
-			child.Parent = this;
-			Children.Add(child);
+			field ??= Node?.Parent.LinkedData;
+			return field;
 		}
-        public void AddChildren(IEnumerable<TreeData> children)
-        {
-            foreach (var child in children)
-            {
-                AddChild(child);
-            }
-        }
-        public void RemoveChild(TreeData child)
-        {
-            if (Children.Contains(child))
-            {
-                child.Parent = null;
-                Children.Remove(child);
-            }
-        }
-        public void RemoveChildren(IEnumerable<TreeData>? children)
-        {
-            if (children is null) return;
-			foreach (var child in children)
-            {
-                RemoveChild(child);
-            }
+		set; 
+	}
+	public object? Tag { get; set; }
+	public int? DirectoryId { get; set; }
+	public BitmapImage? Icon { get; set; } = Assets.GetImage("simple-folder-icon_32") as BitmapImage;
+	public TreeViewNode? Node { get; internal set; }
+	public List<ITreeItem>? Children
+	{
+		get
+		{
+			field ??= Node?.Children.Select(n => n.LinkedData as ITreeItem).ToList();
+			return field;
 		}
-        public void Clear() => RemoveChildren(Children as IEnumerable<TreeData>);
+		set
+		{
+			field = value;
+		}
+	}
+	public bool IsLinked => Node is not null;
+	public bool HasChildren => Node?.HasChildren ?? false;
+	public bool IsExpanded
+	{
+		get => Node?.IsExpanded ?? false;
+		set => Node?.IsExpanded = value;
+	}
+	public TreeData(string? name, TreeData? parent = null)
+	{
+		Name = name;
+		Parent = parent;
+		Parent?.AddChild(this);
+		FullPath = Parent is null ? Name : $"{parent?.FullPath}\\{Name}";
+		Children = [];
+		Tag = null;
+	}
+	public void AddChild(TreeData child)
+	{
+		child.Parent = this;
+		Children.Add(child);
+	}
+	public void AddChildren(IEnumerable<TreeData> children)
+	{
+		foreach (var child in children)
+		{
+			AddChild(child);
+		}
+	}
+	public void RemoveChild(TreeData child)
+	{
+		if (Children.Contains(child))
+		{
+			child.Parent = null;
+			Children.Remove(child);
+		}
+	}
+	public void RemoveChildren(IEnumerable<TreeData>? children)
+	{
+		if (children is null) return;
+		foreach (var child in children)
+		{
+			RemoveChild(child);
+		}
+	}
+	public void Clear() => RemoveChildren(Children as IEnumerable<TreeData>);
 
-		public IEnumerator<TreeData> GetEnumerator() => Children.Cast<TreeData>().GetEnumerator();
-		IEnumerator IEnumerable.GetEnumerator()
-		{
-			return GetEnumerator();
-		}
-		public override string ToString()
-		{
-			return Name ?? "";
-		}
+	public IEnumerator<TreeData> GetEnumerator() => Children.Cast<TreeData>().GetEnumerator();
+	IEnumerator IEnumerable.GetEnumerator()
+	{
+		return GetEnumerator();
+	}
+	public override string ToString()
+	{
+		return Name ?? "";
+	}
+}
+
+public partial class ItemData
+{
+	public virtual ListViewItem? Item { get; set; }
+	public virtual required string Name { get; set; }
+	public virtual string? Text
+	{
+		get => field ??= Name;
+		set;
+	}
+
+	public virtual bool IsSelected
+	{
+		get => Item?.IsSelected ?? false;	
+		set => Item?.IsSelected = value;
 	}
 }

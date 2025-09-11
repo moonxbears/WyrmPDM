@@ -1,26 +1,24 @@
 ﻿using System;
-using System.Runtime.Serialization;
 
-namespace XmlRpc.Goober
+namespace HackPDM.Odoo.XmlRpc;
+
+[Serializable]
+internal class XmlRpcException : Exception
 {
-	[Serializable]
-	internal class XmlRpcException : Exception
+	public string FaultString => Message;
+	public int FaultCode
 	{
-		public string FaultString => Message;
-		public int FaultCode
-		{
-			get;
-		}
+		get;
+	}
 
-		public XmlRpcException( int code, string message )
-			: base( message )
-		{
-			FaultCode = code;
-		}
+	public XmlRpcException( int code, string message )
+		: base( message )
+	{
+		FaultCode = code;
+	}
 
-		public override string ToString()
-		{
-			return "Code: " + FaultCode + " Message: " + base.ToString();
-		}
+	public override string ToString()
+	{
+		return "Code: " + FaultCode + " Message: " + base.ToString();
 	}
 }

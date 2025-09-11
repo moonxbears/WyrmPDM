@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <Page
-    x:Class="HackPDM.Src.Forms.Helper.MessageBox"
+    x:Class="HackPDM.Forms.Helper.MessageBox"
     xmlns="using:Microsoft.UI.Xaml.Controls"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
