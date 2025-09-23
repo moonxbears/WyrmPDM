@@ -1,34 +1,30 @@
-<?xml version="1.0" encoding="utf-8" ?>
 <Page
     x:Class="HackPDM.Forms.Hack.HackFileManager"
-    xmlns="using:Microsoft.UI.Xaml.Controls"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:dataGrid="using:CommunityToolkit.WinUI.UI.Controls"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:sys="using:System"
-    xmlns:ui="using:CommunityToolkit.WinUI"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
     mc:Ignorable="d">
 
-    <Grid Margin="12">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto" />
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="Auto" />
-        </Grid.ColumnDefinitions>
+    <Grid Width="1920" Height="1080">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="256" />
         </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="272" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="288" />
+        </Grid.ColumnDefinitions>
 
-        <!--  TreeView for Directories  -->
         <TreeView
             x:Name="OdooDirectoryTree"
             Grid.Row="0"
-            Grid.RowSpan="2"
             Grid.Column="0"
-            Width="321"
-            Margin="0,0,10,0"
+            Margin="14"
+            HorizontalAlignment="Stretch"
             VerticalAlignment="Stretch">
             <TreeView.ContextFlyout>
                 <MenuFlyout>
@@ -51,115 +47,425 @@
             </TreeView.ContextFlyout>
         </TreeView>
 
-        <!--  TabView for file lists  -->
         <TabView
             x:Name="ListTabs"
             Grid.Row="0"
-            Grid.RowSpan="2"
             Grid.Column="1"
-            Margin="0,0,10,0">
-
-            <TabViewItem Header="Entries" IsClosable="False">
-                <ListView x:Name="OdooEntryList">
-                    <ListView.ContextFlyout>
-                        <MenuFlyout>
-                            <MenuFlyoutItem x:Name="ListGetLatest" Text="Get Latest" />
-                            <MenuFlyoutItem x:Name="ListCheckout" Text="Checkout" />
-                            <MenuFlyoutItem x:Name="ListCommit" Text="Commit" />
-                            <MenuFlyoutItem x:Name="ListUndoCheckout" Text="Undo Checkout" />
-                            <MenuFlyoutItem x:Name="ListDelete" Text="Delete" />
-                            <MenuFlyoutSubItem x:Name="ListOpen" Text="Open">
-                                <MenuFlyoutItem x:Name="ListPreview" Text="Preview Latest Remote" />
-                                <MenuFlyoutItem x:Name="ListLocal" Text="Latest Local" />
-                                <MenuFlyoutItem x:Name="ListFileDirectory" Text="File Directory" />
-                            </MenuFlyoutSubItem>
-                        </MenuFlyout>
-                    </ListView.ContextFlyout>
-                </ListView>
-            </TabViewItem>
-            <TabViewItem Header="Changes" IsClosable="False">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <ListView x:Name="HackChangesList" Grid.Column="0" />
-                    <ListView x:Name="OdooChangesList" Grid.Column="1" />
-                </Grid>
-            </TabViewItem>
+            Grid.ColumnSpan="2"
+            Margin="8,8,8,8"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch">
+            <TabView.TabItems>
+                <TabViewItem Header="Entries">
+                    <dataGrid:DataGrid
+                        x:Name="OdooEntryList"
+                        Margin="0"
+                        AutoGenerateColumns="False">
+                        <dataGrid:DataGrid.ContextFlyout>
+                            <MenuFlyout>
+                                <MenuFlyoutItem x:Name="ListGetLatest" Text="Get Latest" />
+                                <MenuFlyoutItem x:Name="ListCheckout" Text="Checkout" />
+                                <MenuFlyoutItem x:Name="ListCommit" Text="Commit" />
+                                <MenuFlyoutItem x:Name="ListUndoCheckout" Text="Undo Checkout" />
+                                <MenuFlyoutItem x:Name="ListDelete" Text="Delete" />
+                                <MenuFlyoutSubItem x:Name="ListOpen" Text="Open">
+                                    <MenuFlyoutItem x:Name="ListPreview" Text="Preview Latest Remote" />
+                                    <MenuFlyoutItem x:Name="ListLocal" Text="Latest Local" />
+                                    <MenuFlyoutItem x:Name="ListFileDirectory" Text="File Directory" />
+                                </MenuFlyoutSubItem>
+                            </MenuFlyout>
+                        </dataGrid:DataGrid.ContextFlyout>
+                        <dataGrid:DataGrid.Columns>
+                            <dataGrid:DataGridTextColumn
+                                Width="75"
+                                Binding="{Binding ID}"
+                                CanUserSort="True"
+                                Header="ID" />
+                            <dataGrid:DataGridTextColumn
+                                Width="300"
+                                Binding="{Binding Name}"
+                                CanUserSort="True"
+                                Header="Name" />
+                            <dataGrid:DataGridTextColumn
+                                Width="120"
+                                Binding="{Binding Type}"
+                                CanUserSort="True"
+                                Header="Type" />
+                            <dataGrid:DataGridTextColumn
+                                Width="100"
+                                Binding="{Binding Size}"
+                                CanUserSort="True"
+                                Header="Size" />
+                            <dataGrid:DataGridTextColumn
+                                Width="75"
+                                Binding="{Binding Status}"
+                                CanUserSort="True"
+                                Header="Status" />
+                            <dataGrid:DataGridTextColumn
+                                Width="120"
+                                Binding="{Binding CheckOut}"
+                                CanUserSort="True"
+                                Header="CheckOut" />
+                            <dataGrid:DataGridTextColumn
+                                Width="110"
+                                Binding="{Binding Category}"
+                                CanUserSort="True"
+                                Header="Category" />
+                            <dataGrid:DataGridTextColumn
+                                Width="150"
+                                Binding="{Binding LocalDate}"
+                                CanUserSort="True"
+                                Header="Local Date" />
+                            <dataGrid:DataGridTextColumn
+                                Width="150"
+                                Binding="{Binding RemoteDate}"
+                                CanUserSort="True"
+                                Header="Remote Date" />
+                            <dataGrid:DataGridTextColumn
+                                Width="100"
+                                Binding="{Binding FullName}"
+                                CanUserSort="True"
+                                Header="FullName" />
+                        </dataGrid:DataGrid.Columns>
+                    </dataGrid:DataGrid>
+                </TabViewItem>
+                <TabViewItem Header="Changes">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <dataGrid:DataGrid
+                            x:Name="HackChangesList"
+                            Grid.Column="0"
+                            Margin="0,0,8,0"
+                            AutoGenerateColumns="False">
+                            <dataGrid:DataGrid.Columns>
+                                <dataGrid:DataGridTextColumn
+                                    Width="75"
+                                    Binding="{Binding ID}"
+                                    CanUserSort="True"
+                                    Header="ID" />
+                                <dataGrid:DataGridTextColumn
+                                    Width="300"
+                                    Binding="{Binding Name}"
+                                    CanUserSort="True"
+                                    Header="Name" />
+                                <dataGrid:DataGridTextColumn
+                                    Width="120"
+                                    Binding="{Binding Type}"
+                                    CanUserSort="True"
+                                    Header="Type" />
+                                <dataGrid:DataGridTextColumn
+                                    Width="100"
+                                    Binding="{Binding Size}"
+                                    CanUserSort="True"
+                                    Header="Size" />
+                                <dataGrid:DataGridTextColumn
+                                    Width="75"
+                                    Binding="{Binding Status}"
+                                    CanUserSort="True"
+                                    Header="Status" />
+                                <dataGrid:DataGridTextColumn
+                                    Width="120"
+                                    Binding="{Binding CheckOut}"
+                                    CanUserSort="True"
+                                    Header="CheckOut" />
+                                <dataGrid:DataGridTextColumn
+                                    Width="110"
+                                    Binding="{Binding Category}"
+                                    CanUserSort="True"
+                                    Header="Category" />
+                                <dataGrid:DataGridTextColumn
+                                    Width="150"
+                                    Binding="{Binding LocalDate}"
+                                    CanUserSort="True"
+                                    Header="Local Date" />
+                                <dataGrid:DataGridTextColumn
+                                    Width="150"
+                                    Binding="{Binding RemoteDate}"
+                                    CanUserSort="True"
+                                    Header="Remote Date" />
+                                <dataGrid:DataGridTextColumn
+                                    Width="100"
+                                    Binding="{Binding FullName}"
+                                    CanUserSort="True"
+                                    Header="FullName" />
+                            </dataGrid:DataGrid.Columns>
+                        </dataGrid:DataGrid>
+                        <dataGrid:DataGrid
+                            x:Name="OdooChangesList"
+                            Grid.Column="1"
+                            Margin="8,0,0,0"
+                            AutoGenerateColumns="False">
+                            <dataGrid:DataGrid.Columns>
+                                <dataGrid:DataGridTextColumn
+                                    Width="75"
+                                    Binding="{Binding ID}"
+                                    CanUserSort="True"
+                                    Header="ID" />
+                                <dataGrid:DataGridTextColumn
+                                    Width="300"
+                                    Binding="{Binding Name}"
+                                    CanUserSort="True"
+                                    Header="Name" />
+                                <dataGrid:DataGridTextColumn
+                                    Width="120"
+                                    Binding="{Binding Type}"
+                                    CanUserSort="True"
+                                    Header="Type" />
+                                <dataGrid:DataGridTextColumn
+                                    Width="100"
+                                    Binding="{Binding Size}"
+                                    CanUserSort="True"
+                                    Header="Size" />
+                                <dataGrid:DataGridTextColumn
+                                    Width="75"
+                                    Binding="{Binding Status}"
+                                    CanUserSort="True"
+                                    Header="Status" />
+                                <dataGrid:DataGridTextColumn
+                                    Width="120"
+                                    Binding="{Binding CheckOut}"
+                                    CanUserSort="True"
+                                    Header="CheckOut" />
+                                <dataGrid:DataGridTextColumn
+                                    Width="110"
+                                    Binding="{Binding Category}"
+                                    CanUserSort="True"
+                                    Header="Category" />
+                                <dataGrid:DataGridTextColumn
+                                    Width="150"
+                                    Binding="{Binding LocalDate}"
+                                    CanUserSort="True"
+                                    Header="Local Date" />
+                                <dataGrid:DataGridTextColumn
+                                    Width="150"
+                                    Binding="{Binding RemoteDate}"
+                                    CanUserSort="True"
+                                    Header="Remote Date" />
+                                <dataGrid:DataGridTextColumn
+                                    Width="100"
+                                    Binding="{Binding FullName}"
+                                    CanUserSort="True"
+                                    Header="FullName" />
+                            </dataGrid:DataGrid.Columns>
+                        </dataGrid:DataGrid>
+                    </Grid>
+                </TabViewItem>
+            </TabView.TabItems>
         </TabView>
 
-        <!--  Right-side controls (image, version tabs)  -->
         <TabView
             x:Name="VersionTabs"
             Grid.Row="1"
-            Grid.RowSpan="2"
-            Grid.Column="2"
-            Margin="10,0,0,0">
-            <TabViewItem x:Name="HistoryTab" Header="History">
-                <ListView x:Name="OdooHistory" />
-            </TabViewItem>
-            <TabViewItem x:Name="ParentTab" Header="Where Used">
-                <ListView x:Name="OdooParents" />
-            </TabViewItem>
-            <TabViewItem x:Name="ChildTab" Header="Dependents">
-                <ListView x:Name="OdooChildren" />
-            </TabViewItem>
-            <TabViewItem x:Name="PropertiesTab" Header="Properties">
-                <ListView x:Name="OdooProperties" />
-            </TabViewItem>
-            <TabViewItem x:Name="InfoTab" Header="Info">
-                <ListView x:Name="OdooVersionInfoList" />
-            </TabViewItem>
+            Grid.Column="0"
+            Grid.ColumnSpan="2"
+            Margin="8,0,8,8"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch">
+            <TabView.TabItems>
+                <TabViewItem Header="History (0)">
+                    <dataGrid:DataGrid x:Name="OdooHistory" AutoGenerateColumns="False">
+                        <dataGrid:DataGrid.Columns>
+                            <dataGrid:DataGridTextColumn
+                                Width="75"
+                                Binding="{Binding Version}"
+                                CanUserSort="True"
+                                Header="Version" />
+                            <dataGrid:DataGridTextColumn
+                                Width="140"
+                                Binding="{Binding ModUser}"
+                                CanUserSort="True"
+                                Header="ModUser" />
+                            <dataGrid:DataGridTextColumn
+                                Width="140"
+                                Binding="{Binding ModDate}"
+                                CanUserSort="True"
+                                Header="ModDate" />
+                            <dataGrid:DataGridTextColumn
+                                Width="75"
+                                Binding="{Binding Size}"
+                                CanUserSort="True"
+                                Header="Size" />
+                            <dataGrid:DataGridTextColumn
+                                Width="75"
+                                Binding="{Binding RelDate}"
+                                CanUserSort="True"
+                                Header="RelDate" />
+                        </dataGrid:DataGrid.Columns>
+                    </dataGrid:DataGrid>
+                </TabViewItem>
+                <TabViewItem Header="Where Used (0)">
+                    <dataGrid:DataGrid x:Name="OdooParents" AutoGenerateColumns="False">
+                        <dataGrid:DataGrid.Columns>
+                            <dataGrid:DataGridTextColumn
+                                Width="75"
+                                Binding="{Binding Version}"
+                                CanUserSort="True"
+                                Header="Version" />
+                            <dataGrid:DataGridTextColumn
+                                Width="400"
+                                Binding="{Binding Name}"
+                                CanUserSort="True"
+                                Header="Name" />
+                            <dataGrid:DataGridTextColumn
+                                Width="600"
+                                Binding="{Binding BasePath}"
+                                CanUserSort="True"
+                                Header="Base Path" />
+                        </dataGrid:DataGrid.Columns>
+                    </dataGrid:DataGrid>
+                </TabViewItem>
+                <TabViewItem Header="Dependents (0)">
+                    <dataGrid:DataGrid x:Name="OdooChildren" AutoGenerateColumns="False">
+                        <dataGrid:DataGrid.Columns>
+                            <dataGrid:DataGridTextColumn
+                                Width="75"
+                                Binding="{Binding Version}"
+                                CanUserSort="True"
+                                Header="Version" />
+                            <dataGrid:DataGridTextColumn
+                                Width="400"
+                                Binding="{Binding Name}"
+                                CanUserSort="True"
+                                Header="Name" />
+                            <dataGrid:DataGridTextColumn
+                                Width="600"
+                                Binding="{Binding BasePath}"
+                                CanUserSort="True"
+                                Header="Base Path" />
+                        </dataGrid:DataGrid.Columns>
+                    </dataGrid:DataGrid>
+                </TabViewItem>
+                <TabViewItem Header="Properties">
+                    <dataGrid:DataGrid x:Name="OdooProperties" AutoGenerateColumns="False">
+                        <dataGrid:DataGrid.Columns>
+                            <dataGrid:DataGridTextColumn
+                                Width="75"
+                                Binding="{Binding Version}"
+                                CanUserSort="True"
+                                Header="Version" />
+                            <dataGrid:DataGridTextColumn
+                                Width="100"
+                                Binding="{Binding Configuration}"
+                                CanUserSort="True"
+                                Header="Configuration" />
+                            <dataGrid:DataGridTextColumn
+                                Width="100"
+                                Binding="{Binding Name}"
+                                CanUserSort="True"
+                                Header="Name" />
+                            <dataGrid:DataGridTextColumn
+                                Width="75"
+                                Binding="{Binding Property}"
+                                CanUserSort="True"
+                                Header="Property" />
+                            <dataGrid:DataGridTextColumn
+                                Width="75"
+                                Binding="{Binding Type}"
+                                CanUserSort="True"
+                                Header="Type" />
+                            <dataGrid:DataGridTextColumn
+                                Width="400"
+                                Binding="{Binding Value}"
+                                CanUserSort="True"
+                                Header="Value" />
+                        </dataGrid:DataGrid.Columns>
+                    </dataGrid:DataGrid>
+                </TabViewItem>
+                <TabViewItem Header="Info">
+                    <dataGrid:DataGrid x:Name="OdooVersionInfoList" AutoGenerateColumns="False">
+                        <dataGrid:DataGrid.Columns>
+                            <dataGrid:DataGridTextColumn
+                                Width="75"
+                                Binding="{Binding ID}"
+                                CanUserSort="True"
+                                Header="ID" />
+                            <dataGrid:DataGridTextColumn
+                                Width="300"
+                                Binding="{Binding Name}"
+                                CanUserSort="True"
+                                Header="Name" />
+                            <dataGrid:DataGridTextColumn
+                                Width="100"
+                                Binding="{Binding FileSize}"
+                                CanUserSort="True"
+                                Header="File Size" />
+                            <dataGrid:DataGridTextColumn
+                                Width="75"
+                                Binding="{Binding DirectoryID}"
+                                CanUserSort="True"
+                                Header="Directory ID" />
+                            <dataGrid:DataGridTextColumn
+                                Width="75"
+                                Binding="{Binding NodeID}"
+                                CanUserSort="True"
+                                Header="Node ID" />
+                            <dataGrid:DataGridTextColumn
+                                Width="75"
+                                Binding="{Binding EntryID}"
+                                CanUserSort="True"
+                                Header="Entry ID" />
+                            <dataGrid:DataGridTextColumn
+                                Width="75"
+                                Binding="{Binding AttachmentID}"
+                                CanUserSort="True"
+                                Header="Attachment ID" />
+                            <dataGrid:DataGridTextColumn
+                                Width="120"
+                                Binding="{Binding ModifyDate}"
+                                CanUserSort="True"
+                                Header="Modify Date" />
+                            <dataGrid:DataGridTextColumn
+                                Width="300"
+                                Binding="{Binding Checksum}"
+                                CanUserSort="True"
+                                Header="Checksum" />
+                            <dataGrid:DataGridTextColumn
+                                Width="300"
+                                Binding="{Binding OdooCompletePath}"
+                                CanUserSort="True"
+                                Header="Odoo Complete path" />
+                        </dataGrid:DataGrid.Columns>
+                    </dataGrid:DataGrid>
+                </TabViewItem>
+            </TabView.TabItems>
         </TabView>
 
-        <!--  Image Panel  -->
-        <Border
-            Grid.Row="0"
-            Grid.RowSpan="1"
+        <Image
+            x:Name="OdooEntryImage"
+            Grid.Row="1"
             Grid.Column="2"
-            Margin="10,0,0,10">
-            <Image
-                x:Name="OdooEntryImage"
-                Width="256"
-                Height="274"
-                Source="ms-appx:///Assets/placeholder.png"
-                Stretch="UniformToFill" />
-        </Border>
-
-        <!--  Bottom Controls  -->
-        <Grid
-            Grid.Row="2"
-            Grid.Column="0"
-            Grid.ColumnSpan="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch" />
+        <StackPanel
+            x:Name="panel1"
+            Grid.Row="1"
+            Grid.Column="2"
+            Margin="8,0,8,8"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Bottom">
+            <StackPanel
+                Margin="0,0,0,0"
+                HorizontalAlignment="Right"
+                Orientation="Horizontal">
+                <Image
+                    Width="32"
+                    Height="32"
+                    Margin="0,0,8,0" />
+                <Image
+                    Width="32"
+                    Height="32"
+                    Margin="0,0,8,0" />
+                <Image Width="32" Height="32" />
+            </StackPanel>
             <CheckBox
                 x:Name="ShowInactive"
-                Grid.Column="1"
-                Margin="0,0,10,0"
-                VerticalAlignment="Center"
+                Margin="0,8,0,0"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Bottom"
                 Content="Show Deleted" />
-            <CommandBar
-                x:Name="MoreTools"
-                Grid.Column="2"
-                DefaultLabelPosition="Right">
-                <AppBarButton
-                    x:Name="AdditionalTools"
-                    Icon="More"
-                    Label="Additional Tools">
-                    <AppBarButton.Flyout>
-                        <MenuFlyout>
-                            <MenuFlyoutItem x:Name="OdooRefreshDropdown" Text="Refresh View" />
-                            <MenuFlyoutItem x:Name="OdooSearchDropdown" Text="Search" />
-                            <MenuFlyoutItem x:Name="OdooManageTypesDropdown" Text="Manage File Types" />
-                        </MenuFlyout>
-                    </AppBarButton.Flyout>
-                </AppBarButton>
-            </CommandBar>
-        </Grid>
+        </StackPanel>
     </Grid>
 </Page>

@@ -12,6 +12,12 @@ using Microsoft.UI.Xaml.Media;
 using Theme = HackPDM.Src.ClientUtils.Types.Theme;
 using Control = Microsoft.UI.Xaml.Controls.Control;
 using HackPDM.Src.ClientUtils.Types;
+
+using TreeView = Microsoft.UI.Xaml.Controls.TreeView;
+using TreeViewItem = Microsoft.UI.Xaml.Controls.TreeViewItem;
+using System.Collections.ObjectModel;
+using CommunityToolkit.WinUI.UI.Controls;
+using HackPDM.Extensions.General;
 //using System.Windows.Controls;
 
 namespace HackPDM.Extensions.Controls;
@@ -44,7 +50,7 @@ public static class ExtensionForm
 		};
 	}
 
-	extension(ListViewItem item)
+	extension(DataGridRow item)
 	{
 		public ItemData LinkedItem
 		{
@@ -68,8 +74,17 @@ public static class ExtensionForm
 					_data.Add(item, holder);
 				}
 				holder.ItemData = value;
-				item.Content = holder.ItemData;
+				item.DataContext = holder.ItemData;
 			}
+		}
+
+	}
+	extension(Control control)
+	{
+		public void AddItem<T>(T item)
+		{
+			var collection = control.ItemsSource<ObservableCollection<T>>();
+			collection?.Add(item);
 		}
 	}
 	extension (TreeViewNode node)
@@ -231,16 +246,20 @@ public static class ExtensionForm
 		ArgumentNullException.ThrowIfNull(node);
 		return node.FullPath;
 	}
-	public static T? ItemsSource<T>(this ItemsControl control) where T : class
+	public static T? ItemsSource<T>(this Control control) where T : class
 	{
 		ArgumentNullException.ThrowIfNull(control);
-		return control.ItemsSource as T;
+		return control.DataContext as T;
 	}
-	public static void Sort<T>(this ItemsControl items, Comparison<T> comparison) 
+	public static void SortBy<T, TKey>(this Control items, Func<T, TKey> comparison) 
 	{
-		var casted = items.ItemsSource as List<T>;
-		casted?.Sort(comparison.Invoke);
-		if (casted is not null) items.ItemsSource = casted;
+		var casted = items.DataContext as ObservableCollection<T>;
+		
+		casted?.SortBy(comparison.Invoke, true);
+		if (casted is null) return;
+		
+		items.DataContext = casted;
+		items.UpdateLayout();
 	}
 	//extension(Form form)
 	//{

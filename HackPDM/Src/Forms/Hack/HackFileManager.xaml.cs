@@ -36,6 +36,9 @@ using OClient = HackPDM.Odoo.OdooClient;
 using Path = System.IO.Path;
 using static HackPDM.Forms.Helper.MessageBox;
 using HackPDM.Src.ClientUtils.Types;
+using Microsoft.UI.Xaml.Controls.Primitives;
+using Windows.UI.Popups;
+using CommunityToolkit.WinUI.UI.Controls;
 
 
 // To learn more about WinUI, the WinUI project structure,
@@ -59,7 +62,7 @@ public sealed partial class HackFileManager : Page
 
 	public static NotifyIcon Notify { get; } = Notifier.Notify;
 	public static StatusDialog Dialog { get; set; }
-	public static ConcurrentQueue<string[]> QueueAsyncStatus = new();
+	public static ConcurrentQueue<(StatusMessage, string)> QueueAsyncStatus = new();
 	public static ListDetail ActiveList { get; set; }
 	public static int DownloadBatchSize
 	{
@@ -148,7 +151,8 @@ public sealed partial class HackFileManager : Page
 		OVersions.CollectionChanged		+= CollectionChanged;
 
 		OdooEntryList.SelectionChanged	+= OdooEntryList_SelectionChanged;
-		TreeAnalyze.Click               += (sender, args) => {};
+
+        TreeAnalyze.Click               += (sender, args) => {};
 		TreeCheckout.Click              += Tree_Click_Checkout;
 		TreeCommit.Click                += Tree_Click_Commit;
 		TreeDelete.Click                += Tree_Click_LogicalDelete;
@@ -249,9 +253,9 @@ public sealed partial class HackFileManager : Page
 		keyValues["directories"] = children;
 		return keyValues;
 	}
-	private void InitListViewInternal(ListView list, ListDetail rows)
+	private void InitListViewInternal(DataGrid list, ListDetail rows)
 		=> InitListView(list, rows);
-	internal static void InitListView(ItemsControl control, ListDetail rows) 
+	internal static void InitListView(DataGrid control, ListDetail rows) 
 		=> SafeInvoker(control, () => control.ItemsSource = null);
 	internal static void InitGridView(ItemsControl control) 
 		=> SafeInvoker(control, () => control.ItemsSource = null);
@@ -293,11 +297,11 @@ public sealed partial class HackFileManager : Page
 	//		list.ListViewItemSorter = row.SortRowOrder.Sort;
 	//	});
 	//}
-	internal static T EmptyListItemInternal<T>(ListView list) where T : new()
+	internal static T EmptyListItemInternal<T>(DataGrid list) where T : new()
 		=> EmptyListItem<T>(list);
-	internal static T EmptyGridTable<T>(ItemsControl grid) where T : new() 
+	internal static T EmptyGridTable<T>(DataGrid grid) where T : new() 
 		=> EmptyListItem<T>(grid);
-	internal static T EmptyListItem<T>(ItemsControl list) where T : new()
+	internal static T EmptyListItem<T>(DataGrid list) where T : new()
 	{
 		T entry = new();
 		SafeInvoker(list, () =>
@@ -334,21 +338,22 @@ public sealed partial class HackFileManager : Page
 	private void ClearEntryLists()
 	{
 		//OdooHistory.Clear();
-		OdooHistory.Items?.Clear();
+		OdooHistory.ItemsSource = new HistoryRow[0];
 		//OdooParents.Clear();
-		OdooParents.Items?.Clear();
-		//OdooChildren.Clear();
-		OdooChildren.Items?.Clear();
+		OdooParents.ItemsSource = new ParentRow[0];
+        //OdooChildren.Clear();
+        OdooChildren.ItemsSource = new ChildrenRow[0];
 		//OdooProperties.Clear();
-		OdooProperties.Items?.Clear();
-	}
+		OdooProperties.ItemsSource = new PropertiesRow[0];
+
+    }
 	public void RefreshEntries()
 	{
 		SafeInvoker(OdooEntryList, () => OdooEntryList.UpdateLayout());
 	}
 	internal TreeView GetOdooDirectoryTree()
 		=> OdooDirectoryTree;
-	internal ListView GetOdooEntryList()
+	internal DataGrid GetOdooEntryList()
 		=> OdooEntryList;
 	#endregion
 
@@ -385,8 +390,8 @@ public sealed partial class HackFileManager : Page
 				token.ThrowIfCancellationRequested();
 				AddRemoteEntries(entries, hackmap);
 				AddLocalEntries(LastSelectedNode, hackmap);
-
-				SafeInvoker(OdooEntryList, ()=> OdooEntryList.Sort((EntryRow x, EntryRow y)=> string.Compare(x.Name, y.Name)));
+				
+				SafeInvoker(OdooEntryList, ()=> OdooEntryList.SortBy<EntryRow, string>(x => x.Name));
 			}
 			IsListLoaded = true;
 		}
@@ -511,7 +516,7 @@ public sealed partial class HackFileManager : Page
 			await AsyncHelper.WaitUntil(() => IsListLoaded);
 			if (OdooEntryList.SelectedItems.Count > 0)
 			{
-				(OdooEntryList.SelectedItems[0] as ListViewItem)?.StartBringIntoView();
+				(OdooEntryList.SelectedItems[0] as EntryRow)?.Item.StartBringIntoView();
 			}
 		});
 	}
@@ -730,7 +735,7 @@ public sealed partial class HackFileManager : Page
 			
 		item.FullName = fullName;
 
-		SafeInvoker(OdooEntryList, () => OdooEntryList.Items.Add(item));
+		SafeInvoker(OdooEntryList, () => OdooEntryList.AddItem(item));
 	}
 	private async void AddLocalEntries(TreeViewNode node, Dictionary<string, Task<HackFile>> hackFileMap = null)
 	{
@@ -843,13 +848,13 @@ public sealed partial class HackFileManager : Page
 	#endregion
 
 	#region List Item Selection
-	private async Task ProcessEntrySelectionAsync(ListViewItem item, CancellationToken token)
+	private async Task ProcessEntrySelectionAsync(DataGridRow item, CancellationToken token)
 	{
-		HpVersion[] versions = [];
+        HpVersion[] versions = [];
 		List<HpVersionProperty[]> versionProperties = [];
 		(HpVersion[], HpVersion[]) versionsRelation = ([], []);
-
-		var entry = item.Content as EntryRow;
+	
+		var entry = item.DataContext as EntryRow;
 		if (entry is null) return;
 
 
@@ -942,10 +947,10 @@ public sealed partial class HackFileManager : Page
 			}
 		}
 	}
-	private async void UpdateListAsync<T>(ListView list, T item)
+	private async void UpdateListAsync<T>(DataGrid list, T item)
 	{
 		await Task.Yield();
-		SafeInvoker(list, () => list.Items.Add(item));
+		SafeInvoker(list, () => list.AddItem(item));
 	}
 	private HpVersion[] GetVersionsForEntry(int entryId, string[] excludedFields = null, string[] insertedFields = null)
 	{
@@ -1025,7 +1030,7 @@ public sealed partial class HackFileManager : Page
 							_ => null,
 						};
 
-						OdooProperties.Items.Add(item);
+						OdooProperties.AddItem(item);
 					}
 				}
 			});
@@ -1049,7 +1054,7 @@ public sealed partial class HackFileManager : Page
 					item.Version = version.Id;
 					item.Name = version.Name;
 					item.BasePath = Path.Combine(/*HackDefaults.PWAPathAbsolute,*/ version.WinPathway);
-					OdooChildren.Items.Add(item);
+					OdooChildren.AddItem(item);
 				}
 			});
 		}
@@ -1073,7 +1078,7 @@ public sealed partial class HackFileManager : Page
 					item.Name = version.Name;
 					item.BasePath = version.WinPathway;
 
-					OdooParents.Items.Add(item);
+					OdooParents.AddItem(item);
 				}
 			});
 		}
@@ -1111,7 +1116,7 @@ public sealed partial class HackFileManager : Page
 					item.Size = version.FileSize;
 					item.RelDate = null;
 
-					OdooHistory.Items.Add(item);
+					OdooHistory.AddItem(item);
 				}
 			});
 		}
@@ -1145,7 +1150,7 @@ public sealed partial class HackFileManager : Page
 					: "Not Found";
 				item.OdooCompletePath = path;
 
-				OdooVersionInfoList.Items.Add(item);
+				OdooVersionInfoList.AddItem(item);
 			});
 		}
 	}
@@ -1392,7 +1397,7 @@ public sealed partial class HackFileManager : Page
 		MessageBox.Show($"Completed!");
 		RestartEntries();
 	}
-	private async Task Async_ListItemChange(ListViewItem item, CancellationToken token)
+	private async Task Async_ListItemChange(DataGridRow item, CancellationToken token)
 	{
 		try
 		{
@@ -1493,7 +1498,7 @@ public sealed partial class HackFileManager : Page
 
 		while (entries.TryTake(out HpEntry entry))
 		{
-			Task<HpEntry> entryTask = Task.Run(() =>
+			Task<HpEntry?> entryTask = Task.Run(() =>
 			{
 				// true means that this entry is checked out
 				if (entry.CheckoutUser != OdooDefaults.OdooId)
@@ -1604,7 +1609,7 @@ public sealed partial class HackFileManager : Page
 			// ==============================================================
 			if (version.Checksum == null || version.Checksum.Length == 0 || version.Checksum == "False")
 			{
-				QueueAsyncStatus.Enqueue(["ERROR", $"Checksum not found for version: {version.Name}"]);
+				QueueAsyncStatus.Enqueue((StatusMessage.ERROR, $"Checksum not found for version: {version.Name}"));
 				SkipCounter++;
 				willProcess = false;
 			}
@@ -1612,7 +1617,7 @@ public sealed partial class HackFileManager : Page
 			{
 
 				//unprocessedVersions.Add(version.ID);
-				QueueAsyncStatus.Enqueue(["FOUND", $"Skipping version download: {version.Name}"]);
+				QueueAsyncStatus.Enqueue((StatusMessage.FOUND, $"Skipping version download: {version.Name}"));
 				SkipCounter++;
 				willProcess = false;
 			}
@@ -1624,7 +1629,7 @@ public sealed partial class HackFileManager : Page
 				string fileName = Path.Combine(version.WinPathway, version.Name);
 				processVersions.Add(version);
 
-				QueueAsyncStatus.Enqueue(["PROCESSING", $"Downloading latest version: {fileName}"]);
+				QueueAsyncStatus.Enqueue((StatusMessage.PROCESSING, $"Downloading latest version: {fileName}"));
 				_processCounter++;
 			}
 			_totalProcessed = SkipCounter + _processCounter;
@@ -1854,7 +1859,7 @@ public sealed partial class HackFileManager : Page
 		// ColumnInfo newCol = ColumnMap.RowWidths.SortColumnOrder[e.Column];
 		// ColumnMap.RowWidths.SetActiveColumn(newCol);
 		// ColumnMap.RowWidths.SortRowOrder = newCol;
-		OdooEntryList.Sort<EntryRow>((s,o)=>String.CompareOrdinal(s.Name, o.Name));
+		OdooEntryList.SortBy<EntryRow, string>(entry=>entry.Name);
 		
 	}
 
@@ -2175,9 +2180,9 @@ public sealed partial class HackFileManager : Page
 		var sb = new StringBuilder();
 		var files = new List<FileInfo>();
 
-		OdooEntryList.SelectedItems.Cast<ListViewItem>().ToList().ForEach(item =>
+		OdooEntryList.SelectedItems.Cast<EntryRow>().ToList().ForEach(item =>
 		{
-			string filepath = Path.Combine(pathway, (item.Content as EntryRow)?.Name ?? "");
+			string filepath = Path.Combine(pathway, item?.Name ?? "");
 			FileInfo file = new(filepath);
 			if (file.Exists)
 			{
@@ -2550,9 +2555,9 @@ public sealed partial class HackFileManager : Page
 		version.DownloadFile(Path.GetTempPath());
 		FileOperations.OpenFile(Path.Combine(version.WinPathway, version.Name));
 	}
-	private void PreviewImageSelection(ListViewItem? item, string nameConfigId)
+	private void PreviewImageSelection(DataGridRow? item, string nameConfigId)
 	{
-		switch (item?.Content)
+		switch (item?.DataContext)
 		{
 			case null: break;
 			case EntryRow er: if (er.Id is not null) PreviewImage(er.Id); break;
@@ -2598,7 +2603,7 @@ public sealed partial class HackFileManager : Page
 			{
 				await Task.Delay(100);
 			}
-			ListViewItem? listItem = null;
+			DataGridRow? listItem = null;
 			string index = NameConfig.SearchName.Name;
 			
 			foreach (EntryRow rows in OEntries)
@@ -2611,7 +2616,7 @@ public sealed partial class HackFileManager : Page
 			}
 			if (listItem == null) throw new ArgumentException();
 
-			listItem.IsSelected = true;
+			OdooEntryList.SelectedItems.Contains(listItem);
 			listItem.Focus(FocusState.Programmatic);
 			//(listItem.Content as EntryRow)?.
 			listItem.StartBringIntoView();

@@ -14,7 +14,7 @@ using System.Windows.Forms;
 using HackPDM.Hack;
 using HackPDM.Properties;
 using HackPDM.Src;
-using HackPDM.Src.Forms.Hack;
+using HackPDM.Forms.Hack;
 
 using Microsoft.UI.Xaml;
 
