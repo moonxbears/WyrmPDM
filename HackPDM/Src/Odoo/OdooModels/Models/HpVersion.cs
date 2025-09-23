@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using HackPDM.ClientUtils;
 using HackPDM.Extensions.General;
 using HackPDM.Hack;
+using HackPDM.Src.ClientUtils.Types;
+
 //using static System.Net.Mime.MediaTypeNames;
 
 

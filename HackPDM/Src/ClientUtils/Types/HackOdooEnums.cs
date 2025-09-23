@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HackPDM.ClientUtils;
+namespace HackPDM.Src.ClientUtils.Types;
 
 public enum FileStatus
 {
@@ -39,9 +39,7 @@ public enum Operators
     Like,
     LikeEqual,
     NotLike,
-    Like,
     NotILike,
-    LikeEqual,
     In,
     NotIn,
     ChildOf,
@@ -58,14 +56,14 @@ public enum ValueConversion
 }
 public enum StatusMessage
 {
-    Processing,
-    Skip,
-    Found,
-    Info,
-    Success,
-    Warning,
-    Error,
-    Other,
+    PROCESSING,
+    SKIP,
+    FOUND,
+    INFO,
+    SUCCESS,
+    WARNING,
+    ERROR,
+    OTHER,
 }
 public enum ChecksumType
 {

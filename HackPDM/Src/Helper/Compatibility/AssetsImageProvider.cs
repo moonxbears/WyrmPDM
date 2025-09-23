@@ -5,9 +5,9 @@ using System.IO;
 using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Graphics.Imaging;
 using Windows.Storage;
-using HackPDM.ClientUtils;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
+using HackPDM.Src.ClientUtils.Types;
 
 namespace HackPDM.Helper.Compatibility;
 

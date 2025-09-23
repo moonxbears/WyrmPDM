@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+
 using HackPDM.Hack;
 using HackPDM.Properties;
 using HackPDM.Src;
@@ -21,7 +22,7 @@ using static System.Net.Mime.MediaTypeNames;
 
 using HorizontalAlignment = Microsoft.UI.Xaml.HorizontalAlignment;
 
-namespace HackPDM.ClientUtils;
+namespace HackPDM.Src.ClientUtils.Types;
 
 public class NotifyIcon
 {

@@ -7,7 +7,7 @@ using System.Windows.Forms;
 
 using HackPDM.Extensions.Control;
 
-namespace HackPDM.ClientUtils;
+namespace HackPDM.Src.ClientUtils.Types;
 
 public interface ISingletonForm<T>
     where T : Form, new()

@@ -1,10 +1,11 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using System.Drawing;
+
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 
-namespace HackPDM.ClientUtils;
+namespace HackPDM.Src.ClientUtils.Types;
 
 public interface IConvert<T>
 {
@@ -33,4 +34,16 @@ public interface IImageProvider
 	Bitmap? GetBitmap(string key);
 	void SetImage(string key, byte[] imgBytes);
 	IEnumerable<string> GetAvailableKeys();
+}
+public interface IItemChangeListener<T>
+{
+	void OnItemAdded(object sender, ItemChangedEventArgs<T> e);
+	void OnItemRemoved(object sender, ItemChangedEventArgs<T> e);
+	void OnItemUpdated(object sender, ItemChangedEventArgs<T> e);
+	void OnItemSelected(object sender, ItemChangedEventArgs<T> e);
+	void OnItemClicked(object sender, ItemChangedEventArgs<T> e);
+	void OnItemDoubleClicked(object sender, ItemChangedEventArgs<T> e);
+	void OnItemRendering(object sender, ItemChangedEventArgs<T> e);
+	void OnItemFocused(object sender, ItemChangedEventArgs<T> e);
+	void OnItemHovered(object sender, ItemChangedEventArgs<T> e);
 }

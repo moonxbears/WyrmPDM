@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 
 namespace HackPDM.Helper;
 
@@ -14,5 +15,15 @@ public static partial class WindowHelper
     {
         IntPtr hwnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
         MoveWindow(hwnd, 100, 100, width, height, true);
+    }
+
+    public static Window CreateWindowPage(Type pageType)
+    {
+        var window = new MainWindow();
+        var rootFrame = new Frame();
+        window.Activate();
+        window.Content = rootFrame;
+        rootFrame.Navigate(pageType);
+        return window;
     }
 }

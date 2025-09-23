@@ -6,6 +6,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using HackPDM.ClientUtils;
+using HackPDM.Src.ClientUtils.Types;
 
 namespace HackPDM.Extensions.General;
 

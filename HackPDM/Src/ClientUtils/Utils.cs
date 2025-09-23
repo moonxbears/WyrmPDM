@@ -9,6 +9,8 @@ using HackPDM.Data;
 using HackPDM.Extensions.General;
 using HackPDM.Forms.Helper;
 using HackPDM.Odoo.OdooModels;
+using HackPDM.Src.ClientUtils.Types;
+
 using Microsoft.UI.Xaml.Controls;
 using static HackPDM.Forms.Helper.MessageBox;
 

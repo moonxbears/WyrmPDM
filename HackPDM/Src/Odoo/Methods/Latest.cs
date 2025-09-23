@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 using HackPDM.ClientUtils;
 using HackPDM.Extensions.General;
 using HackPDM.Odoo.OdooModels.Models;
+using HackPDM.Src.ClientUtils.Types;
+
 using StatusDialog = HackPDM.Forms.Settings.StatusDialog;
 namespace HackPDM.Odoo.Methods;
 
@@ -22,8 +24,8 @@ internal static class Latest
 		// add status lines for entry id and upcoming versions
 		lock (lockObject)
 		{
-			StatusDialog.Dialog.AddStatusLine(StatusMessage.Found, $"{entryIDs.Count} entries");
-			StatusDialog.Dialog.AddStatusLine(StatusMessage.Processing, $"Retrieving all latest versions associated with entries...");
+			StatusDialog.Dialog.AddStatusLine(StatusMessage.FOUND, $"{entryIDs.Count} entries");
+			StatusDialog.Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Retrieving all latest versions associated with entries...");
 		}
 
 		versions = GetLatestVersions(entryIDs, ["preview_image", "entry_id", "node_id", "file_modify_stamp", "attachment_id", "file_contents"]);
@@ -75,7 +77,7 @@ internal static class Latest
 			// ==============================================================
 			if (version.Checksum == null || version.Checksum.Length == 0 || version.Checksum == "False")
 			{
-				HackFileManager.QueueAsyncStatus.Enqueue((StatusMessage.Error, $"Checksum not found for version: {version.Name}"));
+				HackFileManager.QueueAsyncStatus.Enqueue((StatusMessage.ERROR, $"Checksum not found for version: {version.Name}"));
 				sd.SkipCounter++;
 				willProcess = false;
 			}
@@ -83,7 +85,7 @@ internal static class Latest
 			{
 
 				//unprocessedVersions.Add(version.ID);
-				HackFileManager.QueueAsyncStatus.Enqueue((StatusMessage.Found, $"Skipping version download: {version.Name}"));
+				HackFileManager.QueueAsyncStatus.Enqueue((StatusMessage.FOUND, $"Skipping version download: {version.Name}"));
 				sd.SkipCounter++;
 				willProcess = false;
 			}
@@ -95,7 +97,7 @@ internal static class Latest
 				string fileName = Path.Combine(version.WinPathway, version.Name);
 				processVersions.Add(version);
 
-				HackFileManager.QueueAsyncStatus.Enqueue((StatusMessage.Processing, $"Downloading latest version: {fileName}"));
+				HackFileManager.QueueAsyncStatus.Enqueue((StatusMessage.PROCESSING, $"Downloading latest version: {fileName}"));
 				sd.ProcessCounter++;
 			}
 			sd.totalProcessed = sd.SkipCounter + sd.ProcessCounter;
@@ -232,7 +234,7 @@ internal static class Latest
 		StatusDialog.Dialog = new StatusDialog();
 		await StatusDialog.Dialog.ShowWait("Get Latest");
 
-		StatusDialog.Dialog.AddStatusLine(StatusMessage.Info, "Finding Entry Dependencies...");
+		StatusDialog.Dialog.AddStatusLine(StatusMessage.INFO, "Finding Entry Dependencies...");
 		HpEntry[] entries = await HpEntry.GetRecordsByIdsAsync(entryIDs, includedFields: ["latest_version_id"]);
 		//HpEntry[] entries = HpEntry.GetRecordsByIDS(entryIDs, includedFields: ["latest_version_id"]);
 

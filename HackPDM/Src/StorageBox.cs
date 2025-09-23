@@ -1,6 +1,8 @@
-﻿using HackPDM.ClientUtils;
-using HackPDM.Properties;
+﻿using HackPDM.Properties;
+using HackPDM.Src.ClientUtils.Types;
+
 using Microsoft.UI.Xaml.Media;
+
 using Color = Windows.UI.Color;
 
 
@@ -36,9 +38,13 @@ public static class StorageBox
 	public const string MESSAGE_BOX_YES = "Yes";
 	public const string MESSAGE_BOX_NO = "No";
 	public const string MESSAGE_BOX_CONTENT = "";
-	#endregion
-	#region HackFileManager
-	public const int HACK_FILE_MANAGER_WIDTH = 1280;
+    #endregion
+    #region Status Dialog
+    public const int STATUS_BOX_WIDTH = 1280;
+    public const int STATUS_BOX_HEIGHT = 720;
+    #endregion
+    #region HackFileManager
+    public const int HACK_FILE_MANAGER_WIDTH = 1280;
 	public const int HACK_FILE_MANAGER_HEIGHT = 720;
 	public const string HACK_FILE_MANAGER_TITLE = "Hack File Manager - HackPDM";
 	public const string EMPTY_PLACEHOLDER = "-";

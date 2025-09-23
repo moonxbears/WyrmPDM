@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
-using HackPDM.ClientUtils;
+
+using HackPDM.Src.ClientUtils.Types;
+
 using Microsoft.UI.Xaml.Media;
 
 namespace HackPDM.Helper.Compatibility;

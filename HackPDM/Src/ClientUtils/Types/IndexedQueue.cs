@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HackPDM.ClientUtils.Queue;
+namespace HackPDM.Src.ClientUtils.Types;
 
 public class IndexedQueue<T> : IEnumerable<T>, IEnumerable, ICollection<T>, ICloneable
 {

@@ -10,7 +10,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace HackPDM.ClientUtils;
+namespace HackPDM.Src.ClientUtils.Types;
 
 public class ConcurrentSet<T> : ISet<T>, IReadOnlyCollection<T>, IDisposable
 {

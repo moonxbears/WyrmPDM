@@ -96,19 +96,19 @@
             Grid.RowSpan="2"
             Grid.Column="2"
             Margin="10,0,0,0">
-            <TabViewItem Header="History">
+            <TabViewItem x:Name="HistoryTab" Header="History">
                 <ListView x:Name="OdooHistory" />
             </TabViewItem>
-            <TabViewItem Header="Where Used">
+            <TabViewItem x:Name="ParentTab" Header="Where Used">
                 <ListView x:Name="OdooParents" />
             </TabViewItem>
-            <TabViewItem Header="Dependents">
+            <TabViewItem x:Name="ChildTab" Header="Dependents">
                 <ListView x:Name="OdooChildren" />
             </TabViewItem>
-            <TabViewItem Header="Properties">
+            <TabViewItem x:Name="PropertiesTab" Header="Properties">
                 <ListView x:Name="OdooProperties" />
             </TabViewItem>
-            <TabViewItem Header="Info">
+            <TabViewItem x:Name="InfoTab" Header="Info">
                 <ListView x:Name="OdooVersionInfoList" />
             </TabViewItem>
         </TabView>

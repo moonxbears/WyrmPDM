@@ -4,14 +4,14 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Windows.UI;
-using HackPDM.ClientUtils;
 using HackPDM.Data;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 //using Microsoft.UI.Xaml.Controls;
-using Theme = HackPDM.ClientUtils.Theme;
+using Theme = HackPDM.Src.ClientUtils.Types.Theme;
 using Control = Microsoft.UI.Xaml.Controls.Control;
+using HackPDM.Src.ClientUtils.Types;
 //using System.Windows.Controls;
 
 namespace HackPDM.Extensions.Controls;
@@ -50,22 +50,25 @@ public static class ExtensionForm
 		{
 			get
 			{
-				if (_data.TryGetValue(item, out var holder)) return item;
-				holder = new();
+				if (_data.TryGetValue(item, out var holder)) return holder.ItemData;
+				holder = new()
+				{
+					ItemData = new(),
+				};
 				_data.Add(item, holder);
 
-				return item;
+				return holder.ItemData;
 			}
 
 			set
 			{
 				if (!_data.TryGetValue(item, out var holder))
 				{
-					holder = new HolderValues();
+					holder = new();
 					_data.Add(item, holder);
 				}
-				holder.TreeNodeData = value;
-				node.Content = value;
+				holder.ItemData = value;
+				item.Content = holder.ItemData;
 			}
 		}
 	}
@@ -273,6 +276,6 @@ public static class ExtensionForm
 	{
 		public bool IsSingleton { get; set; }=false;
 		public TreeData? TreeNodeData { get; set;  } = null;
-		public 
+		public ItemData? ItemData { get; set;  } = null;
 	}
 }

@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using HackPDM.ClientUtils;
 using HackPDM.Extensions.General;
 using HackPDM.Odoo.OdooModels.Models;
+using HackPDM.Src.ClientUtils.Types;
+
 using OClient = HackPDM.Odoo.OdooClient;
 
 namespace HackPDM.Odoo.OdooModels;

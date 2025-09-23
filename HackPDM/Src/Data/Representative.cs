@@ -4,8 +4,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-
-using HackPDM.ClientUtils;
 using HackPDM.Odoo.OdooModels.Models;
 using HackPDM.Properties;
 using HackPDM.Extensions.Controls;
@@ -13,6 +11,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Imaging;
 
 using static HackPDM.Odoo.OdooModels.Models.HpVersionProperty;
+using HackPDM.Src.ClientUtils.Types;
 
 namespace HackPDM.Data;
 
@@ -28,6 +27,17 @@ public class EntryRow : ItemData, IRowData
 	public DateTime?    LocalDate   { get; set; }
 	public DateTime?    RemoteDate  { get; set; }
 	public string?      FullName    { get; set; }
+
+	public bool? IsLocal
+	{
+		get
+		{
+			return Id is null or 0;
+		}
+		set => field = value;
+	}
+	public bool			IsOnlyLocal => (IsLocal ?? true) && !IsRemote;
+	public bool			IsRemote	{ get; set; }
 }
 public class HistoryRow : ItemData, IRowData
 {
@@ -36,16 +46,19 @@ public class HistoryRow : ItemData, IRowData
 	public DateTime?    ModDate     { get; set; }
 	public long?         Size        { get; set; }
 	public DateTime?    RelDate     { get; set; }
+	public HistoryRow() {}
 }
 public class ParentRow : ItemData, IRowData
 {
 	public int          Version     { get; set; }
 	public string?      BasePath    { get; set; }
+	public ParentRow() {}
 }
 public class ChildrenRow : ItemData, IRowData
 {
 	public int          Version     { get; set; }
 	public string?      BasePath    { get; set; }
+	public ChildrenRow() {}
 }
 public class PropertiesRow : ItemData, IRowData
 {
@@ -54,6 +67,7 @@ public class PropertiesRow : ItemData, IRowData
 	public string?      Configuration{  get; set; }
 	public PropertyType?Type        { get; set; }
 	public object?      ValueData       { get; set; }
+	public PropertiesRow() {}
 }
 public class VersionRow : ItemData, IRowData
 {
@@ -216,10 +230,15 @@ public partial class TreeData : ITreeItem, IEnumerable<TreeData>
 	}
 }
 
+public class BasicStatusMessage
+{
+	public StatusMessage Status { get; set; } = StatusMessage.OTHER;
+	public string? Message { get; set; }
+}
 public partial class ItemData
 {
 	public virtual ListViewItem? Item { get; set; }
-	public virtual required string Name { get; set; }
+	public virtual string Name { get; set; } = "";
 	public virtual string? Text
 	{
 		get => field ??= Name;

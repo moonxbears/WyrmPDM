@@ -1,12 +1,18 @@
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+
+using HackPDM.Data;
 using HackPDM.Forms.Helper;
 using HackPDM.Forms.Odoo;
 using HackPDM.Hack;
 using HackPDM.Odoo;
+using HackPDM.Src.ClientUtils.Types;
+
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+
 using HackFileManager = HackPDM.Forms.Hack.HackFileManager;
-using HackSettings = HackPDM.Src.Forms.Hack.HackSettings;
+using HackSettings = HackPDM.Properties.Settings;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -18,6 +24,7 @@ namespace HackPDM.Forms.Settings;
 /// </summary>
 public sealed partial class ProfileManager : Page
 {
+    public static ObservableCollection<BasicStatusMessage> OStatus { get; internal set; }           = [];
     public ProfileManager()
     {
         InitializeComponent();
@@ -95,10 +102,10 @@ public sealed partial class ProfileManager : Page
             {
                 foreach (string message in errors)
                 {
-                    var listItem = HackFileManager.EmptyListItem(ProfileManStatusList);
+                    var listItem = HackFileManager.EmptyListItem<BasicStatusMessage>(ProfileManStatusList);
 
-                    listItem.SubItems["Status"].Text = "ERROR";
-                    listItem.SubItems["Message"].Text = message;
+                    listItem.Status = StatusMessage.ERROR;
+                    listItem.Message = message;
 
                     ProfileManStatusList.Items.Add(listItem);
                 }

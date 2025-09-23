@@ -77,6 +77,7 @@ public sealed partial class MessageBox : Page
                 MessageBoxType.OkCancel => DialogResult.Cancel,
                 MessageBoxType.YesNo => DialogResult.None,
                 MessageBoxType.YesNoCancel => DialogResult.Cancel,
+                MessageBoxType.AbortRetryIgnore  => DialogResult.Cancel,
                 _ => DialogResult.None,
             },
             ContentDialogResult.Primary => type switch
@@ -85,12 +86,14 @@ public sealed partial class MessageBox : Page
                 MessageBoxType.OkCancel => DialogResult.Ok,
                 MessageBoxType.YesNo => DialogResult.Yes,
                 MessageBoxType.YesNoCancel => DialogResult.Yes,
+                MessageBoxType.AbortRetryIgnore => DialogResult.Yes,
                 _ => DialogResult.None,
             },
             ContentDialogResult.Secondary => type switch
             {
                 MessageBoxType.YesNo => DialogResult.No,
                 MessageBoxType.YesNoCancel => DialogResult.No,
+                MessageBoxType.AbortRetryIgnore => DialogResult.Ignore,
                 _ => DialogResult.None,
             },
             _ => DialogResult.None,
@@ -128,6 +131,7 @@ public sealed partial class MessageBox : Page
             MessageBoxType.OkCancel => (closeText: config.CancelButtonText, primaryText: config.OkButtonText, secondaryText: null),
             MessageBoxType.YesNo => (closeText: null, primaryText: config.YesButtonText, secondaryText: config.NoButtonText),
             MessageBoxType.YesNoCancel => (closeText: config.CancelButtonText, primaryText: config.YesButtonText, secondaryText: config.NoButtonText),
+            MessageBoxType.AbortRetryIgnore => (closeText: config.CancelButtonText, primaryText: "Retry", secondaryText: "Ignore"),
             _ => (closeText: null, primaryText: config.OkButtonText, secondaryText: null),
         };
     public record MessageBoxConfig
@@ -176,6 +180,7 @@ public sealed partial class MessageBox : Page
         Cancel,
         Yes,
         No,
+        Ignore,
         None
     }
     public enum MessageBoxType
@@ -183,7 +188,8 @@ public sealed partial class MessageBox : Page
         Ok,
         OkCancel,
         YesNo,
-        YesNoCancel
+        YesNoCancel,
+        AbortRetryIgnore,
     }
     public enum MessageBoxIcon
     {

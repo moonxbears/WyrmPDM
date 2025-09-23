@@ -3,6 +3,7 @@ using System.Collections;
 using System.IO;
 using System.Threading.Tasks;
 using HackPDM.ClientUtils;
+using HackPDM.Src.ClientUtils.Types;
 
 namespace HackPDM.Hack;
 

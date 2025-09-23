@@ -11,6 +11,7 @@ using HackPDM.Extensions.General;
 using HackPDM.Extensions.Odoo;
 using HackPDM.Hack;
 using HackPDM.Odoo.OdooModels.Models;
+using HackPDM.Src.ClientUtils.Types;
 
 namespace HackPDM.Odoo.Methods;
 
@@ -50,9 +51,9 @@ public static class Commit
         // testing filter hacks..
         if (entries is not null && entries.Count > 0)
         {
-            StatusDialog.Dialog.AddStatusLine(StatusMessage.Processing, $"Filtering out uncommitable entries found remotely");
+            StatusDialog.Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Filtering out uncommitable entries found remotely");
             entries = await FilterCommitEntries(entries);
-            StatusDialog.Dialog.AddStatusLine(StatusMessage.Info, $"Able to commit ({entries.Count}) remote files");
+            StatusDialog.Dialog.AddStatusLine(StatusMessage.INFO, $"Able to commit ({entries.Count}) remote files");
         }
         else
         {
@@ -62,9 +63,9 @@ public static class Commit
         // section for checking if hack files have a checksum that matches the fullpath
         if (hackFiles is not null && hackFiles.Count > 0)
         {
-            StatusDialog.Dialog.AddStatusLine(StatusMessage.Processing, $"Filtering out uncommitable entries found locally");
+            StatusDialog.Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Filtering out uncommitable entries found locally");
             hackFiles = await FilterCommitHackFiles(hackFiles);
-            StatusDialog.Dialog.AddStatusLine(StatusMessage.Info, $"Able to commit ({hackFiles.Count}) local only files");
+            StatusDialog.Dialog.AddStatusLine(StatusMessage.INFO, $"Able to commit ({hackFiles.Count}) local only files");
         }
         else
         {
@@ -99,11 +100,11 @@ public static class Commit
         sd.ProcessCounter = 0;
         sd.SkipCounter = 0;
         sd.MaxCount = entries.Count;
-        if (versionBatches.Count > 0) StatusDialog.Dialog.AddStatusLine(StatusMessage.Processing, $"Commiting new versions to database...");
-        else StatusDialog.Dialog.AddStatusLine(StatusMessage.Info, $"No new remote versions to commit for existing entries to the database...");
+        if (versionBatches.Count > 0) StatusDialog.Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Commiting new versions to database...");
+        else StatusDialog.Dialog.AddStatusLine(StatusMessage.INFO, $"No new remote versions to commit for existing entries to the database...");
         for (int i = 0; i < versionBatches.Count; i++)
         {
-            StatusDialog.Dialog.AddStatusLine(StatusMessage.Processing, $"Commiting batch {i + 1}/{versionBatches.Count}...");
+            StatusDialog.Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Commiting batch {i + 1}/{versionBatches.Count}...");
 
             HpVersion[] vbatch = await HpVersion.CreateAllNew([.. versionBatches[i]]);
             versions.AddRange(vbatch);
@@ -115,22 +116,22 @@ public static class Commit
         // create new parent, child hp_version_relationship's for versions
         if (versions.Count < 1)
         {
-            StatusDialog.Dialog.AddStatusLine(StatusMessage.Info, $"No new version relationship commits for database...");
+            StatusDialog.Dialog.AddStatusLine(StatusMessage.INFO, $"No new version relationship commits for database...");
         }
         else
         {
-            StatusDialog.Dialog.AddStatusLine(StatusMessage.Processing, $"Commiting new version relationship commits to database...");
+            StatusDialog.Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Commiting new version relationship commits to database...");
             HpVersionRelationship.Create([.. versions]);
         }
         StatusDialog.Dialog.SetProgressBar(2 * (sd.MaxCount) / 3, sd.MaxCount);
 
         if (versions.Count < 1)
         {
-            StatusDialog.Dialog.AddStatusLine(StatusMessage.Info, $"No new version property commits for database...");
+            StatusDialog.Dialog.AddStatusLine(StatusMessage.INFO, $"No new version property commits for database...");
         }
         else
         {
-            StatusDialog.Dialog.AddStatusLine(StatusMessage.Processing, $"Commiting new version property commits to database...");
+            StatusDialog.Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Commiting new version property commits to database...");
             HpVersionProperty.Create([.. versions]);
         }
         StatusDialog.Dialog.SetProgressBar(sd.MaxCount, sd.MaxCount);
@@ -157,7 +158,7 @@ public static class Commit
                     {
                         lock (lockObject)
                         {
-                            StatusDialog.Dialog.AddStatusLine(StatusMessage.Error, $"entry is not checked out to you: {entry.Name} ({entry.Id})");
+                            StatusDialog.Dialog.AddStatusLine(StatusMessage.ERROR, $"entry is not checked out to you: {entry.Name} ({entry.Id})");
                         }
                     }
                     else
@@ -165,7 +166,7 @@ public static class Commit
                         lock (lockObject)
                         {
                             string userString = OdooDefaults.IdToUser.TryGetValue(entry.CheckoutUser ?? 0, out HpUser user) ? $"{user.Name} (id: {user.Id}))" : $"(id: {entry.CheckoutUser})";
-                            StatusDialog.Dialog.AddStatusLine(StatusMessage.Error, $"checked out to user {userString}: {entry.Name} ({entry.Id}) ");
+                            StatusDialog.Dialog.AddStatusLine(StatusMessage.ERROR, $"checked out to user {userString}: {entry.Name} ({entry.Id}) ");
                         }
                     }
                     return null;
@@ -180,7 +181,7 @@ public static class Commit
                 {
                     lock (lockObject)
                     {
-                        StatusDialog.Dialog.AddStatusLine(StatusMessage.Warning, $"Latest remote version {latestVersion.Name} matches local version");
+                        StatusDialog.Dialog.AddStatusLine(StatusMessage.WARNING, $"Latest remote version {latestVersion.Name} matches local version");
                     }
                     entry.IsLatest = true;
                     // return null;
@@ -191,7 +192,7 @@ public static class Commit
                 {
                     lock (lockObject)
                     {
-                        StatusDialog.Dialog.AddStatusLine(StatusMessage.Error, $"{latestVersion.Name} has no local version");
+                        StatusDialog.Dialog.AddStatusLine(StatusMessage.ERROR, $"{latestVersion.Name} has no local version");
                     }
 
                     return null;
@@ -199,7 +200,7 @@ public static class Commit
 
                 lock (lockObject)
                 {
-                    StatusDialog.Dialog.AddStatusLine(StatusMessage.Processing, $"commiting {latestVersion.Name}");
+                    StatusDialog.Dialog.AddStatusLine(StatusMessage.PROCESSING, $"commiting {latestVersion.Name}");
                 }
                 return entry;
             });

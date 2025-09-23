@@ -1,11 +1,10 @@
 ﻿using System.IO;
 
-using HackPDM.ClientUtils;
-using HackPDM.Src;
-using HackPDM.Src.Forms.Settings;
+using HackPDM.Src.ClientUtils.Types;
 
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+
 using ProfileManager = HackPDM.Forms.Settings.ProfileManager;
 
 // To learn more about WinUI, the WinUI project structure,

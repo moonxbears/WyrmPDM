@@ -5,16 +5,15 @@ using System.IO;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
 
-using HackPDM.Src;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 
 using Windows.Graphics.Imaging;
 using Windows.Storage;
 using Windows.Storage.Streams;
-using HackPDM.ClientUtils;
 using HackPDM.Helper.Compatibility;
 using SB = HackPDM.StorageBox;
+using HackPDM.Src.ClientUtils.Types;
 
 namespace HackPDM.Properties;
 

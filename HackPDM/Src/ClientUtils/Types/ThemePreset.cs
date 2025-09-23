@@ -11,7 +11,7 @@ using Microsoft.UI.Xaml.Controls;
 using System;
 using System.Diagnostics;
 
-namespace HackPDM.ClientUtils;
+namespace HackPDM.Src.ClientUtils.Types;
 
 public static class ThemePreset
 {

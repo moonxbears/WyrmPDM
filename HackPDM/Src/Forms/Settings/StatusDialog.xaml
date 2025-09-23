@@ -1,12 +1,89 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <Page
     x:Class="HackPDM.Forms.Settings.StatusDialog"
-    xmlns="using:Microsoft.UI.Xaml.Controls"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:local="using:HackPDM.Src.Forms.Settings"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    mc:Ignorable="d">
+    xmlns:ui="using:CommunityToolkit.WinUI"
+    xmlns:rep="using:HackPDM.Data"
+    mc:Ignorable="d"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
 
-    <Grid />
+        <!-- Main Status List -->
+        <ListView x:Name="StatusList" Grid.Row="0" Grid.ColumnSpan="2" Height="224" Margin="0,0,0,5">
+            <ListView.Header>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Action" Width="120"/>
+                    <TextBlock Text="Description" Width="1158"/>
+                </StackPanel>
+            </ListView.Header>
+        </ListView>
+
+        <!-- Splitter between StatusList and the two lower lists -->
+        <SplitView Grid.Row="1" Grid.ColumnSpan="2" Height="5" HorizontalAlignment="Stretch" Background="Gray"/>
+
+        <!-- Info List -->
+        <ListView x:Name="InfoList" Grid.Row="2" Grid.Column="0" Margin="0,5,5,5">
+            <ListView.Header>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Action" Width="94"/>
+                    <TextBlock Text="Description" Width="514"/>
+                </StackPanel>
+            </ListView.Header>
+        </ListView>
+
+        <!-- Splitter between InfoList and ErrorList -->
+        <AppBarSeparator Grid.Row="2" Grid.Column="0" Width="5" Background="Gray"/>
+
+        <!-- Error List -->
+        <ListView x:Name="ErrorList" Grid.Row="2" Grid.Column="1" Margin="5,5,0,5">
+            <ListView.Header>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Action" Width="120"/>
+                    <TextBlock Text="Description" Width="535"/>
+                </StackPanel>
+            </ListView.Header>
+        </ListView>
+
+        <!-- Progress Bar -->
+        <ProgressBar x:Name="fileCheckStatus" Grid.Row="3" Grid.ColumnSpan="2" HorizontalAlignment="Stretch" VerticalAlignment="Center" Height="15"/>
+
+        <!-- Progress Text and Status Labels -->
+        <StackPanel Grid.Row="4" Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Bottom">
+            <TextBlock x:Name="ProgressText" Text="(0%)&#x0a;0 / 0" Margin="0,0,10,0"/>
+            <TextBlock x:Name="Downloaded" Text="Downloaded: " Margin="0,0,10,0"/>
+            <TextBlock x:Name="TotalDownload" Text="Total Downloaded: " Margin="0,0,10,0"/>
+        </StackPanel>
+
+        <!-- Skipped Label -->
+        <TextBlock x:Name="SkippedLabel" Text="(0) Skipped" Grid.Row="4" Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Bottom"/>
+
+        <!-- Control Buttons -->
+        <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button x:Name="StatusSettings" Content="configure settings" Margin="0,0,10,0"/>
+            <CheckBox x:Name="cbxAutoClose" Content="Close When Complete" Margin="0,0,10,0"/>
+            <Button x:Name="cmdCancel" Content="Cancel" Margin="0,0,10,0"/>
+            <Button x:Name="cmdClose" Content="Close"/>
+        </StackPanel>
+        <Grid.Resources>
+
+            <Style TargetType="ListViewItem">
+                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            </Style>
+            
+        </Grid.Resources>
+    </Grid>
 </Page>

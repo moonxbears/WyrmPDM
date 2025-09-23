@@ -1,6 +1,6 @@
 ﻿using System.Runtime.Versioning;
 using Windows.Storage;
-using HackPDM.ClientUtils;
+using HackPDM.Src.ClientUtils.Types;
 
 namespace HackPDM.Helper.Compatibility;
 

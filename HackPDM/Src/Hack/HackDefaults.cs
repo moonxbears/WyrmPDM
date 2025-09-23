@@ -9,6 +9,7 @@ using HackPDM.ClientUtils;
 using HackPDM.Odoo;
 using HackPDM.Odoo.OdooModels.Models;
 using HackPDM.Properties;
+using HackPDM.Src.ClientUtils.Types;
 
 namespace HackPDM.Hack;
 
