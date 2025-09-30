@@ -34,11 +34,11 @@ public class SimpleHttpRequest
 	{
 		get
 		{
-			return __filePath;
+			return _filePath;
 		}
 		set
 		{
-			__filePath = value;
+			_filePath = value;
 			_filePathDir = null;
 			_filePathFile = null;
 		}
@@ -53,8 +53,6 @@ public class SimpleHttpRequest
 	{
 		get; private set;
 	}
-
-	public string FilePath => _filePath;
 
 	public string FilePathFile
 	{

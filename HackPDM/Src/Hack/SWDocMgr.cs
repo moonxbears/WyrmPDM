@@ -4,14 +4,19 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
+
+using HackPDM.Forms.Helper;
+
 using SolidWorks.Interop.swdocumentmgr;
+
+using static HackPDM.Forms.Helper.MessageBox;
 
 namespace HackPDM.Hack;
 
 public class SwDocMgr
 {
 
-    private SwDMApplication _swDocMgr = default(SwDMApplication);
+    private SwDMApplication _swDocMgr = default;
 
     // constructor
     public SwDocMgr(string strLicenseKey)
@@ -28,9 +33,8 @@ public class SwDocMgr
         {
             DialogResult dr = MessageBox.Show("Failed to get an instance of the SolidWorks Document Manager API: " + ex.Message,
                 "Loading SW",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Exclamation,
-                MessageBoxDefaultButton.Button1);
+                type: MessageBoxType.Ok,
+                icon: MessageBoxIcon.Error);
         }
 
     }
@@ -39,8 +43,8 @@ public class SwDocMgr
     {
         // external references for assembly files (GetAllExternalReferences4)
         // external references for part files (GetExternalFeatureReferences)
-        SwDMDocument19 swDoc = default(SwDMDocument19);
-        SwDMSearchOption swSearchOpt = default(SwDMSearchOption);
+        SwDMDocument19 swDoc = default;
+        SwDMSearchOption swSearchOpt = default;
 
         // returns list of string arrays
         // 0: short file name
@@ -63,9 +67,8 @@ public class SwDocMgr
             {
                 DialogResult dr = MessageBox.Show("Failed to open solidworks file: " + fileName,
                     "Loading SW File",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Exclamation,
-                    MessageBoxDefaultButton.Button1);
+                    type: MessageBoxType.Ok,
+                    icon: MessageBoxIcon.Error);
             }
             return null;
         }
@@ -127,9 +130,8 @@ public class SwDocMgr
         {
             DialogResult dr = MessageBox.Show("Failed to open solidworks file: " + fileName,
                 "Loading SW File",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Exclamation,
-                MessageBoxDefaultButton.Button1);
+                type: MessageBoxType.Ok,
+                icon: MessageBoxIcon.Error);
         }
 
         // get document custom properties (file level properties)
@@ -189,7 +191,7 @@ public class SwDocMgr
         {
 
             SwDMConfiguration swCfg = (SwDMConfiguration)swCfgMgr.GetConfigurationByName(strConfigName);
-            string[] strCfgPropNames = swCfg.GetCustomPropertyNames();
+            string[] strCfgPropNames = (string[])swCfg.GetCustomPropertyNames();
             if (strCfgPropNames==null) continue;
 
             foreach (string strPropName in strCfgPropNames)
@@ -254,16 +256,15 @@ public class SwDocMgr
         {
             DialogResult dr = MessageBox.Show("Failed to open solidworks file: " + fileName,
                 "Loading SW File",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Exclamation,
-                MessageBoxDefaultButton.Button1);
+                type: MessageBoxType.Ok,
+                icon: MessageBoxIcon.Error);
             return null;
         }
 
         SwDmPreviewError ePrevError = SwDmPreviewError.swDmPreviewErrorNone;
         try
         {
-            byte[] bPreview = swDoc.GetPreviewBitmapBytes(out ePrevError);
+            byte[] bPreview = (byte[])swDoc.GetPreviewBitmapBytes(out ePrevError);
             MemoryStream ms = new(bPreview);
             Bitmap bmp = (Bitmap)Bitmap.FromStream(ms);
 
@@ -283,55 +284,54 @@ public class SwDocMgr
 
     }
 
-    public stdole.IPictureDisp GetPreview2(string fileName, bool deep = false)
-    {
-        // This method is only supported for in-process execution.  We need this the execute in a multi-threaded environment.
-        // I tried starting a new instance of the SWDocMgr class for each thread, and
-        // that seemed to work once, then didn't work, no explanation.
-        // The error, when in a thread, is "Catastrophic Failure."
-        // Use GetPreview() instead
+    //public stdole.IPictureDisp GetPreview2(string fileName, bool deep = false)
+    //{
+    //    // This method is only supported for in-process execution.  We need this the execute in a multi-threaded environment.
+    //    // I tried starting a new instance of the SWDocMgr class for each thread, and
+    //    // that seemed to work once, then didn't work, no explanation.
+    //    // The error, when in a thread, is "Catastrophic Failure."
+    //    // Use GetPreview() instead
 
-        // get doc type
-        SwDmDocumentType swDocType = GetTypeFromString(fileName);
-        if (swDocType == SwDmDocumentType.swDmDocumentUnknown)
-        {
-            return null;
-        }
+    //    // get doc type
+    //    SwDmDocumentType swDocType = GetTypeFromString(fileName);
+    //    if (swDocType == SwDmDocumentType.swDmDocumentUnknown)
+    //    {
+    //        return null;
+    //    }
 
-        // get the document
-        SwDMDocument19 swDoc;
-        SwDmDocumentOpenError nRetVal = 0;
-        swDoc = (SwDMDocument19)_swDocMgr.GetDocument(fileName, swDocType, true, out nRetVal);
-        if (SwDmDocumentOpenError.swDmDocumentOpenErrorNone != nRetVal)
-        {
-            DialogResult dr = MessageBox.Show("Failed to open solidworks file: " + fileName,
-                "Loading SW File",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Exclamation,
-                MessageBoxDefaultButton.Button1);
-            return null;
-        }
+    //    // get the document
+    //    SwDMDocument19 swDoc;
+    //    SwDmDocumentOpenError nRetVal = 0;
+    //    swDoc = (SwDMDocument19)_swDocMgr.GetDocument(fileName, swDocType, true, out nRetVal);
+    //    if (SwDmDocumentOpenError.swDmDocumentOpenErrorNone != nRetVal)
+    //    {
+    //        DialogResult dr = MessageBox.Show("Failed to open solidworks file: " + fileName,
+    //            "Loading SW File",
+    //            type: MessageBoxType.Ok,
+    //            icon: MessageBoxIcon.Error);
+    //        return null;
+    //    }
 
-        SwDmPreviewError ePrevError = SwDmPreviewError.swDmPreviewErrorNone;
-        stdole.IPictureDisp ipicPreview;
-        try
-        {
-            ipicPreview = swDoc.GetPreviewPNGBitmap(out ePrevError);
-            swDoc.CloseDoc();
-            return ipicPreview;
-        }
-        catch
-        {
-            //DialogResult dr = MessageBox.Show("Failed to get solidworks preview image: " + FileName + ": " + ePrevError.ToString(),
-            //    "Loading SW Preview",
-            //    MessageBoxButtons.OK,
-            //    MessageBoxIcon.Exclamation,
-            //    MessageBoxDefaultButton.Button1);
-            swDoc.CloseDoc();
-            return null;
-        }
+    //    SwDmPreviewError ePrevError = SwDmPreviewError.swDmPreviewErrorNone;
+    //    stdole.IPictureDisp ipicPreview;
+    //    try
+    //    {
+    //        ipicPreview = swDoc.GetPreviewPNGBitmap(out ePrevError);
+    //        swDoc.CloseDoc();
+    //        return ipicPreview;
+    //    }
+    //    catch
+    //    {
+    //        //DialogResult dr = MessageBox.Show("Failed to get solidworks preview image: " + FileName + ": " + ePrevError.ToString(),
+    //        //    "Loading SW Preview",
+    //        //    MessageBoxButtons.OK,
+    //        //    MessageBoxIcon.Exclamation,
+    //        //    MessageBoxDefaultButton.Button1);
+    //        swDoc.CloseDoc();
+    //        return null;
+    //    }
 
-    }
+    //}
 
     SwDmDocumentType GetTypeFromString(string modelPathName)
     {

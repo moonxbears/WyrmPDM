@@ -9,14 +9,14 @@ public class XmlRpcSystemObject
 {
 	private readonly XmlRpcServer _server;
 
-	public static IDictionary MethodHelp { get; } = new Hashtable();
+	public static IDictionary MethodHelper { get; } = new Hashtable();
 
 
 	public XmlRpcSystemObject( XmlRpcServer server )
 	{
 		_server = server;
 		server.Add( "system", this );
-		MethodHelp.Add( GetType().FullName + ".methodHelp", "Return a string description." );
+        MethodHelper.Add( GetType().FullName + ".methodHelp", "Return a string description." );
 	}
 
 	public static object Invoke( object target, string methodName, IList parameters )
@@ -159,7 +159,7 @@ public class XmlRpcSystemObject
 		string text = null;
 		try
 		{
-			text = (string)MethodHelp [ _server.MethodName( name ) ];
+			text = (string)MethodHelper[ _server.MethodName( name ) ];
 		}
 		catch ( XmlRpcException ex )
 		{

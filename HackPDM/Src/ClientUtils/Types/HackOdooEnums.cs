@@ -43,7 +43,9 @@ public enum Operators
     In,
     NotIn,
     ChildOf,
-    ParentOf
+    ParentOf,
+	ILike,
+	ILikeEqual
 }
 public enum ValueConversion
 {

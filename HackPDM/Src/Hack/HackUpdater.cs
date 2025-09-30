@@ -4,7 +4,11 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+
+using HackPDM.Forms.Helper;
 using HackPDM.Odoo;
+
+using static HackPDM.Forms.Helper.MessageBox;
 
 namespace HackPDM.Hack;
 
@@ -20,17 +24,6 @@ internal class HackUpdater
 	{
 		return Assembly.GetExecutingAssembly().GetName().Version;
 	}
-	private async static Task<IReadOnlyList<Release>> GetReleasesAsync(long repositoryId )
-	{
-		var ghClient = new GitHubClient(new Octokit.ProductHeaderValue("hackpdm"));
-		return await ghClient.Repository.Release.GetAll( repositoryId );
-	}
-	private static bool IsLatestVersion (Release release, Version version)
-	{
-		Debug.WriteLine($"tagname: {release.TagName}\nname: {release.Name}");
-		string vStr = $"{version.Major}.{version.Minor}.{version.Build}.{version.Revision}";
-		return release.TagName == vStr;
-	}
 	private static bool IsCorrectOdooVersion(Version version)
 	{
 		_odooClientVersion = OdooDefaults.HpSettings.Where( s => s.Name == OdooDefaults.ODOO_VERSION_KEY_NAME ).First().CharValue;
@@ -41,7 +34,7 @@ internal class HackUpdater
 		if ( MessageBox.Show( $"Latest version: {version.Major}.{version.Minor}.{version.Build}.{version.Revision} doesn't match odoo version: {_odooClientVersion}\n" +
 		                      $"Would you like to download the latest version?",
 			    "Versions",
-			    MessageBoxButtons.YesNoCancel ) == DialogResult.Yes )
+			    MessageBoxType.YesNoCancel ) == DialogResult.Yes )
 		{
 			UpdaterProcess( );
 		}

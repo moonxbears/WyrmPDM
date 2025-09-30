@@ -59,7 +59,7 @@ public sealed partial class HackFileManager : Page
 
 	public static NotifyIcon Notify { get; } = Notifier.Notify;
 	public static StatusDialog Dialog { get; set; }
-	public static ConcurrentQueue<string[]> QueueAsyncStatus = new();
+	public static ConcurrentQueue<(StatusMessage action, string description)> QueueAsyncStatus = new();
 	public static ListDetail ActiveList { get; set; }
 	public static int DownloadBatchSize
 	{
@@ -67,8 +67,8 @@ public sealed partial class HackFileManager : Page
 		set	=> OdooDefaults.DownloadBatchSize = value;
 	}
 	public static int SkipCounter { get; private set; }
-	private static Task _entryListChange = default;
-	private static Task _treeItemChange = default;
+	private static Task? _entryListChange = default;
+	private static Task? _treeItemChange = default;
 	private static (object? sender, SelectionChangedEventArgs? e) _queuedEntryChange = (null, null);
 	private static (TreeView? sender, TreeViewSelectionChangedEventArgs? args) _queuedTreeChange = (null, null);
 
@@ -79,7 +79,7 @@ public sealed partial class HackFileManager : Page
 	private static CancellationTokenSource _cSource = new();
 	private static CancellationTokenSource _cTreeSource = new();
 
-	private static ImageSource _previewImage = null;
+	private static ImageSource? _previewImage = null;
 	private static bool IsActive { get; set; } = false;
 	private static int _processCounter;
 	private static int _totalProcessed;
@@ -1604,7 +1604,7 @@ public sealed partial class HackFileManager : Page
 			// ==============================================================
 			if (version.Checksum == null || version.Checksum.Length == 0 || version.Checksum == "False")
 			{
-				QueueAsyncStatus.Enqueue(["ERROR", $"Checksum not found for version: {version.Name}"]);
+				QueueAsyncStatus.Enqueue((StatusMessage.ERROR, $"Checksum not found for version: {version.Name}"));
 				SkipCounter++;
 				willProcess = false;
 			}
@@ -1612,7 +1612,7 @@ public sealed partial class HackFileManager : Page
 			{
 
 				//unprocessedVersions.Add(version.ID);
-				QueueAsyncStatus.Enqueue(["FOUND", $"Skipping version download: {version.Name}"]);
+				QueueAsyncStatus.Enqueue((StatusMessage.FOUND, $"Skipping version download: {version.Name}"));
 				SkipCounter++;
 				willProcess = false;
 			}
@@ -1624,7 +1624,7 @@ public sealed partial class HackFileManager : Page
 				string fileName = Path.Combine(version.WinPathway, version.Name);
 				processVersions.Add(version);
 
-				QueueAsyncStatus.Enqueue(["PROCESSING", $"Downloading latest version: {fileName}"]);
+				QueueAsyncStatus.Enqueue((StatusMessage.PROCESSING, $"Downloading latest version: {fileName}"));
 				_processCounter++;
 			}
 			_totalProcessed = SkipCounter + _processCounter;

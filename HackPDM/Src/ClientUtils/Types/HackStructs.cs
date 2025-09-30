@@ -14,7 +14,7 @@ using System.Windows.Forms;
 using HackPDM.Hack;
 using HackPDM.Properties;
 using HackPDM.Src;
-using HackPDM.Src.Forms.Hack;
+using HackPDM.Forms.Hack;
 
 using Microsoft.UI.Xaml;
 
@@ -46,18 +46,18 @@ public class Notifier
     public static ConcurrentQueue<FileCheck> QueueFileCheck = new();
     public static DirectoryInfo Directory;
     public static FileSystemWatcher? FileWatcher { get; set; }
-    public static NotifyIcon Notify { get; set; } = null;
+    public static NotifyIcon Notify { get; set; } = new();
     public static bool IsRunning { get; private set; } = false;
     static Notifier()
     {
-        Directory = new(StorageBox.PwaPathAbsolute);
+        Directory = new(StorageBox.PwaPathAbsolute ?? "");
         FileWatcher = null;
         if (!Directory.Exists) return;
         FileWatcher = new()
         {
             IncludeSubdirectories = true,
             NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.CreationTime | NotifyFilters.Attributes,
-            Path = StorageBox.PwaPathAbsolute,
+            Path = StorageBox.PwaPathAbsolute ?? "",
             EnableRaisingEvents = true,
         };
             
@@ -88,8 +88,7 @@ public class Notifier
                 // Notify is not null &&
                 if (QueueFileCheck.Count == 1)
                 {
-                    QueueFileCheck.TryDequeue(out FileCheck fileCheck);
-                    fileCheck.Notify();
+                    if (QueueFileCheck.TryDequeue(out FileCheck fileCheck)) fileCheck.Notify();
                 }
                 // Notify is not null &&
                 else if (QueueFileCheck.Count > 1)

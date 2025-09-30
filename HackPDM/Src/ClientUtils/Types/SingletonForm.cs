@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-using HackPDM.Extensions.Control;
+using HackPDM.Extensions.Controls;
 
 namespace HackPDM.Src.ClientUtils.Types;
 

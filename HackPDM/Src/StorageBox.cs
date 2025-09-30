@@ -11,13 +11,23 @@ namespace HackPDM;
 public static class StorageBox
 {
 	#region Application Settings
-	public const string APP_NAME = "HackPDM";
+	public const string APP_NAME = "WyrmPDM";
 	public const string APP_VERSION = "1.0.0";
 	public const string APP_DEVELOPER = "Justin";
 	public static string? PwaPathAbsolute
 	{
-		get => Settings.Get<string>("PWAPathAbsolute");
-		set => Settings.Set("PWAPathAbsolute", value);
+		get => field ??= Settings.Get<string>("PWAPathAbsolute");
+		set => Settings.Set("PWAPathAbsolute", field = value);
+	}
+	public static string? PwaPathRelative
+	{
+		get => field ??= new System.IO.DirectoryInfo(PwaPathAbsolute ?? "").Name;
+		set => field = value;
+	}
+	public static string? TemporaryPath
+	{
+		get => field ??= Settings.Get<string>("TemporaryPath");
+		set => Settings.Set("TemporaryPath", field = value);
 	}
 	#endregion
 	#region Profile Manager

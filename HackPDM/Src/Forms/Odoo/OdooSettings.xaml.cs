@@ -1,3 +1,13 @@
+using System;
+using System.Text;
+using System.Windows;
+
+using HackPDM.Odoo;
+
+using Meziantou.Framework.Win32;
+using Sett = HackPDM.Properties.Settings;
+using Window = Microsoft.UI.Xaml.Window;
+
 using Microsoft.UI.Xaml.Controls;
 
 // To learn more about WinUI, the WinUI project structure,
@@ -13,5 +23,82 @@ public sealed partial class OdooSettings : Page
     public OdooSettings()
     {
         InitializeComponent();
+        GetInfoDefault();
+    }
+
+    private void SubmitOdooSettings(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+    {
+        SetInfoDefault();
+        Window.Current.Close();
+    }
+    private void GetInfoDefault()
+    {
+        txtOdooAddress.Text = Sett.Get<string>("OdooAddress");
+        txtOdooPort.Text = Sett.Get<string>("OdooPort");
+        changeURL();
+
+        txtOdooDb.Text = Sett.Get<string>("OdooDb");
+        txtSwKey.Text = Sett.Get<string>("SwLicenseKey");
+        txtAreaFactor.Text = Sett.Get<decimal>("AreaFactor").ToString();
+        Credential? cred = CredentialManager.ReadCredential("HackPDM-OdooUser");
+
+        txtOdooUser.Text = cred?.UserName ?? "";
+        txtOdooPass.Password = cred?.Password ?? "";
+    }
+    private void SetInfoDefault()
+    {
+        const string credTarget = "HackPDM-OdooUser";
+        Sett.Set("OdooAddress", txtOdooAddress.Text);
+        Sett.Set("OdooPort", txtOdooPort.Text);
+
+        StringBuilder sb = new();
+        sb.Append($"http://{txtOdooAddress.Text}");
+        if (txtOdooPort.Text is not null && txtOdooPort.Text.Length > 0)
+        {
+            sb.Append($":{txtOdooPort.Text}");
+        }
+        Sett.Set("OdooDb", txtOdooDb.Text);
+        Sett.Set("SwLicenseKey", txtSwKey.Text);
+        decimal AF;
+        if (!decimal.TryParse(txtAreaFactor.Text, out AF))
+        {
+            MessageBox.Show("Area Factor must be a decimal number");
+            return;
+        }
+        Sett.Set("AreaFactor", AF);
+
+        Credential? cred = CredentialManager.ReadCredential(credTarget) 
+            ?? new(CredentialType.Generic,
+                    Sett.Get<string>(credTarget) ?? credTarget,
+                    txtOdooUser.Text,
+                    txtOdooPass.Password,
+                    "HackPDM Odoo Credentials");
+        
+        
+        OdooDefaults.OdooUser = txtOdooUser.Text;
+        OdooDefaults.OdooPass = txtOdooPass.Password;
+        OdooDefaults.OdooUrl = sb.ToString();
+        OdooDefaults.OdooId = 0;
+    }
+
+    private void textBox1_TextChanged(object sender, EventArgs e) => changeURL();
+    private void txtOdooUrl_TextChanged(object sender, EventArgs e) => changeURL();
+    private void changeURL()
+    {
+        StringBuilder sb = new();
+        sb.Append($"Odoo Url: \thttp://");
+        if (txtOdooAddress.Text is not null and not "")
+        {
+            sb.Append($"{txtOdooAddress.Text}");
+        }
+        else
+        {
+            sb.Append("<address>");
+        }
+        if (txtOdooPort.Text is not null and not "")
+        {
+            sb.Append($":{txtOdooPort.Text}");
+        }
+        // label2.Text = sb.ToString();
     }
 }

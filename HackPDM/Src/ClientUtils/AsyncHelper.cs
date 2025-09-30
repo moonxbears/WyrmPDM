@@ -6,6 +6,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+using HackPDM.Forms.Hack;
+
 using Newtonsoft.Json.Linq;
 
 using StatDialog = HackPDM.Forms.Settings.StatusDialog;
@@ -147,11 +149,11 @@ internal class AsyncHelper
     {
         tokenSource ??= new();
         var task = Task.Run(() => function(), tokenSource.Token);
-        bool blnWorkCanceled = await AsyncHelper.WaitUntil(() => StatDialog.Dialog.Canceled || task.IsCompleted || task.IsCanceled, 500);
+        bool blnWorkCanceled = await AsyncHelper.WaitUntil(() => HackFileManager.Dialog.Canceled || task.IsCompleted || task.IsCanceled, 500);
 
         if (blnWorkCanceled)
         {
-            if (StatDialog.Dialog.Canceled || task.IsCanceled)
+            if (HackFileManager.Dialog.Canceled || task.IsCanceled)
             {
                 tokenSource.Cancel();
                 try

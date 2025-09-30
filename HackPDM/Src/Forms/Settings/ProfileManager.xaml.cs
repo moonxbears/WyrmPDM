@@ -5,6 +5,7 @@ using HackPDM.Data;
 using HackPDM.Forms.Helper;
 using HackPDM.Forms.Odoo;
 using HackPDM.Hack;
+using HackPDM.Helper;
 using HackPDM.Odoo;
 using HackPDM.Src.ClientUtils.Types;
 
@@ -118,5 +119,17 @@ public sealed partial class ProfileManager : Page
             return false;
         }
     }
-
+    public void OdooSetting(object sender, RoutedEventArgs e)
+    {
+        WindowHelper.CreateWindowPage<OdooSettings>();
+    }
+    public void HackSetting(object sender, RoutedEventArgs e)
+    {
+        WindowHelper.CreateWindowPage<Hack.HackSettings>();
+    }
+    public void AttemptLogin(object sender, RoutedEventArgs e)
+    {
+        if (!AbleToLogin()) return;
+        WindowHelper.CreateWindowPage<HackFileManager>();
+    }
 }

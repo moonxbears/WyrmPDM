@@ -13,11 +13,10 @@ public class XmlRpcRequest
 
 	private readonly Encoding _encoding = new ASCIIEncoding();
 
-	protected IList Params;
 
 	private readonly XmlRpcRequestSerializer _serializer = new XmlRpcRequestSerializer();
 
-	public virtual IList Params => _params;
+	public virtual IList Params { get; }
 
 	public virtual string MethodName
 	{
@@ -54,13 +53,13 @@ public class XmlRpcRequest
 
 	public XmlRpcRequest()
 	{
-		_params = new ArrayList();
+		Params = new ArrayList();
 	}
 
 	public XmlRpcRequest( string methodName, IList parameters )
 	{
 		MethodName = methodName;
-		_params = parameters;
+        Params = parameters;
 	}
 
 	public object Invoke( string url )

@@ -1,16 +1,19 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Threading.Tasks;
-using System.Windows;
 
 using HackPDM.ClientUtils;
 using HackPDM.Data;
 using HackPDM.Forms.Hack;
+using HackPDM.Helper;
 using HackPDM.Src.ClientUtils.Types;
 
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+
 using Setting = HackPDM.Properties.Settings;
 
 // To learn more about WinUI, the WinUI project structure,
@@ -24,7 +27,10 @@ namespace HackPDM.Forms.Settings;
 public sealed partial class StatusDialog : Page
 {
     public Window? ParentWindow { get; set; }
-    
+
+    public static ObservableCollection<BasicStatusMessage> OStatus { get; internal set; } = [];
+    public static ObservableCollection<BasicStatusMessage> OInfo { get; internal set; } = [];
+    public static ObservableCollection<BasicStatusMessage> OError { get; internal set; } = [];
     public static Brush ColorProcessing { get; set; } = StorageBox.BrushDarkBlue;
     public static Brush ColorSkip { get; set; } = StorageBox.BrushDarkGray;
     public static Brush ColorFound { get; set; } = StorageBox.BrushDarkGray;
@@ -68,15 +74,13 @@ public sealed partial class StatusDialog : Page
     public bool ShowStatusDialog(string titleText)
     {
         //var dlg = new StatusDialog(TitleText);
-        
-        this.ShowDialog();
+
+        ParentWindow ??= WindowHelper.CreateWindowPage<StatusDialog>();
         return this.Canceled;
     }
     public async Task<bool> ShowWait(string titleText)
     {
-        this.Text = titleText;
-        this.Show();
-        return await AsyncHelper.WaitUntil(() => this.Visible, 100, 10000);
+        return await AsyncHelper.WaitUntil(() => ParentWindow?.Visible ?? true, 100, 10000);
     }
 
     public StatusDialog()
@@ -84,40 +88,30 @@ public sealed partial class StatusDialog : Page
         HackFileManager.QueueAsyncStatus = new();
         InitializeComponent();
         ClearStatus();
-        this.Load += new EventHandler(FormLoaded);
-    }
-    protected override void OnFormClosing(FormClosingEventArgs e)
-    {
-        Canceled = true;
-        base.OnFormClosing(e);
+        this.Loaded += new((s, e)=> HasLoaded = true);
     }
 
-    private StatusDialog(string titleText) : this()
+	private StatusDialog(string titleText) : this()
     {
         HackFileManager.QueueAsyncStatus = new();
-        this.Text = titleText;
+        ParentWindow?.Title = titleText;
         ClearStatus();
-    }
-    private void FormLoaded(object sender, EventArgs e)
-    {
-        HasLoaded = true;
     }
     public void ClearStatus()
     {
-            
+
     }
     public void AddStatusLine(StatusMessage action, string description)
     {
-        string[] strStatusParams = [action, description];
-        AddStatusLine(strStatusParams);
+        AddStatusLine((action, description));
     }
-    public void AddStatusLines((StatusMessage action, string description) values)
+    public void AddStatusLines(List<(StatusMessage action, string description)> values)
     {
         AddStatusLinesInternal(values);
     }
     public void AddStatusLines(ConcurrentQueue<(StatusMessage action, string description)> values)
     {
-        List<string[]> batch = new(values.Count);
+        List<(StatusMessage, string)> batch = new(values.Count);
         for (int i = 0; i < values.Count; i++)
         {
             if (values.TryDequeue(out (StatusMessage action, string description) item)) batch.Add(item);
@@ -133,12 +127,7 @@ public sealed partial class StatusDialog : Page
     private delegate void SetProgressBarDel(int[] @params);
     private void SetProgressBarInternal(int[] @params)
     {
-        if (this.InvokeRequired)
-        {
-            SetProgressBarDel del = new(SetProgressBarInternal);
-            this.Invoke(del, (object)@params);
-        }
-        else
+        this.DispatcherQueue.ExecuteUI(()=>
         {
             int max, value;
             value = @params[0];
@@ -148,77 +137,60 @@ public sealed partial class StatusDialog : Page
             fileCheckStatus.Value = value;
             ProgressText.Text = $"({(value / (float)max) * 100:f2}%)\n{value} / {max}";
             SkippedLabel.Text = $"({HackFileManager.SkipCounter}) Skipped";
-        }
+        });
     }
 
     private delegate void AddStatusLinesDel(List<(StatusMessage action, string description)> values);
     private void AddStatusLinesInternal(List<(StatusMessage action, string description)> values)
     {
-        if (this.InvokeRequired)
+        this.DispatcherQueue.ExecuteUI(() =>
         {
-            AddStatusLinesDel del = new(AddStatusLinesInternal);
-            this.Invoke(del, values);
-        }
-        else
-        {
-            MessageLog.BeginUpdate();
-            int totalCount = MessageLog.Items.Count + values.Count;
-
-            if (totalCount > HistoryLength)
+            foreach (var (action, description) in values)
             {
-                // 65 lvM count
-                // 100 values count
-                // 165 total 
-                // 150 history length 
-                // 15 = total - history length
-                // lvM - value = 150
-                int histOffset = totalCount - HistoryLength ?? 1000;
-                for (int i = 0; i < histOffset; i++)
+                var messageLog = GetList(action);
+                int totalCount = messageLog.Items.Count;
+
+                if (totalCount > HistoryLength)
                 {
-                    if (MessageLog.Items.Count > 0)
+                    // 65 lvM count
+                    // 100 values count
+                    // 165 total 
+                    // 150 history length 
+                    // 15 = total - history length
+                    // lvM - value = 150
+                    int histOffset = totalCount - HistoryLength ?? 1000;
+                    for (int i = 0; i < histOffset; i++)
                     {
-                        MessageLog.Items.RemoveAt(0);
+                        if (messageLog.Items.Count > 0)
+                        {
+                            messageLog.Items.RemoveAt(0);
+                        }
                     }
                 }
-            }
-            foreach (var item in values)
-            {
-                var lvItem = HackFileManager.EmptyListItem<BasicStatusMessage>(GetList(item.action));
-                ColorizeStatus(item, lvItem.);
+                var lvItem = HackFileManager.EmptyListItem<BasicStatusMessage>(messageLog);
+                //ColorizeStatus(item, lvItem);
                 // set background color, based on status action
 
-                MessageLog.Items.Add(lvItem);
-                MessageLog.EnsureVisible(MessageLog.Items.Count - 1);
-            }
-            MessageLog.EndUpdate();
-        }
-    }
-    private delegate void AddStatusLineDel(string[] @params);
-    private void AddStatusLine((StatusMessage action, string description) @params)
-    {
-        this.DispatcherQueue.TryEnqueue(() =>
-        {
-            if (this.InvokeRequired)
-            {
-
-                // this is a worker thread so delegate the task to the UI thread
-                AddStatusLineDel del = new(AddStatusLine);
-                this.Invoke(del, (object)@params);
-            }
-            else
-            {
-
-                // we are executing in the UI thread
-                ListViewItem lvItem = new(@params);
-
-                // set background color, based on status action
-                
-                MessageLog.Items.Add(lvItem);
-                MessageLog.EnsureVisible(MessageLog.Items.Count - 1);
-
+                messageLog.Items.Add(lvItem);
+                messageLog.StartBringIntoView();
             }
         });
     }
+    private delegate void AddStatusLineDel(string[] @params);
+    private void AddStatusLine((StatusMessage action, string description) statusMessage)
+    {
+        this.DispatcherQueue.ExecuteUI(()=>
+        {
+            // we are executing in the UI thread
+            var messageLog = GetList(statusMessage.action);
+            var lvItem = HackFileManager.EmptyListItem<BasicStatusMessage>(messageLog);
+
+            // set background color, based on status action
+            messageLog?.Items.Add(lvItem);
+            messageLog?.StartBringIntoView();
+        });
+    }
+    
     private void ColorizeStatus((StatusMessage action, string description) values, ListViewItem item)
     {
         switch (values.action)
@@ -244,29 +216,52 @@ public sealed partial class StatusDialog : Page
         StatusMessage.ERROR         => ErrorList,
         _                           => InfoList,
     };
-    private void CmdCancelClick(object sender, EventArgs e)
+    private void CmdCancelClick()
     {
         Canceled = true;
-        this.Close();
     }
 
-    void CmdCloseClick(object sender, EventArgs e)
+    void CmdCloseClick()
     {
-        this.Close();
+        
     }
 
     public void OperationCompleted()
     {
         if (_errorCount != 0)
             AddStatusLine(StatusMessage.ERROR, $"Encountered {_errorCount} errors");
-        else if (cbxAutoClose.Checked == true)
-            this.Close();
-        cmdCancel.Enabled = false;
-        cmdClose.Enabled = true;
+        else if (cbxAutoClose.IsEnabled == true)
+            CmdCloseClick();
+        cmdCancel.IsEnabled = false;
+        cmdClose.IsEnabled = true;
     }
 
     private void StatusSettings_Click(object sender, EventArgs e)
     {
-        new StatusSettings().Show();
+        //var page = InstanceManager.GetAPage<StatusSettings>();
+        var window = WindowHelper.CreateWindowPage<StatusSettings>();
+    }
+
+	internal void SetDownloaded(object downloadBytes)
+	{
+		throw new NotImplementedException();
+	}
+
+	internal void SetTotalDownloaded(object sessionDownloadBytes)
+	{
+		throw new NotImplementedException();
+	}
+}
+public struct StatusData
+{
+    public static StatusData StaticData = new();
+    public static long SessionDownloadBytes;
+    public int totalProcessed;
+    public int SkipCounter;
+    public int ProcessCounter;
+    public int MaxCount;
+    public long DownloadBytes;
+    public StatusData() 
+    { 
     }
 }

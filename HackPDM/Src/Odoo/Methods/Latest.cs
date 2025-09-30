@@ -5,12 +5,19 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+
 using HackPDM.ClientUtils;
 using HackPDM.Extensions.General;
+using HackPDM.Extensions.Controls;
+using HackPDM.Forms.Hack;
+using HackPDM.Forms.Helper;
 using HackPDM.Odoo.OdooModels.Models;
 using HackPDM.Src.ClientUtils.Types;
 
+using Microsoft.UI.Xaml.Controls;
+
 using StatusDialog = HackPDM.Forms.Settings.StatusDialog;
+using HackPDM.Forms.Settings;
 namespace HackPDM.Odoo.Methods;
 
 internal static class Latest
@@ -24,8 +31,8 @@ internal static class Latest
 		// add status lines for entry id and upcoming versions
 		lock (lockObject)
 		{
-			StatusDialog.Dialog.AddStatusLine(StatusMessage.FOUND, $"{entryIDs.Count} entries");
-			StatusDialog.Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Retrieving all latest versions associated with entries...");
+            HackFileManager.Dialog.AddStatusLine(StatusMessage.FOUND, $"{entryIDs.Count} entries");
+            HackFileManager.Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Retrieving all latest versions associated with entries...");
 		}
 
 		versions = GetLatestVersions(entryIDs, ["preview_image", "entry_id", "node_id", "file_modify_stamp", "attachment_id", "file_contents"]);
@@ -46,13 +53,13 @@ internal static class Latest
 			MessageBox.Show("Cancelled Download");
 		}
 
-		StatusDialog.Dialog.SetProgressBar(versions.Length, versions.Length);
+        HackFileManager.Dialog.SetProgressBar(versions.Length, versions.Length);
 
 		if (!sentFromCheckout)
 		{
 			MessageBox.Show($"Completed!");
 		}
-		FormManager.GetOrAddForm<HackFileManager>(FormType.Hfm).RestartEntries();
+		InstanceManager.GetAPage<HackFileManager>().RestartEntries();
 	}
 	internal static HpVersion []	GetLatestVersions			(ArrayList entryIDs, string[] excludedFields = null)
 	{
@@ -103,11 +110,11 @@ internal static class Latest
 			sd.totalProcessed = sd.SkipCounter + sd.ProcessCounter;
 			if (sd.totalProcessed % 25 == 0 || sd.totalProcessed >= sd.MaxCount)
 			{
-				StatusDialog.Dialog.SetTotalDownloaded(StatusData.SessionDownloadBytes);
-				StatusDialog.Dialog.SetDownloaded(sd.DownloadBytes);
-				StatusDialog.Dialog.AddStatusLines(HackFileManager.QueueAsyncStatus);
+                HackFileManager.Dialog.SetTotalDownloaded(StatusData.SessionDownloadBytes);
+                HackFileManager.Dialog.SetDownloaded(sd.DownloadBytes);
+                HackFileManager.Dialog.AddStatusLines(HackFileManager.QueueAsyncStatus);
 			}
-			StatusDialog.Dialog.SetProgressBar(sd.SkipCounter + sd.ProcessCounter, sd.MaxCount);
+            HackFileManager.Dialog.SetProgressBar(sd.SkipCounter + sd.ProcessCounter, sd.MaxCount);
 
 
 			//          tasks.Add(
@@ -211,7 +218,9 @@ internal static class Latest
 	{
 		object lockObject = new();
 
-		TreeNode tnCurrent = HackFileManager.Singleton.LastSelectedNode;
+		var hfm = InstanceManager.GetAPage<HackFileManager>();
+
+        TreeViewNode? tnCurrent = hfm.LastSelectedNode;
 
 		if ( tnCurrent == null )
 		{
@@ -222,19 +231,19 @@ internal static class Latest
 		// directory only needs ID set to find that record's entries
 		HpDirectory directory = new("temp")
 		{
-			Id = (int)tnCurrent.Tag
+			Id = tnCurrent.LinkedData.DirectoryId ?? 0,
 		};
 
-		ArrayList entryIDs = directory.GetDirectoryEntryIDs( withSubdirectories, HackFileManager.Singleton.InactiveEntries);
+		ArrayList entryIDs = directory.GetDirectoryEntryIDs( withSubdirectories, false);
 		await GetLatestInternal(entryIDs, sentFromCheckout);
 	}
 	internal static async Task      GetLatestInternal           (ArrayList entryIDs, bool sentFromCheckout = false)
 	{
 		Notifier.CancelCheckLoop();
-		StatusDialog.Dialog = new StatusDialog();
-		await StatusDialog.Dialog.ShowWait("Get Latest");
+        HackFileManager.Dialog = new StatusDialog();
+		await HackFileManager.Dialog.ShowWait("Get Latest");
 
-		StatusDialog.Dialog.AddStatusLine(StatusMessage.INFO, "Finding Entry Dependencies...");
+        HackFileManager.Dialog.AddStatusLine(StatusMessage.INFO, "Finding Entry Dependencies...");
 		HpEntry[] entries = await HpEntry.GetRecordsByIdsAsync(entryIDs, includedFields: ["latest_version_id"]);
 		//HpEntry[] entries = HpEntry.GetRecordsByIDS(entryIDs, includedFields: ["latest_version_id"]);
 

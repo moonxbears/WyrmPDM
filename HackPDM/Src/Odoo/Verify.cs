@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using HackPDM.Forms.Helper;
+using HackPDM.Properties;
 
 namespace HackPDM.Odoo;
 
@@ -44,8 +45,8 @@ public static class Verify
 	}
 	public static bool CorrectHackSettings(ref List<string> errors)
 	{
-		if ( !Directory.Exists( Properties.Settings.Default["PWAPathAbsolute"] )) errors.Add( "HACK: invalid pwa directory path" );
-		if ( !Directory.Exists( Properties.Settings.Default["TemporaryPath"] )) errors.Add( "HACK: invalid temporary directory path" );
+		if ( !Directory.Exists( Settings.Get<string>("PWAPathAbsolute"))) errors.Add( "HACK: invalid pwa directory path" );
+		if ( !Directory.Exists( Settings.Get<string>("TemporaryPath"))) errors.Add( "HACK: invalid temporary directory path" );
 
 		return errors.Count < 1;
 	}

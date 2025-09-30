@@ -12,7 +12,7 @@ public class XmlRpcBoxcarRequest : XmlRpcRequest
 	{
 		get
 		{
-			_params.Clear();
+			field.Clear();
 			ArrayList arrayList = [];
 			foreach ( XmlRpcRequest request in Requests )
 			{
@@ -24,8 +24,8 @@ public class XmlRpcBoxcarRequest : XmlRpcRequest
 				arrayList.Add( hashtable );
 			}
 
-			_params.Add( arrayList );
-			return _params;
+			field.Add( arrayList );
+			return field;
 		}
 	}
 }

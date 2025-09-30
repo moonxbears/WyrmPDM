@@ -46,7 +46,7 @@ public static class OdooDefaults
     public const string RESTRICT_TYPES_NAME = "restrict_types";
 
     public static readonly string[] DependentExt = [".SLDPRT", ".SLDASM", ".SLDDRW"];
-    public static string[] EntryFilterPatterns = [.. HpEntryNameFilters.Select(eFilter => eFilter.NameRegex)];
+    public static string[] EntryFilterPatterns = [.. HpEntryNameFilters?.Select(eFilter => eFilter.NameRegex) ?? []];
     // lock asynchonous operations
     private static readonly object MLockObject = new();
     public static string? OdooDb 
@@ -109,7 +109,7 @@ public static class OdooDefaults
     }
     public static string? OdooCredentialTarget 
     { 
-        get => field ??= Settings.Get<string>("OdooCredentialTarget");
+        get => field ??= Settings.Get<string?>("OdooCredentialTarget", StorageBox.DEFAULT_ODOO_CREDENTIALS) ?? StorageBox.DEFAULT_ODOO_CREDENTIALS;
 
         set
         {
@@ -171,7 +171,7 @@ public static class OdooDefaults
     {
         get
         {
-            field ??= HpNodes.First(node => node.Name.Equals(System.Environment.MachineName));
+            field ??= HpNodes?.First(node => node.Name.Equals(System.Environment.MachineName));
             return field;
         }
         set
@@ -221,7 +221,7 @@ public static class OdooDefaults
     {
         get
         {
-            field ??= HpSettings.First(setting => setting.Name == "max_concurrency").IntValue;
+            field ??= HpSettings?.First(setting => setting.Name == "max_concurrency").IntValue;
             return field;
         }
     }
@@ -229,7 +229,7 @@ public static class OdooDefaults
     {
         get
         {
-            field ??= HpSettings.First(setting => setting.Name == "max_batch_size").IntValue;
+            field ??= HpSettings?.First(setting => setting.Name == "max_batch_size").IntValue;
             return field;
         }
     }
@@ -243,9 +243,9 @@ public static class OdooDefaults
         }
         set => field = value;
     }
-    public static string SwApi = HpSettings.First(sett => sett.Name == SW_KEY_NAME).CharValue;
-    public static bool RestrictProperties = HpSettings.First(sett => sett.Name == RESTRICT_PROP_NAME).BoolValue;
-    public static bool RestrictTypes = HpSettings.First(sett => sett.Name == RESTRICT_TYPES_NAME).BoolValue;
+    public static string SwApi = HpSettings?.First(sett => sett.Name == SW_KEY_NAME).CharValue ?? "";
+    public static bool RestrictProperties = HpSettings?.First(sett => sett.Name == RESTRICT_PROP_NAME).BoolValue ?? true;
+    public static bool RestrictTypes = HpSettings?.First(sett => sett.Name == RESTRICT_TYPES_NAME).BoolValue ?? true;
     public static HpEntryNameFilter[] HpEntryNameFilters
     {
         get

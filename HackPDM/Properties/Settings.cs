@@ -31,7 +31,17 @@ internal partial class Settings : ApplicationSettingsBase
 #pragma warning restore CA1416 // Validate platform compatibility
 	}
 
-	public static T? Get<T>(string key, T? defaultValue = default) => Provider.Get(key, defaultValue);
+	public static T? Get<T>(string key, T? defaultValue = default)
+	{
+		try
+		{
+			return Provider.Get(key, defaultValue);
+		}
+		catch
+		{
+			return default;
+		}
+	}
 	public static void Set<T>(string key, T value) => Provider.Set(key, value);
 }
 internal static class Assets
