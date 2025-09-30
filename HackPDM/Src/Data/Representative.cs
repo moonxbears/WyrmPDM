@@ -12,8 +12,6 @@ using Microsoft.UI.Xaml.Media.Imaging;
 
 using static HackPDM.Odoo.OdooModels.Models.HpVersionProperty;
 using HackPDM.Src.ClientUtils.Types;
-using CommunityToolkit.WinUI.UI.Controls;
-using HackPDM.Forms.Hack;
 
 namespace HackPDM.Data;
 
@@ -115,7 +113,6 @@ public class FileTypeLocRow : ItemData, IRowData
 }
 public class FileTypeLocDatRow : ItemData, IRowData
 {
-	public override DataGrid? ParentData { get => base.ParentData; set => base.ParentData = value; }
 	public string? Extension { get; set; }
 	public string? RegEx { get; set; }
 	public string? Category { get; set; }
@@ -232,15 +229,16 @@ public partial class TreeData : ITreeItem, IEnumerable<TreeData>
 		return Name ?? "";
 	}
 }
-public class BasicStatusMessage
+
+public class BasicStatusMessage : IRowData
 {
 	public StatusMessage Status { get; set; } = StatusMessage.OTHER;
 	public string? Message { get; set; }
+	public ListViewItem? Item { get; set; }
 }
 public partial class ItemData
 {
-	public virtual DataGrid? ParentData { get; set; } = null;
-	public virtual DataGridRow? Item { get; set; }
+	public virtual ListViewItem? Item { get; set; }
 	public virtual string Name { get; set; } = "";
 	public virtual string? Text
 	{
@@ -250,16 +248,7 @@ public partial class ItemData
 
 	public virtual bool IsSelected
 	{
-		get => Item is not null && (ParentData?.SelectedItems.Contains(Item) ?? false);
-		set
-		{
-			if (Item is not null)
-			{
-				if (!ParentData?.SelectedItems.Contains(Item) ?? false)
-				{
-					ParentData!.SelectedItems.Add(Item);
-				}
-			}
-		}
+		get => Item?.IsSelected ?? false;	
+		set => Item?.IsSelected = value;
 	}
 }

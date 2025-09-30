@@ -2,11 +2,9 @@
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Drawing;
 using System.IO;
 using System.Linq;
-
 using HackPDM.ClientUtils;
 using HackPDM.Src.ClientUtils.Types;
 
@@ -179,17 +177,6 @@ public static class ExtensionMethods
             {
                 yield return obj;
             }
-        }
-    }
-    public static void SortBy<T, TKey>(this ObservableCollection<T> collection, Func<T, TKey> keySelector, bool ascending = true)
-    {
-        ObservableCollection<T> sorted = ascending
-            ? [.. collection.OrderBy(keySelector)]
-            : [.. collection.OrderByDescending(keySelector)];
-
-        for (int i = 0; i< collection.Count; i++)
-        {
-            collection[i] = sorted[i];
         }
     }
     public static TArray Split<TArray>(this string str, string delimiter = " ", StringSplitOptions options = StringSplitOptions.RemoveEmptyEntries)

@@ -4,226 +4,86 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:dataGrid="using:CommunityToolkit.WinUI.UI.Controls"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:rep="using:HackPDM.Data"
     xmlns:ui="using:CommunityToolkit.WinUI"
-    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
-    mc:Ignorable="d">
-
-    <Grid
-        Width="968"
-        Height="505"
-        Background="{ThemeResource Theme_BackgroundBrush}">
+    xmlns:rep="using:HackPDM.Data"
+    mc:Ignorable="d"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+    <Grid Margin="12">
         <Grid.RowDefinitions>
-            <RowDefinition Height="*" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <!--  Top Half: Status Log (Important Actions)  -->
-        <Grid Grid.Row="0" Margin="8,8,8,4">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="128" />
-                <ColumnDefinition Width="8" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <dataGrid:DataGrid
-                x:Name="StatusList"
-                Grid.Row="1"
-                Grid.ColumnSpan="3"
-                Margin="0,0,0,0"
-                AutoGenerateColumns="False">
-                <!--  Example log entry  -->
-                <dataGrid:DataGrid.Columns>
-                    <dataGrid:DataGridTextColumn
-                        Width="128"
-                        Binding="{Binding Action}"
-                        CanUserSort="True"
-                        Header="ID" />
-                    <dataGrid:DataGridTextColumn
-                        Width="Auto"
-                        Binding="{Binding Description}"
-                        CanUserSort="True"
-                        Header="Name" />
-                </dataGrid:DataGrid.Columns>
-            </dataGrid:DataGrid>
-        </Grid>
-        <!--  Bottom Half: Two Logs Side-by-Side  -->
-        <Grid Grid.Row="1" Margin="8,4,8,8">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="8" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <!--  Skipped Actions Log  -->
-            <Grid Grid.Column="0">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-                <Grid Grid.Row="0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="128" />
-                        <ColumnDefinition Width="8" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                </Grid>
-                <dataGrid:DataGrid
-                    x:Name="InfoList"
-                    Grid.Row="1"
-                    Grid.ColumnSpan="3"
-                    Margin="0,0,0,0"
-                    VerticalAlignment="Stretch"
-                    AutoGenerateColumns="False">
-                    <!--  Example log entry  -->
-                    <dataGrid:DataGrid.Columns>
-                        <dataGrid:DataGridTextColumn
-                            Width="128"
-                            Binding="{Binding Action}"
-                            CanUserSort="True"
-                            Header="ID" />
-                        <dataGrid:DataGridTextColumn
-                            Width="Auto"
-                            Binding="{Binding Description}"
-                            CanUserSort="True"
-                            Header="Name" />
-                    </dataGrid:DataGrid.Columns>
-                </dataGrid:DataGrid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
 
-            </Grid>
-            <!--  Errors / Warnings Log  -->
-            <Grid Grid.Column="2">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-                <Grid Grid.Row="0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="128" />
-                        <ColumnDefinition Width="8" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                </Grid>
-                <dataGrid:DataGrid
-                    x:Name="ErrorList"
-                    Grid.Row="1"
-                    Grid.ColumnSpan="3"
-                    Margin="0,0,0,0"
-                    VerticalAlignment="Stretch"
-                    AutoGenerateColumns="False">
-                    <!--  Example log entry  -->
-                    <dataGrid:DataGrid.Columns>
-                        <dataGrid:DataGridTextColumn
-                            Width="128"
-                            Binding="{Binding Action}"
-                            CanUserSort="True"
-                            Header="ID" />
-                        <dataGrid:DataGridTextColumn
-                            Width="Auto"
-                            Binding="{Binding Description}"
-                            CanUserSort="True"
-                            Header="Name" />
-                    </dataGrid:DataGrid.Columns>
-                </dataGrid:DataGrid>
-            </Grid>
-        </Grid>
-        <!--  Bottom Controls: ProgressBar, Status, and Buttons  -->
-        <Grid Grid.Row="2" Margin="8,0,8,8">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="8" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="16" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="16" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="8" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="8" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <!--  Progress Bar  -->
-            <ProgressBar
-                x:Name="fileCheckStatus"
-                Grid.Column="4"
-                Height="24"
-                Margin="8,0,8,0"
-                VerticalAlignment="Center"
-                Maximum="100"
-                Minimum="0"
-                Value="15.3" />
-            <!--  Progress Percentage Text (middle, above bar)  -->
-            <StackPanel
-                Grid.Column="4"
-                Margin="0,0,0,28"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Top"
-                Orientation="Horizontal">
-                <TextBlock FontWeight="Bold" Text="Progress: " />
-                <TextBlock x:Name="ProgressText" Text="(15.3%)" />
-            </StackPanel>
-            <!--  Total Downloaded (left of bar)  -->
-            <StackPanel
-                Grid.Column="2"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Center"
-                Orientation="Horizontal">
-                <TextBlock FontWeight="Bold" Text="Total downloaded: " />
-                <TextBlock x:Name="TotalDownload" Text="900.2 MB" />
-            </StackPanel>
-            <!--  Downloaded Current and Skipped Files (right of bar, stacked)  -->
-            <StackPanel
-                Grid.Column="7"
-                HorizontalAlignment="Left"
-                VerticalAlignment="Center"
-                Orientation="Vertical">
+        <!-- Main Status List -->
+        <ListView x:Name="StatusList" Grid.Row="0" Grid.ColumnSpan="2" Height="224" Margin="0,0,0,5">
+            <ListView.Header>
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock FontWeight="Bold" Text="Downloaded: " />
-                    <TextBlock x:Name="Downloaded" Text="150.5 MB" />
+                    <TextBlock Text="Action" Width="120"/>
+                    <TextBlock Text="Description" Width="1158"/>
                 </StackPanel>
-                <StackPanel Margin="0,4,0,0" Orientation="Horizontal">
-                    <TextBlock FontWeight="Bold" Text="Skipped: " />
-                    <TextBlock x:Name="SkippedLabel" Text="8 files" />
+            </ListView.Header>
+        </ListView>
+
+        <!-- Splitter between StatusList and the two lower lists -->
+        <SplitView Grid.Row="1" Grid.ColumnSpan="2" Height="5" HorizontalAlignment="Stretch" Background="Gray"/>
+
+        <!-- Info List -->
+        <ListView x:Name="InfoList" Grid.Row="2" Grid.Column="0" Margin="0,5,5,5">
+            <ListView.Header>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Action" Width="94"/>
+                    <TextBlock Text="Description" Width="514"/>
                 </StackPanel>
-            </StackPanel>
-            <!--  Settings Button  -->
-            <Button
-                x:Name="StatusSettings"
-                Grid.Column="10"
-                Width="40"
-                Height="40"
-                VerticalAlignment="Center"
-                ToolTipService.ToolTip="Settings">
-                <Image Source="https://img.icons8.com/ios-filled/40/000000/settings.png" />
-            </Button>
-            <!--  Cancel Button  -->
-            <Button
-                x:Name="cmdCancel"
-                Grid.Column="12"
-                Width="40"
-                Height="40"
-                Margin="0,0,0,0"
-                VerticalAlignment="Center"
-                ToolTipService.ToolTip="Cancel">
-                <Image Source="https://img.icons8.com/ios-filled/40/000000/cancel.png" />
-            </Button>
-            <!--  Close Button  -->
-            <Button
-                x:Name="cmdClose"
-                Grid.Column="14"
-                Width="40"
-                Height="40"
-                Margin="0,0,0,0"
-                VerticalAlignment="Center"
-                ToolTipService.ToolTip="Close">
-                <Image Source="https://img.icons8.com/ios-filled/40/000000/close-window.png" />
-            </Button>
-        </Grid>
+            </ListView.Header>
+        </ListView>
+
+        <!-- Splitter between InfoList and ErrorList -->
+        <AppBarSeparator Grid.Row="2" Grid.Column="0" Width="5" Background="Gray"/>
+
+        <!-- Error List -->
+        <ListView x:Name="ErrorList" Grid.Row="2" Grid.Column="1" Margin="5,5,0,5">
+            <ListView.Header>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Action" Width="120"/>
+                    <TextBlock Text="Description" Width="535"/>
+                </StackPanel>
+            </ListView.Header>
+        </ListView>
+
+        <!-- Progress Bar -->
+        <ProgressBar x:Name="fileCheckStatus" Grid.Row="3" Grid.ColumnSpan="2" HorizontalAlignment="Stretch" VerticalAlignment="Center" Height="15"/>
+
+        <!-- Progress Text and Status Labels -->
+        <StackPanel Grid.Row="4" Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Bottom">
+            <TextBlock x:Name="ProgressText" Text="(0%)&#x0a;0 / 0" Margin="0,0,10,0"/>
+            <TextBlock x:Name="Downloaded" Text="Downloaded: " Margin="0,0,10,0"/>
+            <TextBlock x:Name="TotalDownload" Text="Total Downloaded: " Margin="0,0,10,0"/>
+        </StackPanel>
+
+        <!-- Skipped Label -->
+        <TextBlock x:Name="SkippedLabel" Text="(0) Skipped" Grid.Row="4" Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Bottom"/>
+
+        <!-- Control Buttons -->
+        <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button x:Name="StatusSettings" Content="configure settings" Margin="0,0,10,0"/>
+            <CheckBox x:Name="cbxAutoClose" Content="Close When Complete" Margin="0,0,10,0"/>
+            <Button x:Name="cmdCancel" Content="Cancel" Margin="0,0,10,0"/>
+            <Button x:Name="cmdClose" Content="Close"/>
+        </StackPanel>
+        <Grid.Resources>
+
+            <Style TargetType="ListViewItem">
+                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            </Style>
+            
+        </Grid.Resources>
     </Grid>
 </Page>

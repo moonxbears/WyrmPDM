@@ -1,23 +1,16 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
-
-using CommunityToolkit.WinUI.UI.Controls;
 
 using HackPDM.ClientUtils;
 using HackPDM.Data;
 using HackPDM.Forms.Hack;
 using HackPDM.Src.ClientUtils.Types;
 
-using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
-
-using Windows.UI.Core;
-
 using Setting = HackPDM.Properties.Settings;
 
 // To learn more about WinUI, the WinUI project structure,
@@ -31,6 +24,7 @@ namespace HackPDM.Forms.Settings;
 public sealed partial class StatusDialog : Page
 {
     public Window? ParentWindow { get; set; }
+    
     public static Brush ColorProcessing { get; set; } = StorageBox.BrushDarkBlue;
     public static Brush ColorSkip { get; set; } = StorageBox.BrushDarkGray;
     public static Brush ColorFound { get; set; } = StorageBox.BrushDarkGray;
@@ -114,15 +108,16 @@ public sealed partial class StatusDialog : Page
     }
     public void AddStatusLine(StatusMessage action, string description)
     {
-        AddStatusLine((action, description));
+        string[] strStatusParams = [action, description];
+        AddStatusLine(strStatusParams);
     }
-    public void AddStatusLines(params (StatusMessage action, string description)[] values)
+    public void AddStatusLines((StatusMessage action, string description) values)
     {
-        AddStatusLinesInternal([.. values]);
+        AddStatusLinesInternal(values);
     }
     public void AddStatusLines(ConcurrentQueue<(StatusMessage action, string description)> values)
     {
-        List<(StatusMessage, string)> batch = new(values.Count);
+        List<string[]> batch = new(values.Count);
         for (int i = 0; i < values.Count; i++)
         {
             if (values.TryDequeue(out (StatusMessage action, string description) item)) batch.Add(item);
@@ -138,108 +133,67 @@ public sealed partial class StatusDialog : Page
     private delegate void SetProgressBarDel(int[] @params);
     private void SetProgressBarInternal(int[] @params)
     {
-        if (!ComeBackWithThreadAccess(() => SetProgressBarInternal(@params))) return;
-
-        int max, value;
-        value = @params[0];
-        max = @params[1] > value ? @params[1] : value;
-
-        fileCheckStatus.Maximum = max;
-        fileCheckStatus.Value = value;
-        ProgressText.Text = $"({(value / (float)max) * 100:f2}%)\n{value} / {max}";
-        SkippedLabel.Text = $"({HackFileManager.SkipCounter}) Skipped";
-    }
-    private bool ComeBackWithThreadAccess(DispatcherQueueHandler handler)
-    {
-        var dispatcher = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
-        if (dispatcher.HasThreadAccess)
+        if (this.InvokeRequired)
         {
-            return dispatcher.TryEnqueue(handler);
+            SetProgressBarDel del = new(SetProgressBarInternal);
+            this.Invoke(del, (object)@params);
         }
-        return false;
+        else
+        {
+            int max, value;
+            value = @params[0];
+            max = @params[1] > value ? @params[1] : value;
+
+            fileCheckStatus.Maximum = max;
+            fileCheckStatus.Value = value;
+            ProgressText.Text = $"({(value / (float)max) * 100:f2}%)\n{value} / {max}";
+            SkippedLabel.Text = $"({HackFileManager.SkipCounter}) Skipped";
+        }
     }
 
     private delegate void AddStatusLinesDel(List<(StatusMessage action, string description)> values);
     private void AddStatusLinesInternal(List<(StatusMessage action, string description)> values)
     {
-        if (!ComeBackWithThreadAccess(() => AddStatusLinesInternal(values))) return;
-
-        MessageLog.BeginUpdate();
-        int totalCount = MessageLog.Items.Count + values.Count;
-
-        if (totalCount > HistoryLength)
+        if (this.InvokeRequired)
         {
-            // 65 lvM count
-            // 100 values count
-            // 165 total 
-            // 150 history length 
-            // 15 = total - history length
-            // lvM - value = 150
-            int histOffset = totalCount - HistoryLength;
-            for (int i = 0; i < histOffset; i++)
+            AddStatusLinesDel del = new(AddStatusLinesInternal);
+            this.Invoke(del, values);
+        }
+        else
+        {
+            MessageLog.BeginUpdate();
+            int totalCount = MessageLog.Items.Count + values.Count;
+
+            if (totalCount > HistoryLength)
             {
-                if (MessageLog.Items.Count > 0)
+                // 65 lvM count
+                // 100 values count
+                // 165 total 
+                // 150 history length 
+                // 15 = total - history length
+                // lvM - value = 150
+                int histOffset = totalCount - HistoryLength ?? 1000;
+                for (int i = 0; i < histOffset; i++)
                 {
-                    MessageLog.Items.RemoveAt(0);
+                    if (MessageLog.Items.Count > 0)
+                    {
+                        MessageLog.Items.RemoveAt(0);
+                    }
                 }
             }
-        }
-        foreach (var (action, description) in values)
-        {
-			
-        }
-        MessageLog.EndUpdate();
-        
-    }
-    private void AddMessageToList((StatusMessage action, string description) values)
-    {
-        DataGridRow lvItem = new()
-        {
-            DataContext = new BasicStatusMessage { Message = values.description, Status = values.action }
-        };
-        // set background color, based on status action
-        DataGrid? grid = null;
-        switch (values.action)
-        {
-            case StatusMessage.PROCESSING:
+            foreach (var item in values)
             {
-                lvItem.Foreground = ColorProcessing; 
-                grid = StatusList
-                break;
-            }
-            case StatusMessage.SKIP:
-            {
-                lvItem.Foreground = ColorSkip; 
-                break;
-            }
-            case StatusMessage.FOUND:
-            {
-                lvItem.Foreground = ColorFound; 
-                break;
-            }
-            case StatusMessage.SUCCESS:
-            {
-                lvItem.Foreground = ColorSuccess; 
-                break;
-            }
-            case StatusMessage.WARNING:
-            {
-                lvItem.Background = ColorWarning; 
-                break;
-            }
-            case StatusMessage.ERROR:
-            {
-                lvItem.Background = ColorError; 
-                _errorCount++; 
-                break;
-            }
-            default: break;
-        }
+                var lvItem = HackFileManager.EmptyListItem<BasicStatusMessage>(GetList(item.action));
+                ColorizeStatus(item, lvItem.);
+                // set background color, based on status action
 
-        MessageLog.Items.Add(lvItem);
-        MessageLog.EnsureVisible(MessageLog.Items.Count - 1);
+                MessageLog.Items.Add(lvItem);
+                MessageLog.EnsureVisible(MessageLog.Items.Count - 1);
+            }
+            MessageLog.EndUpdate();
+        }
     }
-    private delegate void AddStatusLineDel((StatusMessage, string) @params);
+    private delegate void AddStatusLineDel(string[] @params);
     private void AddStatusLine((StatusMessage action, string description) @params)
     {
         this.DispatcherQueue.TryEnqueue(() =>
@@ -250,7 +204,6 @@ public sealed partial class StatusDialog : Page
                 // this is a worker thread so delegate the task to the UI thread
                 AddStatusLineDel del = new(AddStatusLine);
                 this.Invoke(del, (object)@params);
-
             }
             else
             {
@@ -266,7 +219,7 @@ public sealed partial class StatusDialog : Page
             }
         });
     }
-    private void ColorizeStatus((StatusMessage action, string description) values, DataGridRow item)
+    private void ColorizeStatus((StatusMessage action, string description) values, ListViewItem item)
     {
         switch (values.action)
         {
@@ -279,6 +232,18 @@ public sealed partial class StatusDialog : Page
             default: break;
         }
     }
+    private ListView GetList(StatusMessage action) => action switch
+    {
+        StatusMessage.PROCESSING    => StatusList,
+        StatusMessage.SUCCESS       => StatusList,
+        StatusMessage.SKIP          => InfoList,
+        StatusMessage.FOUND         => InfoList,
+        StatusMessage.INFO          => InfoList,
+        StatusMessage.OTHER         => InfoList,
+        StatusMessage.WARNING       => ErrorList,
+        StatusMessage.ERROR         => ErrorList,
+        _                           => InfoList,
+    };
     private void CmdCancelClick(object sender, EventArgs e)
     {
         Canceled = true;

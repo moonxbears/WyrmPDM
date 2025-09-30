@@ -24,8 +24,8 @@ internal static class Latest
 		// add status lines for entry id and upcoming versions
 		lock (lockObject)
 		{
-			HackFileManager.Dialog.AddStatusLine(StatusMessage.FOUND, $"{entryIDs.Count} entries");
-			HackFileManager.Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Retrieving all latest versions associated with entries...");
+			StatusDialog.Dialog.AddStatusLine(StatusMessage.FOUND, $"{entryIDs.Count} entries");
+			StatusDialog.Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Retrieving all latest versions associated with entries...");
 		}
 
 		versions = GetLatestVersions(entryIDs, ["preview_image", "entry_id", "node_id", "file_modify_stamp", "attachment_id", "file_contents"]);
@@ -46,7 +46,7 @@ internal static class Latest
 			MessageBox.Show("Cancelled Download");
 		}
 
-		HackFileManager.Dialog.SetProgressBar(versions.Length, versions.Length);
+		StatusDialog.Dialog.SetProgressBar(versions.Length, versions.Length);
 
 		if (!sentFromCheckout)
 		{
@@ -103,11 +103,11 @@ internal static class Latest
 			sd.totalProcessed = sd.SkipCounter + sd.ProcessCounter;
 			if (sd.totalProcessed % 25 == 0 || sd.totalProcessed >= sd.MaxCount)
 			{
-				HackFileManager.Dialog.SetTotalDownloaded(StatusData.SessionDownloadBytes);
-				HackFileManager.Dialog.SetDownloaded(sd.DownloadBytes);
-				HackFileManager.Dialog.AddStatusLines(HackFileManager.QueueAsyncStatus);
+				StatusDialog.Dialog.SetTotalDownloaded(StatusData.SessionDownloadBytes);
+				StatusDialog.Dialog.SetDownloaded(sd.DownloadBytes);
+				StatusDialog.Dialog.AddStatusLines(HackFileManager.QueueAsyncStatus);
 			}
-			HackFileManager.Dialog.SetProgressBar(sd.SkipCounter + sd.ProcessCounter, sd.MaxCount);
+			StatusDialog.Dialog.SetProgressBar(sd.SkipCounter + sd.ProcessCounter, sd.MaxCount);
 
 
 			//          tasks.Add(
@@ -143,9 +143,9 @@ internal static class Latest
 			//                  {
 			//                      if (SkipCounter % 100 == 0 || SkipCounter == maxCount)
 			//                      {
-			//                          HackFileManager.Dialog.AddStatusLines(queueAsyncStatus);
+			//                          StatusDialog.Dialog.AddStatusLines(queueAsyncStatus);
 			//                      }
-			//                      HackFileManager.Dialog.SetProgressBar(skipCounter + processCounter, maxCount);
+			//                      StatusDialog.Dialog.SetProgressBar(skipCounter + processCounter, maxCount);
 			//                  }
 			//              })
 			//          );
@@ -231,10 +231,10 @@ internal static class Latest
 	internal static async Task      GetLatestInternal           (ArrayList entryIDs, bool sentFromCheckout = false)
 	{
 		Notifier.CancelCheckLoop();
-		HackFileManager.Dialog = new StatusDialog();
-		await HackFileManager.Dialog.ShowWait("Get Latest");
+		StatusDialog.Dialog = new StatusDialog();
+		await StatusDialog.Dialog.ShowWait("Get Latest");
 
-		HackFileManager.Dialog.AddStatusLine(StatusMessage.INFO, "Finding Entry Dependencies...");
+		StatusDialog.Dialog.AddStatusLine(StatusMessage.INFO, "Finding Entry Dependencies...");
 		HpEntry[] entries = await HpEntry.GetRecordsByIdsAsync(entryIDs, includedFields: ["latest_version_id"]);
 		//HpEntry[] entries = HpEntry.GetRecordsByIDS(entryIDs, includedFields: ["latest_version_id"]);
 
