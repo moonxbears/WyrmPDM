@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using HackPDM.Extensions.General;
 using HackPDM.Hack;
+// ReSharper disable InconsistentNaming
 
 
 //using static System.Net.Mime.MediaTypeNames;
@@ -14,14 +15,14 @@ namespace HackPDM.Odoo.OdooModels.Models;
 
 public class HpVersionProperty : HpBaseModel<HpVersionProperty>
 {
-    public string SwConfigName;
-    public string TextValue;
-    public float NumberValue;
-    public bool YesnoValue;
-    public string DateValue;
-    public int VersionId;
-    public int PropId;
-    public string PropName;
+    public string sw_config_name;
+    public string text_value;
+    public float number_value;
+    public bool yesno_value;
+    public string date_value;
+    public int version_id;
+    public int prop_id;
+    public string prop_name;
 
     public HpVersionProperty() { }
     public HpVersionProperty(
@@ -33,20 +34,20 @@ public class HpVersionProperty : HpBaseModel<HpVersionProperty>
         int versionId = 0,
         int propId = 0)
     {
-        this.SwConfigName = swConfigName;
-        this.TextValue = textValue;
-        this.NumberValue = numberValue;
-        this.YesnoValue = yesnoValue;
-        this.DateValue = dateValue;
-        this.VersionId = versionId;
-        this.PropId = propId;
+        this.sw_config_name = swConfigName;
+        this.text_value = textValue;
+        this.number_value = numberValue;
+        this.yesno_value = yesnoValue;
+        this.date_value = dateValue;
+        this.version_id = versionId;
+        this.prop_id = propId;
     }
     public PropertyType GetValueType()
     {
-        if (TextValue != null && TextValue != "" && TextValue != "False") return PropertyType.Text;
-        if (DateValue != null && DateValue != "" && DateValue != "False") return PropertyType.Date;
-        if (NumberValue != default) return PropertyType.Number;
-        if (YesnoValue != default) return PropertyType.Yesno;
+        if (text_value != null && text_value != "" && text_value != "False") return PropertyType.Text;
+        if (date_value != null && date_value != "" && date_value != "False") return PropertyType.Date;
+        if (number_value != default) return PropertyType.Number;
+        if (yesno_value != default) return PropertyType.Yesno;
         return PropertyType.None;
     }
         
@@ -56,7 +57,7 @@ public class HpVersionProperty : HpBaseModel<HpVersionProperty>
         text = null;
         if (pType == PropertyType.Text)
         {
-            text = TextValue;
+            text = text_value;
             return true;
         }
         return false;
@@ -67,7 +68,7 @@ public class HpVersionProperty : HpBaseModel<HpVersionProperty>
         number = default;
         if (pType == PropertyType.Number)
         {
-            number = NumberValue;
+            number = number_value;
             return true;
         }
         return false;
@@ -78,7 +79,7 @@ public class HpVersionProperty : HpBaseModel<HpVersionProperty>
         yesNo = default;
         if (pType == PropertyType.Yesno)
         {
-            yesNo = YesnoValue;
+            yesNo = yesno_value;
             return true;
         }
         return false;
@@ -89,7 +90,7 @@ public class HpVersionProperty : HpBaseModel<HpVersionProperty>
         date = null;
         if (pType == PropertyType.Date)
         {
-            date = TextValue;
+            date = text_value;
             return true;
         }
         return false;
@@ -119,7 +120,7 @@ public class HpVersionProperty : HpBaseModel<HpVersionProperty>
         {
             try
             {
-                if (!OdooDefaults.DependentExt.Contains($".{version.FileExt.ToUpper()}")) continue;
+                if (!OdooDefaults.DependentExt.Contains($".{version.file_ext.ToUpper()}")) continue;
                 string pathway = version.WinPathway;
                 List<string> paths = [];
                 List<Tuple<string, string, string, object>> props = HackDefaults.DocMgr.GetProperties(pathway);
@@ -130,16 +131,16 @@ public class HpVersionProperty : HpBaseModel<HpVersionProperty>
                     {
                         HpVersionProperty vProp = new()
                         {
-                            SwConfigName = prop.Item1 == "" ? null : prop.Item1,
-                            VersionId = version.Id != 0 ? version.Id : throw new Exception("version id not defined"),
+                            sw_config_name = prop.Item1 == "" ? null : prop.Item1,
+                            version_id = version.Id != 0 ? version.Id : throw new Exception("version id not defined"),
                         };
-                        if (hpProperty is not null) vProp.PropId = hpProperty.Id; 
+                        if (hpProperty is not null) vProp.prop_id = hpProperty.Id; 
                         switch (prop.Item3)
                         {
-                            case "text": vProp.TextValue        = (string)prop.Item4; break;
-                            case "date": vProp.DateValue        = (string)prop.Item4; break;
-                            case "yesno": vProp.YesnoValue      = (bool)prop.Item4; break;
-                            case "number": vProp.NumberValue    = (float)prop.Item4; break;
+                            case "text": vProp.text_value        = (string)prop.Item4; break;
+                            case "date": vProp.date_value        = (string)prop.Item4; break;
+                            case "yesno": vProp.yesno_value      = (bool)prop.Item4; break;
+                            case "number": vProp.number_value    = (float)prop.Item4; break;
                         }
                         isSuccessful = true;
                         Debug.WriteLine($"prop: {prop.Item2} | {isSuccessful}");

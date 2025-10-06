@@ -91,8 +91,8 @@ public static class FileOperations
             Path.Combine(
                 HackDefaults.PwaPathAbsolute, 
                 version.WinPathway, 
-                version.Name), 
-            version.Checksum,
+                version.name), 
+            version.checksum,
             GetHashAlgorithm(cType));
     public static bool SameChecksum( FileInfo file, string compareChecksum, ChecksumType cType = ChecksumType.Sha1 )
     {

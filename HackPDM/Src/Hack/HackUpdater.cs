@@ -26,7 +26,7 @@ internal class HackUpdater
 	}
 	private static bool IsCorrectOdooVersion(Version version)
 	{
-		_odooClientVersion = OdooDefaults.HpSettings.Where( s => s.Name == OdooDefaults.ODOO_VERSION_KEY_NAME ).First().CharValue;
+		_odooClientVersion = OdooDefaults.HpSettings.Where( s => s.name == OdooDefaults.ODOO_VERSION_KEY_NAME ).First().char_value;
 			
 		if (_odooClientVersion == $"{version.Major}.{version.Minor}.{version.Build}.{version.Revision}")
 			return true;

@@ -1,18 +1,19 @@
 ﻿//using static System.Net.Mime.MediaTypeNames;
 
+// ReSharper disable InconsistentNaming
 namespace HackPDM.Odoo.OdooModels.Models;
 
 public class HpCategoryProperty : HpBaseModel<HpCategoryProperty>
 {
-    public int CatId;
-    public int PropId;
+    public int cat_id;
+    public int prop_id;
 
     public HpCategoryProperty() { }
     public HpCategoryProperty(
         int catId = 0,
         int propId = 0)
     {
-        this.CatId = catId;
-        this.PropId = propId;
+        this.cat_id = catId;
+        this.prop_id = propId;
     }
 }

@@ -42,6 +42,7 @@ public static class StorageBox
 		{nameof(ProfileManager), new WindowConfig("Profile Manager", new int4(200, 200, 500, 200))},
         {nameof(OdooSettings), new WindowConfig("Odoo Settings", new int4(200, 200, 500, 500))},
         {nameof(HackSettings), new WindowConfig("Hack Settings", new int4(200, 200, 500, 200))},
+        {nameof(HackFileManager), new WindowConfig("Hack File Manager", new int4(0, 0, 1280, 720))},
     };
 	#endregion
 	#region Profile Manager

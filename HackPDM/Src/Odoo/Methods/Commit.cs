@@ -32,7 +32,7 @@ public static class Commit
 
         if (entries is not null && entries.Length > 0)
         {
-            ArrayList newIds = await HpEntry.GetEntryList([.. entries.Select(e => e.LatestVersionId)]);
+            ArrayList newIds = await HpEntry.GetEntryList([.. entries.Select(e => e.latest_version_id)]);
             newIds.AddRange(entryIDs);
             newIds = newIds.ToHashSet<int>().ToArrayList();
             allEntries = HpEntry.GetRecordsByIds(newIds, excludedFields: ["type_id", "cat_id", "checkout_node"], insertFields: ["directory_complete_name"]);
@@ -92,7 +92,7 @@ public static class Commit
         while (entries.TryTake(out HpEntry entry))
         {
             string entryDir = HpDirectory.ConvertToWindowsPath(entry.HashedValues["directory_complete_name"] as string, false);
-            HackFile hack = HackFile.GetFromPath(Path.Combine(HackDefaults.PwaPathAbsolute, entryDir, entry.Name));
+            HackFile hack = HackFile.GetFromPath(Path.Combine(HackDefaults.PwaPathAbsolute, entryDir, entry.name));
             datas.Add((hack, entry, HashedValueStoring.None));
             //HpVersion newVersion = await OdooDefaults.CreateNewVersion(hack, entry);
             //versions.Add(newVersion);
@@ -155,21 +155,21 @@ public static class Commit
             Task<HpEntry?> entryTask = Task.Run(() =>
             {
                 // true means that this entry is checked out
-                if (entry.CheckoutUser != OdooDefaults.OdooId)
+                if (entry.checkout_user != OdooDefaults.OdooId)
                 {
-                    if (entry.CheckoutUser == 0)
+                    if (entry.checkout_user == 0)
                     {
                         lock (lockObject)
                         {
-                            HackFileManager.Dialog.AddStatusLine(StatusMessage.ERROR, $"entry is not checked out to you: {entry.Name} ({entry.Id})");
+                            HackFileManager.Dialog.AddStatusLine(StatusMessage.ERROR, $"entry is not checked out to you: {entry.name} ({entry.Id})");
                         }
                     }
                     else
                     {
                         lock (lockObject)
                         {
-                            string userString = OdooDefaults.IdToUser.TryGetValue(entry.CheckoutUser ?? 0, out HpUser user) ? $"{user.Name} (id: {user.Id}))" : $"(id: {entry.CheckoutUser})";
-                            HackFileManager.Dialog.AddStatusLine(StatusMessage.ERROR, $"checked out to user {userString}: {entry.Name} ({entry.Id}) ");
+                            string userString = OdooDefaults.IdToUser.TryGetValue(entry.checkout_user ?? 0, out HpUser user) ? $"{user.name} (id: {user.Id}))" : $"(id: {entry.checkout_user})";
+                            HackFileManager.Dialog.AddStatusLine(StatusMessage.ERROR, $"checked out to user {userString}: {entry.name} ({entry.Id}) ");
                         }
                     }
                     return null;
@@ -184,7 +184,7 @@ public static class Commit
                 {
                     lock (lockObject)
                     {
-                        HackFileManager.Dialog.AddStatusLine(StatusMessage.WARNING, $"Latest remote version {latestVersion.Name} matches local version");
+                        HackFileManager.Dialog.AddStatusLine(StatusMessage.WARNING, $"Latest remote version {latestVersion.name} matches local version");
                     }
                     entry.IsLatest = true;
                     // return null;
@@ -195,7 +195,7 @@ public static class Commit
                 {
                     lock (lockObject)
                     {
-                        HackFileManager.Dialog.AddStatusLine(StatusMessage.ERROR, $"{latestVersion.Name} has no local version");
+                        HackFileManager.Dialog.AddStatusLine(StatusMessage.ERROR, $"{latestVersion.name} has no local version");
                     }
 
                     return null;
@@ -203,7 +203,7 @@ public static class Commit
 
                 lock (lockObject)
                 {
-                    HackFileManager.Dialog.AddStatusLine(StatusMessage.PROCESSING, $"commiting {latestVersion.Name}");
+                    HackFileManager.Dialog.AddStatusLine(StatusMessage.PROCESSING, $"commiting {latestVersion.name}");
                 }
                 return entry;
             });

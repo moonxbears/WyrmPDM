@@ -208,9 +208,9 @@ public static class ExtensionForm
 			return false;
 		}
 	}
-	public static TreeData? RecurseNode(this TreeData node, ReadOnlySpan<string> paths)
+	private static TreeData? RecurseNode(this TreeData? node, ReadOnlySpan<string> paths)
 	{
-		foreach (TreeData tNode in node.Children ?? [])
+		foreach (TreeData tNode in node?.Children ?? [])
 		{
 			if (tNode.Name == paths[0])
 			{

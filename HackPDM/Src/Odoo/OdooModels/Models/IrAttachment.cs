@@ -3,18 +3,19 @@
 
 
 using OClient = HackPDM.Odoo.OdooClient;
+// ReSharper disable InconsistentNaming
 
 namespace HackPDM.Odoo.OdooModels.Models;
 
 public class IrAttachment : HpBaseModel<IrAttachment>
 {
-    public string Name;
-    public int ResId;
-    public int FileSize;
-    public string ResModel;
-    public string Checksum;
-    public string Mimetype;
-    public string Type;
+    public string name;
+    public int res_id;
+    public int file_size;
+    public string res_model;
+    public string checksum;
+    public string mimetype;
+    public string type;
 
     private string _fileContentsBase64;
     public IrAttachment() { }
@@ -28,13 +29,13 @@ public class IrAttachment : HpBaseModel<IrAttachment>
         string type = "binary",
         string fileContentsBase64 = null)
     {
-        this.Name = name;
-        this.ResId = resId;
-        this.FileSize = fileSize;
-        this.ResModel = resModel;
-        this.Checksum = checksum;
-        this.Mimetype = mimetype;
-        this.Type = type;
+        this.name = name;
+        this.res_id = resId;
+        this.file_size = fileSize;
+        this.res_model = resModel;
+        this.checksum = checksum;
+        this.mimetype = mimetype;
+        this.type = type;
         this._fileContentsBase64 = fileContentsBase64;
     }
 

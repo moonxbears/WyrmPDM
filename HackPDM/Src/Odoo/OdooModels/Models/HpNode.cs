@@ -4,18 +4,19 @@ using HackPDM.Extensions.General;
 
 
 using OClient = HackPDM.Odoo.OdooClient;
+// ReSharper disable InconsistentNaming
 
 namespace HackPDM.Odoo.OdooModels.Models;
 
 public class HpNode : HpBaseModel<HpNode>
 {
-    public string Name;
+    public string name;
 
     public HpNode() { }
     public HpNode(
         string name)
     {
-        this.Name = name;
+        this.name = name;
     }
     internal void UpdateNodeLatestVersions(int[] versionIds)
     {
@@ -23,6 +24,6 @@ public class HpNode : HpBaseModel<HpNode>
     }
     public override string ToString() 
     {
-        return Name;
+        return name;
     }
 }

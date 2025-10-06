@@ -10,18 +10,19 @@ using HackPDM.Hack;
 
 
 using OClient = HackPDM.Odoo.OdooClient;
+// ReSharper disable InconsistentNaming
 
 namespace HackPDM.Odoo.OdooModels.Models;
 
 public class HpDirectory : HpBaseModel<HpDirectory>
 {
     internal readonly string[] UsualExcludedFields = [];
-    public string Name;
-    public string ParentPath;
-    public int? ParentId;
-    public int? DefaultCat;
-    public bool? Deleted;
-    public bool? Sandboxed;
+    public string name;
+    public string parent_path;
+    public int? parent_id;
+    public int? default_cat;
+    public bool? deleted;
+    public bool? sandboxed;
 
     public HpDirectory() { }
     public HpDirectory(
@@ -32,12 +33,12 @@ public class HpDirectory : HpBaseModel<HpDirectory>
         bool? deleted = false, 
         bool? sandboxed = false) : this()
     {
-        this.Name = name;
-        this.ParentPath = parentPath;
-        this.ParentId = parentId;
-        this.DefaultCat = defaultCat;
-        this.Deleted = deleted;
-        this.Sandboxed = sandboxed;
+        this.name = name;
+        this.parent_path = parentPath;
+        this.parent_id = parentId;
+        this.default_cat = defaultCat;
+        this.deleted = deleted;
+        this.sandboxed = sandboxed;
     }
     public static (int, int) LastAvailableDirectory( ArrayList paths )
     {
@@ -76,11 +77,11 @@ public class HpDirectory : HpBaseModel<HpDirectory>
         {
             HpDirectory newDirectory = new()
             {
-                Name = (string)paths[i],
-                ParentId = lastParentId,
-                Sandboxed = false,
-                Deleted = false,
-                DefaultCat = 1,
+                name = (string)paths[i],
+                parent_id = lastParentId,
+                sandboxed = false,
+                deleted = false,
+                default_cat = 1,
             };
             await newDirectory.CreateAsync(false);
 
@@ -94,7 +95,7 @@ public class HpDirectory : HpBaseModel<HpDirectory>
     }
     public int GetId()
     {
-        string linuxPath = ParentPath.Replace(@"\", @" / ").Replace(@"\\", @" / ");
+        string linuxPath = parent_path.Replace(@"\", @" / ").Replace(@"\\", @" / ");
         return OClient.Command<int>(this.HpModel, "get_dir_id_for_parentpath", new ArrayList(new string[] { linuxPath }));
     }
     public Hashtable GetSubdirectories(bool withEntries = true)
@@ -172,7 +173,7 @@ public class HpDirectory : HpBaseModel<HpDirectory>
     }
     public override string ToString()
     {
-        return Name;
+        return name;
     }
 }
 public class ExplorerItem

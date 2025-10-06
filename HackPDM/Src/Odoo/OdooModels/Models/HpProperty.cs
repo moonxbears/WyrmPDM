@@ -1,12 +1,13 @@
 ﻿//using static System.Net.Mime.MediaTypeNames;
 
+// ReSharper disable InconsistentNaming
 namespace HackPDM.Odoo.OdooModels.Models;
 
 public class HpProperty : HpBaseModel<HpProperty>
 {
-    public string Name;
-    public string PropType;
-    public bool Active;
+    public string name;
+    public string prop_type;
+    public bool active;
 
     public HpProperty() { }
     public HpProperty(
@@ -14,12 +15,12 @@ public class HpProperty : HpBaseModel<HpProperty>
         string propType = null,
         bool active = default)
     {
-        this.Name = name;
-        this.PropType = propType;
-        this.Active = active;
+        this.name = name;
+        this.prop_type = propType;
+        this.active = active;
     }
     public override string ToString()
     {
-        return Name;
+        return name;
     }
 }

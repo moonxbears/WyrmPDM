@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using HackPDM.Extensions.General;
 using HackPDM.Hack;
+// ReSharper disable InconsistentNaming
 
 
 //using static System.Net.Mime.MediaTypeNames;
@@ -14,16 +15,16 @@ namespace HackPDM.Odoo.OdooModels.Models;
 
 public class HpVersionRelationship : HpBaseModel<HpVersionRelationship>
 {
-    public int ParentId;
-    public int ChildId;
+    public int parent_id;
+    public int child_id;
 
     public HpVersionRelationship() { } 
     public HpVersionRelationship(
         int parentId = 0,
         int childId = 0)
     {
-        this.ParentId = parentId;
-        this.ChildId = childId;
+        this.parent_id = parentId;
+        this.child_id = childId;
     }
     public async static void Create(params HpVersion[] versions)
     {
@@ -32,7 +33,7 @@ public class HpVersionRelationship : HpBaseModel<HpVersionRelationship>
         HpVersionRelationship[] hvrCreate = [];
         foreach (HpVersion version in versions)
         {
-            if (version is not null && !OdooDefaults.DependentExt.Contains($".{version.FileExt.ToUpper()}")) continue;
+            if (version is not null && !OdooDefaults.DependentExt.Contains($".{version.file_ext.ToUpper()}")) continue;
             string pathway = version.WinPathway;
             List<string> paths = [];
             List<string[]> dependencies = HackDefaults.DocMgr.GetDependencies(pathway); // NoInterrupt: true
@@ -52,8 +53,8 @@ public class HpVersionRelationship : HpBaseModel<HpVersionRelationship>
                 hvrCreate = [.. hvrCreate, .. 
                     getVersions.Select(v => new HpVersionRelationship()
                     {
-                        ParentId = version.Id,
-                        ChildId = v.Id,
+                        parent_id = version.Id,
+                        child_id = v.Id,
                     })
                 ];
             }

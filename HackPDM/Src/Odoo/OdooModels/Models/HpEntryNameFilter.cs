@@ -1,12 +1,13 @@
 ﻿//using static System.Net.Mime.MediaTypeNames;
 
+// ReSharper disable InconsistentNaming
 namespace HackPDM.Odoo.OdooModels.Models;
 
 public class HpEntryNameFilter : HpBaseModel<HpEntryNameFilter>
 {
-    public string NameProto;
-    public string NameRegex;
-    public string Description;
+    public string name_proto;
+    public string name_regex;
+    public string description;
 
     public HpEntryNameFilter() { }
     public HpEntryNameFilter(
@@ -14,8 +15,8 @@ public class HpEntryNameFilter : HpBaseModel<HpEntryNameFilter>
         string nameRegex = null,
         string description = null)
     {
-        this.NameProto = nameProto;
-        this.NameRegex = nameRegex;
-        this.Description = description;
+        this.name_proto = nameProto;
+        this.name_regex = nameRegex;
+        this.description = description;
     }
 }

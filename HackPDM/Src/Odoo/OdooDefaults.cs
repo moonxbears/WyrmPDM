@@ -46,7 +46,7 @@ public static class OdooDefaults
     public const string RESTRICT_TYPES_NAME = "restrict_types";
 
     public static readonly string[] DependentExt = [".SLDPRT", ".SLDASM", ".SLDDRW"];
-    public static string[] EntryFilterPatterns = [.. HpEntryNameFilters?.Select(eFilter => eFilter.NameRegex) ?? []];
+    public static string[] EntryFilterPatterns = [.. HpEntryNameFilters?.Select(eFilter => eFilter.name_regex) ?? []];
     // lock asynchonous operations
     private static readonly object MLockObject = new();
     public static string? OdooDb 
@@ -172,7 +172,7 @@ public static class OdooDefaults
     {
         get
         {
-            field ??= HpNodes?.First(node => node.Name.Equals(System.Environment.MachineName));
+            field ??= HpNodes?.First(node => node.name.Equals(System.Environment.MachineName));
             return field;
         }
         set
@@ -222,7 +222,7 @@ public static class OdooDefaults
     {
         get
         {
-            field ??= HpSettings?.First(setting => setting.Name == "max_concurrency").IntValue;
+            field ??= HpSettings?.First(setting => setting.name == "max_concurrency").int_value;
             return field;
         }
     }
@@ -230,7 +230,7 @@ public static class OdooDefaults
     {
         get
         {
-            field ??= HpSettings?.First(setting => setting.Name == "max_batch_size").IntValue;
+            field ??= HpSettings?.First(setting => setting.name == "max_batch_size").int_value;
             return field;
         }
     }
@@ -244,9 +244,9 @@ public static class OdooDefaults
         }
         set => field = value;
     }
-    public static string SwApi = HpSettings?.First(sett => sett.Name == SW_KEY_NAME).CharValue ?? "";
-    public static bool RestrictProperties = HpSettings?.First(sett => sett.Name == RESTRICT_PROP_NAME).BoolValue ?? true;
-    public static bool RestrictTypes = HpSettings?.First(sett => sett.Name == RESTRICT_TYPES_NAME).BoolValue ?? true;
+    public static string SwApi = HpSettings?.First(sett => sett.name == SW_KEY_NAME).char_value ?? "";
+    public static bool RestrictProperties = HpSettings?.First(sett => sett.name == RESTRICT_PROP_NAME).bool_value ?? true;
+    public static bool RestrictTypes = HpSettings?.First(sett => sett.name == RESTRICT_TYPES_NAME).bool_value ?? true;
     public static HpEntryNameFilter[] HpEntryNameFilters
     {
         get
@@ -338,7 +338,7 @@ public static class OdooDefaults
 
                 foreach (HpProperty prop in HpProperties)
                 {
-                    field.Add(prop.Name, prop);
+                    field.Add(prop.name, prop);
                 }
             }
             return field;
@@ -379,7 +379,7 @@ public static class OdooDefaults
 
         foreach ( HpEntryNameFilter filter in hpEntryNameFilters )
         {
-            dict.Add( $".{filter.NameProto}", filter );
+            dict.Add( $".{filter.name_proto}", filter );
         }
         return dict;
     }
@@ -406,7 +406,7 @@ public static class OdooDefaults
 
         foreach ( HpType type in types )
         {
-            dict.Add( $".{type.FileExt.ToLower()}", type );
+            dict.Add( $".{type.file_ext.ToLower()}", type );
         }
         return dict;
     }
@@ -417,9 +417,9 @@ public static class OdooDefaults
         {
             foreach ( HpCategory category in categories )
             {
-                if ( category.Id == type.CatId )
+                if ( category.Id == type.cat_id )
                 {
-                    dict.Add( $".{type.FileExt.ToLower()}", category );
+                    dict.Add( $".{type.file_ext.ToLower()}", category );
                     break;
                 }
             }
@@ -463,8 +463,8 @@ public static class OdooDefaults
     {
         try { 
             // create an HpVersion that doesn't exist in odoo
-            HpVersion version = await HpVersion.CreateNew(hack, entry) ?? throw new Exception( $"{HpVersion.GetHpModel()} was unable to create new version for {entry.Name}" );
-            entry.LatestVersionId = version.Id;
+            HpVersion version = await HpVersion.CreateNew(hack, entry) ?? throw new Exception( $"{HpVersion.GetHpModel()} was unable to create new version for {entry.name}" );
+            entry.latest_version_id = version.Id;
             return version;
         }
         catch (Exception e)

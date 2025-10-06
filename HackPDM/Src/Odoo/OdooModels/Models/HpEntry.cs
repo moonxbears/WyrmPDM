@@ -8,20 +8,21 @@ using HackPDM.Hack;
 
 
 using OClient = HackPDM.Odoo.OdooClient;
+// ReSharper disable InconsistentNaming
 
 namespace HackPDM.Odoo.OdooModels.Models;
 
 public class HpEntry : HpBaseModel<HpEntry>
 {
-    public string Name;
-    public string CheckoutDate;
-    public bool Deleted;
-    public int LatestVersionId;
-    public int DirId;
-    public int TypeId;
-    public int CatId;
-    public int? CheckoutUser;
-    public int? CheckoutNode;
+    public string name;
+    public string checkout_date;
+    public bool deleted;
+    public int latest_version_id;
+    public int dir_id;
+    public int type_id;
+    public int cat_id;
+    public int? checkout_user;
+    public int? checkout_node;
     internal bool IsLatest { get; set; } = false;
 
     public HpEntry() {  }
@@ -36,18 +37,18 @@ public class HpEntry : HpBaseModel<HpEntry>
         int checkoutUser = 0,
         int checkoutNode = 0)
     {
-        this.Name = name;
-        this.Deleted = !active;
-        this.LatestVersionId = latestVersionId;
-        this.DirId = dirId;
-        this.TypeId = typeId;
-        this.CatId = catId;
-        this.CheckoutNode = checkoutNode;
+        this.name = name;
+        this.deleted = !active;
+        this.latest_version_id = latestVersionId;
+        this.dir_id = dirId;
+        this.type_id = typeId;
+        this.cat_id = catId;
+        this.checkout_node = checkoutNode;
 
-        if (checkoutUser == 0) this.CheckoutUser = OdooDefaults.OdooId;
-        else this.CheckoutUser = checkoutUser;
-        if (checkoutDate == null) this.CheckoutDate = OdooDefaults.OdooDateFormat(DateTime.Now);
-        else this.CheckoutDate = checkoutDate;
+        if (checkoutUser == 0) this.checkout_user = OdooDefaults.OdooId;
+        else this.checkout_user = checkoutUser;
+        if (checkoutDate == null) this.checkout_date = OdooDefaults.OdooDateFormat(DateTime.Now);
+        else this.checkout_date = checkoutDate;
     }
     public static ArrayList GetLatestIDs(ArrayList ids)
     {
@@ -61,19 +62,19 @@ public class HpEntry : HpBaseModel<HpEntry>
     {
         return GetLatestIDs([this.Id]);
     }
-    public bool CanCheckOut() => (CheckoutUser is null or 0) && !Deleted;
-    public bool CanUnCheckOut() => (CheckoutUser is not null) && CheckoutUser == OdooDefaults.OdooId;
+    public bool CanCheckOut() => (checkout_user is null or 0) && !deleted;
+    public bool CanUnCheckOut() => (checkout_user is not null) && checkout_user == OdooDefaults.OdooId;
         
     public async Task CheckOut()
     {
         if (!CanCheckOut()) return;
-        CheckoutUser = OdooDefaults.OdooId;
-        CheckoutDate = OdooDefaults.OdooDateFormat( DateTime.Now );
-        CheckoutNode = OdooDefaults.MyNode.Id;
+        checkout_user = OdooDefaults.OdooId;
+        checkout_date = OdooDefaults.OdooDateFormat( DateTime.Now );
+        checkout_node = OdooDefaults.MyNode.Id;
 
         await WriteChangedValuesAsync("checkout_user", "checkout_date", "checkout_node");
-        HpVersion version = new(nodeId: CheckoutNode);
-        version.Id = LatestVersionId;
+        HpVersion version = new(nodeId: checkout_node);
+        version.Id = latest_version_id;
         await version.WriteChangedValuesAsync("node_id");
         if (HashedValues.TryGetValue("windows_complete_name", out object objpath) && objpath is string winpath)
         {
@@ -89,9 +90,9 @@ public class HpEntry : HpBaseModel<HpEntry>
     public async Task UnCheckOut()
     {
         if (!CanUnCheckOut()) return;
-        CheckoutUser = null;
-        CheckoutDate = null;
-        CheckoutNode = null;
+        checkout_user = null;
+        checkout_date = null;
+        checkout_node = null;
 
         await WriteChangedValuesAsync( "checkout_user", "checkout_date", "checkout_node" );
         if (HashedValues.TryGetValue("windows_complete_name", out object objpath) && objpath is string winpath)
@@ -111,14 +112,14 @@ public class HpEntry : HpBaseModel<HpEntry>
 
         HpEntry newEntry = new()
         {
-            Name = hackFile.Name,
-            Deleted = false,
-            DirId = dirId,
+            name = hackFile.Name,
+            deleted = false,
+            dir_id = dirId,
         };
         if (type is not null)
         {
-            newEntry.CatId = type.CatId;
-            newEntry.TypeId = type.Id;
+            newEntry.cat_id = type.cat_id;
+            newEntry.type_id = type.Id;
         }
         await newEntry.CreateAsync( false );
 
@@ -131,17 +132,17 @@ public class HpEntry : HpBaseModel<HpEntry>
     }
     internal async Task LogicalDelete() 
     {
-        Deleted = true;
+        deleted = true;
         await WriteChangedValuesAsync( "deleted" );
     }
     internal async Task LogicalUnDelete() 
     {
-        Deleted = false;
+        deleted = false;
         await WriteChangedValuesAsync( "deleted" );
     }
     public override string ToString()
     {
-        return Name;
+        return name;
     }
 
 }

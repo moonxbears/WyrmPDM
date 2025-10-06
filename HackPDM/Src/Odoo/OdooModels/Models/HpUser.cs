@@ -1,4 +1,5 @@
 ﻿using System;
+// ReSharper disable InconsistentNaming
 
 
 //using static System.Net.Mime.MediaTypeNames;
@@ -9,39 +10,36 @@ namespace HackPDM.Odoo.OdooModels.Models;
 
 public class HpUser : HpBaseModel<HpUser>
 {
-	public string Name;
-	public string Login;
-	public string Email;
-	public string Signature;
-	public string NotificationType;
-	public DateTime? LoginDate;
+	public string name;
+	public string login;
+	public string email;
+	public string signature;
+	public DateTime? login_date;
         
-	public int? CompanyId;
+	public int? company_id;
 
-	public bool? Active;
+	public bool? active;
 
 	public HpUser() {}
 
 	public HpUser( string name,
-		string login = null,
-		string email = null,
-		string signature = null,
-		string notificationType = null,
+		string? login = null,
+		string? email = null,
+		string? signature = null,
 		DateTime? loginDate = null,
 		int? companyId = null,
 		bool? active = null)
 	{
-		this.Name= name;
-		this.Login= login;
-		this.Email= email;
-		this.Signature= signature;
-		this.NotificationType= notificationType;
-		this.LoginDate= loginDate;
-		this.CompanyId= companyId;
-		this.Active= active;
+		this.name= name;
+		this.login= login;
+		this.email= email;
+		this.signature= signature;
+		this.login_date= loginDate;
+		this.company_id= companyId;
+		this.active= active;
 	}
 	public override string ToString()
 	{
-		return Name;
+		return name;
 	}
 }

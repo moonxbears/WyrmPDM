@@ -361,8 +361,8 @@ public class HackFile : HackBaseFile
     public static HackFile GetFromVersion(HpVersion version)
     {
         if (version.WinPathway == null) return null;
-        HackFile hack = GetFromPath(Path.Combine(HackDefaults.PwaPathAbsolute, version.WinPathway, version.Name), Path.Combine(HackDefaults.PwaPathRelative, version.WinPathway));
-        if (hack != null && hack.Checksum == version.Checksum)
+        HackFile hack = GetFromPath(Path.Combine(HackDefaults.PwaPathAbsolute, version.WinPathway, version.name), Path.Combine(HackDefaults.PwaPathRelative, version.WinPathway));
+        if (hack != null && hack.Checksum == version.checksum)
         {
             hack.HasRemoteVersion = true;
             hack.HpVersionId = version.Id;
@@ -392,7 +392,7 @@ public class HackFile : HackBaseFile
     public static bool IsLocalVersion(in HpVersion version, in HackFile hackFile)
     {
         //if (HasLocalVersion(hackFile) && hackFile?.HpVersionID == version.ID) return true;
-        if (hackFile.Checksum == version.Checksum) return true;
+        if (hackFile.Checksum == version.checksum) return true;
         return false;
     }
     public static bool GetLocalVersion(in HpVersion[] versions, out HackFile hackFile)
@@ -504,10 +504,10 @@ public class HackFile : HackBaseFile
             }
             if ( this.Checksum is not null and not "" )
             {
-                if ( this.Checksum == version.Checksum )
+                if ( this.Checksum == version.checksum )
                     return true;
             }
-            if ( version.Checksum is not null and not "" )
+            if ( version.checksum is not null and not "" )
             {
                 if ( this.FullPath is not null and not "" )
                 {
@@ -522,7 +522,7 @@ public class HackFile : HackBaseFile
                 if ( filePath is not "" )
                 {
                     string checksum = FileOperations.FileChecksum( this.FullPath, SHA1.Create() );
-                    if ( checksum == version.Checksum )
+                    if ( checksum == version.checksum )
                         return true;
                 }
             }

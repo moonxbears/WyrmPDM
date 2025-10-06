@@ -53,16 +53,16 @@ public abstract class HpBaseModel
         }
     }
     //public readonly Hashtable EmptyHashtable = new Hashtable();
-    public bool IsModifiedRecord
-    {
-        get
-        {
-            if (!IsRecord) return false;
-            bool wasModified = true;
-            if (wasModified) IsRecord = false;
-            return wasModified;
-        }
-    }
+    // public bool IsModifiedRecord
+    // {
+    //     get
+    //     {
+    //         if (!IsRecord) return false;
+    //         bool wasModified = true;
+    //         if (wasModified) IsRecord = false;
+    //         return wasModified;
+    //     }
+    // }
     public bool IsRecord { get; internal set; }
     public Hashtable HashedValues { get; internal set; } = [];
     public string[] ExcludedFields { get; internal set; }
@@ -430,6 +430,7 @@ public abstract class HpBaseModel<T> : HpBaseModel where T : HpBaseModel, new()
             records.Add(RecordPopulation(ht, excludedFields));
         }
         //return records;
+        
         return [.. records];
     }
     internal async static Task<T[]> GetRecordsByIdsAsync(ArrayList recordIds, ArrayList searchFilters = null, string[] excludedFields = null, string[] includedFields = null, string[] insertFields = null)
@@ -478,7 +479,7 @@ public abstract class HpBaseModel<T> : HpBaseModel where T : HpBaseModel, new()
         }
         T record = HashConverter.ConvertToClass<T>(ht);
             
-        FinalizePopulation(record, ht, excludedFields, hashStoreType);
+        FinalizePopulation(ref record, ht, excludedFields, hashStoreType);
         return record;
     }
     internal static T[] RecordsPopulation(Hashtable[] hts, string[] excludedFields = null, HashedValueStoring hashStoreType = HashedValueStoring.None, Dictionary<string, string> remapNames = null)
@@ -505,12 +506,12 @@ public abstract class HpBaseModel<T> : HpBaseModel where T : HpBaseModel, new()
         return records;
     }
 
-    public static void FinalizePopulation(T record, Hashtable ht, string[] excludedFields = null, HashedValueStoring hashStoreType = HashedValueStoring.None)
+    public static void FinalizePopulation(ref T record, Hashtable ht, string[] excludedFields = null, HashedValueStoring hashStoreType = HashedValueStoring.None)
     {
         // set record settings
         record.Id = (int)ht["id"];
 
-        record.IsRecord = true;
+        record.IsRecord = (bool)true;
         record.ExcludedFields = excludedFields;
 
         //record.HashedValues = [];
@@ -545,7 +546,7 @@ public abstract class HpBaseModel<T> : HpBaseModel where T : HpBaseModel, new()
         if (records.Length != hts.Length) return;
         for (int i = 0; i < records.Length; i++)
         {
-            FinalizePopulation(records[i], hts[i], excludedFields, hashStoreType);
+            FinalizePopulation(ref records[i], hts[i], excludedFields, hashStoreType);
         }
     }
     private static Hashtable ScalpFields(Hashtable ht, HashedValueStoring hashStoreType)

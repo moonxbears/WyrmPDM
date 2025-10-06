@@ -1,4 +1,5 @@
 ﻿using System;
+// ReSharper disable InconsistentNaming
 
 
 //using static System.Net.Mime.MediaTypeNames;
@@ -9,14 +10,14 @@ namespace HackPDM.Odoo.OdooModels.Models;
 
 public class HpSetting : HpBaseModel<HpSetting>
 {
-	public string Name;
-	public string Description;
-	public string Type;
-	public bool BoolValue;
-	public int IntValue;
-	public string CharValue;
-	public float FloatValue;
-	public DateTime DateValue;
+	public string name;
+	public string description;
+	public string type;
+	public bool bool_value;
+	public int int_value;
+	public string char_value;
+	public float float_value;
+	public DateTime date_value;
 
 	public HpSetting()
 	{
@@ -31,13 +32,13 @@ public class HpSetting : HpBaseModel<HpSetting>
 		float floatValue=default,
 		DateTime dateValue=default)
 	{
-		this.Name = name;
-		this.Description = description;
-		this.Type = type;
-		this.BoolValue = boolValue;
-		this.IntValue = intValue;
-		this.CharValue = charValue;
-		this.FloatValue = floatValue;
-		this.DateValue = dateValue;
+		this.name = name;
+		this.description = description;
+		this.type = type;
+		this.bool_value = boolValue;
+		this.int_value = intValue;
+		this.char_value = charValue;
+		this.float_value = floatValue;
+		this.date_value = dateValue;
 	}
 }

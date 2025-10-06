@@ -13,24 +13,25 @@ using HackPDM.Src.ClientUtils.Types;
 
 
 using OClient = HackPDM.Odoo.OdooClient;
+// ReSharper disable InconsistentNaming
 
 namespace HackPDM.Odoo.OdooModels.Models;
 
 public class HpVersion : HpBaseModel<HpVersion>
 {
-    public string Name;
-    public string PreviewImage;
-    public int? EntryId;
-    public int? NodeId;
-    public int? DirId;
+    public string name;
+    public string preview_image;
+    public int? entry_id;
+    public int? node_id;
+    public int? dir_id;
 
     //public string create_stamp; // 
-    public DateTime? FileModifyStamp;
-    public int? AttachmentId;
-    public int? FileSize;
-    public string FileExt;
-    public string Checksum;
-    public string FileContents;
+    public DateTime? file_modify_stamp;
+    public int? attachment_id;
+    public int? file_size;
+    public string file_ext;
+    public string checksum;
+    public string file_contents;
     public string FileContentsBase64 { get; private set; }
     public string WinPathway { get; internal set; }
         
@@ -53,24 +54,24 @@ public class HpVersion : HpBaseModel<HpVersion>
         string fileContentsBase64 = null,
         string checksum = null)
     {
-        this.Name = name;
-        this.PreviewImage = previewImageBase64;
-        this.EntryId = entryId;
-        this.NodeId = nodeId;
-        this.DirId = dirId;
-        this.FileSize = fileSize;
-        this.FileExt = fileExt;
-        this.AttachmentId = attachmentId;
+        this.name = name;
+        this.preview_image = previewImageBase64;
+        this.entry_id = entryId;
+        this.node_id = nodeId;
+        this.dir_id = dirId;
+        this.file_size = fileSize;
+        this.file_ext = fileExt;
+        this.attachment_id = attachmentId;
 
         //if (create_stamp == null) this.create_stamp = OdooDefaults.OdooDateFormat(DateTime.Now);
         //else this.create_stamp = create_stamp;
         if (fileModifyStamp == null)
-            this.FileModifyStamp = DateTime.Now;
+            this.file_modify_stamp = DateTime.Now;
         else
-            this.FileModifyStamp = fileModifyStamp;
+            this.file_modify_stamp = fileModifyStamp;
 
         this.FileContentsBase64 = fileContentsBase64;
-        this.Checksum = checksum;
+        this.checksum = checksum;
             
         this.WinPathway = null;
     }
@@ -102,8 +103,8 @@ public class HpVersion : HpBaseModel<HpVersion>
         {
             if (!Directory.Exists(toPath) && !Directory.CreateDirectory(toPath).Exists) return false;
 
-            string fromFilePath = Path.Combine(this.WinPathway, this.Name);
-            string toFilePath = Path.Combine(toPath, this.Name);
+            string fromFilePath = Path.Combine(this.WinPathway, this.name);
+            string toFilePath = Path.Combine(toPath, this.name);
 
             FileInfo file = new(fromFilePath);
             if (file.Exists) file.MoveTo(toFilePath);
@@ -148,7 +149,7 @@ public class HpVersion : HpBaseModel<HpVersion>
         {
             // reads the datas field in ir.attachment and returns an ArrayList with one record because of one ID
             // which contains a hashtable with keys: datas and id. datas has a value of string which is the base 64 file contents
-            if (FileSize != 0)
+            if (file_size != 0)
             {
                 return (string)((Hashtable)OClient.Read(HpModel, [this.Id], [fileContents])[0])[fileContents];
             }
@@ -160,7 +161,7 @@ public class HpVersion : HpBaseModel<HpVersion>
         string[] fileContents = ["file_contents", "dir_id", "name", "file_modify_stamp", "file_size"];
         List<HpVersion> processVersions = [.. versions.TakeAndRemove(version =>
         {
-            return version.FileContents is null or ""; 
+            return version.file_contents is null or ""; 
         })];
             
         ArrayList ids = new(processVersions.Select(v => v.Id).ToArray());
@@ -181,12 +182,12 @@ public class HpVersion : HpBaseModel<HpVersion>
     }
     public HackFile DownloadFileData()
     {
-        if (FileContents == null) DownloadContents();
+        if (file_contents == null) DownloadContents();
 
-        HackFile file = new(Name, null);
-        if (FileContents == null) return file;
+        HackFile file = new(name, null);
+        if (file_contents == null) return file;
 
-        byte[] fileContents = Convert.FromBase64String(FileContents);
+        byte[] fileContents = Convert.FromBase64String(file_contents);
         file.FileContents = fileContents;
 
         return file;
@@ -203,17 +204,17 @@ public class HpVersion : HpBaseModel<HpVersion>
 
         for (int i = 0; i < vLen; i++)
         {
-            HackFile hack = new(versions[i].Name, null);
+            HackFile hack = new(versions[i].name, null);
             var checkUser = versions[i].HashedValues["checkout_user"];
                 
             hack.Owner = checkUser is int id && OdooDefaults.OdooId == id;
-            if (versions[i] != null && versions[i].FileContents is not null and not "")
+            if (versions[i] != null && versions[i].file_contents is not null and not "")
             {
-                hack.FileContents = Convert.FromBase64String(versions[i].FileContents);
-                hack.Name = versions[i].Name;
+                hack.FileContents = Convert.FromBase64String(versions[i].file_contents);
+                hack.Name = versions[i].name;
                 hack.BasePath = versions[i].WinPathway;
-                hack.SetModifiedDate(versions[i]?.FileModifyStamp ?? default);
-                hack.FileSize = versions[i].FileSize;
+                hack.SetModifiedDate(versions[i]?.file_modify_stamp ?? default);
+                hack.FileSize = versions[i].file_size;
                 // winpathway is probably the shortened version
             }
             else
@@ -253,9 +254,9 @@ public class HpVersion : HpBaseModel<HpVersion>
         DateTime? mostRecent = DateTime.MinValue;
         foreach ( HpVersion v in versions)
         {
-            if (mostRecent < v?.FileModifyStamp)
+            if (mostRecent < v?.file_modify_stamp)
             {
-                mostRecent = v?.FileModifyStamp;
+                mostRecent = v?.file_modify_stamp;
                 version = v;
             }
         }
@@ -291,7 +292,7 @@ public class HpVersion : HpBaseModel<HpVersion>
     {
         foreach (HpVersion version in versions)
         {
-            if (version.Checksum == checksum) return true;
+            if (version.checksum == checksum) return true;
         }
         return false;
     }
@@ -301,7 +302,7 @@ public class HpVersion : HpBaseModel<HpVersion>
         HpVersionRelationship[] versionRelationships = GetRelatedRecordByIds<HpVersionRelationship>( [id], "child_ids", includedFields: ["child_id"] );
         if (versionRelationships is null || versionRelationships.Length == 0) return null;
 
-        ArrayList ids = versionRelationships.Select(vRel => vRel.ChildId).ToArrayList();
+        ArrayList ids = versionRelationships.Select(vRel => vRel.child_id).ToArrayList();
         HpVersion[] versions = GetRecordsByIds(ids, includedFields: ["entry_id"]);
         return versions;
     }
@@ -316,15 +317,15 @@ public class HpVersion : HpBaseModel<HpVersion>
 
         HpVersion newVersion = new()
         {
-            Name = $"{entry.Id}.{hackFile.Name}",
-            DirId = entry.DirId,
-            EntryId = entry.Id,
-            FileExt = hackFile.TypeExt[1..].ToLower(),
+            name = $"{entry.Id}.{hackFile.Name}",
+            dir_id = entry.dir_id,
+            entry_id = entry.Id,
+            file_ext = hackFile.TypeExt[1..].ToLower(),
             WinPathway = hackFile.FullPath,
         };
         if (fileBase64 is not null and not "")
         {
-            newVersion.FileContents = fileBase64;
+            newVersion.file_contents = fileBase64;
         }
         return newVersion;
     }
@@ -366,7 +367,7 @@ public class HpVersion : HpBaseModel<HpVersion>
     }
     protected bool ExistsLocally()
     {
-        FileInfo fileInfo = new(Path.Combine(this.WinPathway, this.Name));
+        FileInfo fileInfo = new(Path.Combine(this.WinPathway, this.name));
             
         if (!fileInfo.Exists) return false;
             
@@ -374,6 +375,6 @@ public class HpVersion : HpBaseModel<HpVersion>
     }
     public override string ToString()
     {
-        return Name;
+        return name;
     }
 }

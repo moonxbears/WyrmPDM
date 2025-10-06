@@ -116,8 +116,9 @@ public sealed partial class HackFileManager : Page
 	public HackFileManager()
 	{
 		InitializeComponent();
+		InitializeCollections();
 		InitializeEvents();
-		this.SetFormTheme(StorageBox.MyTheme ?? ThemePreset.DefaultTheme);
+		// this.SetFormTheme(StorageBox.MyTheme ?? ThemePreset.DefaultTheme);
 		ResetListViews();
 		OdooDirectoryTree.LostFocus += (s, e) =>
 		{
@@ -132,9 +133,21 @@ public sealed partial class HackFileManager : Page
 			_cTreeSource.Cancel();
 			_backgroundWorker.CancelAsync();
 		};
-		this.Loaded += HackFileManager_Load;
 		this._root = HpBaseModel<HpDirectory>.GetRecordById(1);
+		this.Loaded += (_, _) => Task.Run(HackFileManager_Load);
 	}
+
+	private void InitializeCollections()
+	{
+		OdooDirectoryTree.ItemsSource = ONodes;
+		OdooEntryList.ItemsSource = OEntries;
+		OdooHistory.ItemsSource = OHistories;
+		OdooParents.ItemsSource = OParents;
+		OdooChildren.ItemsSource = OChildren;
+		OdooProperties.ItemsSource = OProperties;
+		OdooVersionInfoList.ItemsSource = OVersions;
+	}
+
 	private void InitializeEvents()
 	{
 		OdooDirectoryTree.SelectionChanged += OdooDirectoryTree_SelectionChanged;
@@ -181,47 +194,62 @@ public sealed partial class HackFileManager : Page
 		// TASK: implement
 	}
 
-	private void HackFileManager_Load(object sender, RoutedEventArgs e)
+	private async Task HackFileManager_Load()
 	{
-		CreateTreeViewBackground();
+		await CreateTreeViewBackground();
 	}
 
 	private void FormLoaded(object sender, EventArgs e)
 	{
 	}
-	private void CreateTreeViewBackground()
+	private async Task CreateTreeViewBackground()
 	{
-		BackgroundWorker worker = new()
-		{
-			WorkerSupportsCancellation = true
-		};
-		worker.DoWork += new DoWorkEventHandler(LoadOdooDirectoryTree);
-		worker.RunWorkerAsync();
-
-		bool blnWorkCanceled = false;
-		if (blnWorkCanceled) worker.CancelAsync();
+		await LoadOdooDirectoryTree();
+		// BackgroundWorker worker = new()
+		// {
+		// 	WorkerSupportsCancellation = true
+		// };
+		// //worker.DoWork += new DoWorkEventHandler(LoadOdooDirectoryTree);
+		// //worker.RunWorkerAsync();
+		//
+		// bool blnWorkCanceled = false;
+		// if (blnWorkCanceled) worker.CancelAsync();
 	}
-	private void LoadOdooDirectoryTree(object sender, DoWorkEventArgs e)
+	private async Task LoadOdooDirectoryTree()
 	{
 		IsTreeLoaded = false;
 
-		CreateTreeHash(_root);
-		CreateLocalTree(OdooDirectoryTree);
-
-		if (LastSelectedNode != null)
+		try
 		{
-			LastSelectedNode = OdooDirectoryTree.FindTreeNode(LastSelectedNodePath)?.Node;
+			SafeInvoker(OdooDirectoryTree, () =>
+			{
+				CreateTreeHash(_root);
+				// Debug.WriteLine("");
+				// foreach (EntryRow row in OdooDirectoryTree.ItemsSource as ObservableCollection<EntryRow>)
+				// {
+				// 	Debug.WriteLine(row.Name);
+				// }
+				// Debug.WriteLine("");
+				CreateLocalTree(OdooDirectoryTree);
+
+				if (LastSelectedNode != null)
+				{
+					LastSelectedNode = OdooDirectoryTree.FindTreeNode(LastSelectedNodePath)?.Node;
+				}
+
+				var tData = OdooDirectoryTree.ItemsSource as List<TreeData>;
+				tData?.Sort((TreeData x, TreeData y) => string.Compare(x.Name, y.Name, StringComparison.OrdinalIgnoreCase));
+				LastSelectedNode?.LinkedData.EnsureVisible(OdooDirectoryTree);
+			});
+			IsTreeLoaded = true;
+		}
+		catch (Exception exception)
+		{
+			Debug.WriteLine(exception);
 		}
 
-		SafeInvoker(OdooDirectoryTree, () =>
-		{
-			var tData = OdooDirectoryTree.ItemsSource as List<TreeData>;
-			tData?.Sort((TreeData x, TreeData y) => string.Compare(x.Name, y.Name, StringComparison.OrdinalIgnoreCase));
-			LastSelectedNode?.LinkedData.EnsureVisible(OdooDirectoryTree);
-		});
 
-		IsTreeLoaded = true;
-
+	
 		//SafeInvoke(OdooEntryImage, () =>
 		//{
 		//	//OdooEntryImage.Image = null;
@@ -406,7 +434,7 @@ public sealed partial class HackFileManager : Page
 	}
 	private void CreateTreeHash(HpDirectory directory)
 	{
-		AddDirectoriesToTree(OdooDirectoryTree, directory.GetSubdirectories(false));
+		AddDirectoriesToTree(directory.GetSubdirectories(false));
 	}
 	private void CreateLocalTree(in TreeView treeView)
 	{
@@ -446,58 +474,50 @@ public sealed partial class HackFileManager : Page
 				};
 
 				node.Children.Add(tNode);
-				treeDict.Add(parentData.FullPath, node);
+				treeDict.Add(parentData?.FullPath ?? "", node);
 			}
 		});
 
 	}
-	private void AddDirectoriesToTree(TreeView tree, Hashtable entries)
+	private void AddDirectoriesToTree(Hashtable entries)
 	{
-		SafeInvoker(tree, () =>
+		SafeInvoker(OdooDirectoryTree, () =>
 		{
-			tree.RootNodes.Clear();
-			RecurseAddNodesAsync(null, entries, 0).Wait();
+			OdooDirectoryTree.RootNodes.Clear();
+			var child = RecurseAddNodesAsync(entries);
+			child.Wait();
+			if (child.Result.Item1 is null) return;
+			OdooDirectoryTree.RootNodes.Add(child.Result.Item1);
 		});
 	}
-	private async Task RecurseAddNodesAsync(TreeViewNode treeNode, Hashtable node, int depth)
+	private static async Task<(TreeViewNode, TreeData)> RecurseAddNodesAsync(Hashtable node, int depth = 0)
 	{
 		// add container node (directory name)
-		TreeData dat = new(node["name"] as string);
 		TreeViewNode treeNodeName = new();
+		
+		// refresh to show active changes
+		// add children
+		if (node["directories"] is Hashtable { Count: > 0 } directory)
+		{
+			foreach (DictionaryEntry pair in directory)
+			{
+				if (pair.Value is not Hashtable childDirectory) continue;
+				var child = await RecurseAddNodesAsync(childDirectory, depth + 1);
+				treeNodeName.Children.Add(child.Item1);
+			}
+		}
 
+		TreeData dat = treeNodeName.LinkedData;
+		dat.Name = node["name"] as string;
+		dat.DirectoryId = node["id"] as int?;
 		// if treeNode == null then it will be the root node
-		if (treeNode == null)
-		{
-			treeNode = treeNodeName;
-			SafeInvoker(OdooDirectoryTree, () => OdooDirectoryTree.RootNodes.Add(treeNode));
-		}
-		else
-		{
-			dat.Parent = treeNode.Content<TreeData>();
-			treeNode.Children.Add(treeNodeName);
-		}
-			
 		string path = HackDefaults.DefaultPath(dat.FullPath, true);
 		if (!Directory.Exists(path))
 		{
 			dat.Icon = Assets.GetImage("folder-icon_remoteonly_32") as BitmapImage;
 		}
 
-		dat.DirectoryId = node["id"] as int?;
-
-		// refresh to show active changes
-
-		// add children
-		var directory = node["directories"] as Hashtable;
-		if (directory is null or { Count: < 1 }) return;
-
-		foreach (DictionaryEntry pair in directory)
-		{
-			if (pair.Value is Hashtable childDirectory)
-			{
-				await RecurseAddNodesAsync(treeNodeName, childDirectory, depth + 1);
-			}
-		}
+		return (treeNodeName, dat);
 	}
 	public void RefreshTree()
 		=> SafeInvoker(OdooDirectoryTree, ()=> OdooDirectoryTree.UpdateLayout());
@@ -677,7 +697,7 @@ public sealed partial class HackFileManager : Page
 					using var writer = new DataWriter(stream);
 					try
 					{
-						byte[] imgBytes = FileOperations.ConvertFromBase64(hpType.Icon);
+						byte[] imgBytes = FileOperations.ConvertFromBase64(hpType.icon);
 						writer.WriteBytes(imgBytes);
 						await writer.StoreAsync();
 						await writer.FlushAsync();
@@ -726,7 +746,7 @@ public sealed partial class HackFileManager : Page
 
 		item.Status = Enum.Parse<FileStatus>(status, true);
 		string category = table["category"] is string cat ? cat : EMPTY_PLACEHOLDER;
-		item.Category = OdooDefaults.HpCategories.Where(c => c.Name.Equals(category)).First();
+		item.Category = OdooDefaults.HpCategories.Where(c => c.name.Equals(category)).First();
 			
 		item.FullName = fullName;
 
@@ -799,7 +819,7 @@ public sealed partial class HackFileManager : Page
 				using var writer = new DataWriter(stream);
 				try
 				{
-					byte[] imgBytes = FileOperations.ConvertFromBase64(hpType.Icon);
+					byte[] imgBytes = FileOperations.ConvertFromBase64(hpType.icon);
 					writer.WriteBytes(imgBytes);
 					await writer.StoreAsync();
 					await writer.FlushAsync();
@@ -929,7 +949,7 @@ public sealed partial class HackFileManager : Page
 				HpVersion latest = null;
 				foreach (HpVersion version in versions)
 				{
-					if (latest == null || version.FileModifyStamp > latest.FileModifyStamp)
+					if (latest == null || version.file_modify_stamp > latest.file_modify_stamp)
 					{
 						latest = version;
 					}
@@ -1010,18 +1030,18 @@ public sealed partial class HackFileManager : Page
 
 						var item = EmptyListItemInternal<PropertiesRow>(OdooProperties);
 
-						item.Version = versionProp.VersionId;
-						item.Configuration = versionProp.SwConfigName;
-						item.Name = versionProp.PropName;
-						item.Property = versionProp.PropId;
+						item.Version = versionProp.version_id;
+						item.Configuration = versionProp.sw_config_name;
+						item.Name = versionProp.prop_name;
+						item.Property = versionProp.prop_id;
 
 						item.Type = versionProp.GetValueType();
 						item.ValueData = item.Type switch
 						{
-							HpVersionProperty.PropertyType.Yesno => versionProp.YesnoValue,
-							HpVersionProperty.PropertyType.Number => versionProp.NumberValue,
-							HpVersionProperty.PropertyType.Text => versionProp.TextValue,
-							HpVersionProperty.PropertyType.Date => versionProp.DateValue,
+							HpVersionProperty.PropertyType.Yesno => versionProp.yesno_value,
+							HpVersionProperty.PropertyType.Number => versionProp.number_value,
+							HpVersionProperty.PropertyType.Text => versionProp.text_value,
+							HpVersionProperty.PropertyType.Date => versionProp.date_value,
 							_ => null,
 						};
 
@@ -1047,7 +1067,7 @@ public sealed partial class HackFileManager : Page
 				{
 					var item = EmptyListItemInternal<ChildrenRow>(OdooChildren);
 					item.Version = version.Id;
-					item.Name = version.Name;
+					item.Name = version.name;
 					item.BasePath = Path.Combine(/*HackDefaults.PWAPathAbsolute,*/ version.WinPathway);
 					OdooChildren.Items.Add(item);
 				}
@@ -1070,7 +1090,7 @@ public sealed partial class HackFileManager : Page
 				{
 					var item = EmptyListItemInternal<ParentRow>(OdooParents);
 					item.Version = version.Id;
-					item.Name = version.Name;
+					item.Name = version.name;
 					item.BasePath = version.WinPathway;
 
 					OdooParents.Items.Add(item);
@@ -1107,8 +1127,8 @@ public sealed partial class HackFileManager : Page
 						}
 					}
 					if (moduser is not null) item.ModUser = OdooDefaults.IdToUser.TryGetValue(moduser ?? 0, out var user) ? user : null;
-					item.ModDate = version.FileModifyStamp;
-					item.Size = version.FileSize;
+					item.ModDate = version.file_modify_stamp;
+					item.Size = version.file_size;
 					item.RelDate = null;
 
 					OdooHistory.Items.Add(item);
@@ -1132,14 +1152,14 @@ public sealed partial class HackFileManager : Page
 				var item = EmptyListItemInternal<VersionRow>(OdooVersionInfoList);
 
 				item.Id = version.Id;
-				item.Name = version.Name;
-				item.Checksum = version.Checksum;
-				item.FileSize = version.FileSize;
-				item.DirectoryId = version.DirId;
-				item.NodeId = version.NodeId;
-				item.EntryId = version.EntryId;
-				item.AttachmentId = version.AttachmentId;
-				item.ModifyDate = version.FileModifyStamp;
+				item.Name = version.name;
+				item.Checksum = version.checksum;
+				item.FileSize = version.file_size;
+				item.DirectoryId = version.dir_id;
+				item.NodeId = version.node_id;
+				item.EntryId = version.entry_id;
+				item.AttachmentId = version.attachment_id;
+				item.ModifyDate = version.file_modify_stamp;
 				string? path = version.HashedValues != null && version.HashedValues.ContainsKey("dir_id")
 					? ((version.HashedValues["dir_id"] as ArrayList)?[1].ToString())
 					: "Not Found";
@@ -1151,9 +1171,9 @@ public sealed partial class HackFileManager : Page
 	}
 	private void PreviewImage(HpVersion version)
 	{
-		if (version.PreviewImage is null or "") return;
+		if (version.preview_image is null or "") return;
 
-		byte[] previewImageBytes = Convert.FromBase64String(version.PreviewImage);
+		byte[] previewImageBytes = Convert.FromBase64String(version.preview_image);
 		MemoryStream ms = new(previewImageBytes)
 		{
 			Position = 0
@@ -1175,7 +1195,6 @@ public sealed partial class HackFileManager : Page
 	{
 		object lockObject = new();
 		ArrayList entryIDs = arguements.Item1;
-		HpVersion[] versions;
 
 		// add status lines for entry id and upcoming versions
 		lock (lockObject)
@@ -1184,7 +1203,7 @@ public sealed partial class HackFileManager : Page
 			Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Retrieving all latest versions associated with entries...");
 		}
 
-		versions = GetLatestVersions(entryIDs, ["preview_image", "entry_id", "node_id", "file_modify_stamp", "attachment_id", "file_contents"]);
+		var versions = GetLatestVersions(entryIDs, ["preview_image", "entry_id", "node_id", "file_modify_stamp", "attachment_id", "file_contents"]);
 
 		IEnumerable<List<HpVersion>> versionBatches = Utils.BatchList(versions, DownloadBatchSize);
 
@@ -1240,7 +1259,7 @@ public sealed partial class HackFileManager : Page
 		while (entries.TryTake(out HpEntry entry))
 		{
 			string entryDir = HpDirectory.ConvertToWindowsPath(entry.HashedValues["directory_complete_name"] as string, false);
-			HackFile hack = HackFile.GetFromPath(Path.Combine(HackDefaults.PwaPathAbsolute, entryDir, entry.Name));
+			HackFile hack = HackFile.GetFromPath(Path.Combine(HackDefaults.PwaPathAbsolute, entryDir, entry.name));
 			datas.Add((hack, entry, HashedValueStoring.None));
 			//HpVersion newVersion = await OdooDefaults.CreateNewVersion(hack, entry);
 			//versions.Add(newVersion);
@@ -1251,8 +1270,10 @@ public sealed partial class HackFileManager : Page
 		_processCounter = 0;
 		SkipCounter = 0;
 		_maxCount = entries.Count;
-		if (versionBatches.Count > 0) Dialog.AddStatusLine(StatusMessage.INFO, $"Commiting new versions to database...");
-		else Dialog.AddStatusLine(StatusMessage.INFO, $"No new remote versions to commit for existing entries to the database...");
+		Dialog.AddStatusLine(StatusMessage.INFO,
+			versionBatches.Count > 0
+				? $"Commiting new versions to database..."
+				: $"No new remote versions to commit for existing entries to the database...");
 		for (int i = 0; i < versionBatches.Count; i++)
 		{
 			Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Commiting batch {i + 1}/{versionBatches.Count}...");
@@ -1290,7 +1311,7 @@ public sealed partial class HackFileManager : Page
 
 			lock (lockObject)
 			{
-				Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Checking out {entry.Name} ({entry.Id})");
+				Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Checking out {entry.name} ({entry.Id})");
 			}
 			await CheckOutEntry(entry);
 
@@ -1319,7 +1340,7 @@ public sealed partial class HackFileManager : Page
 
 			lock (lockObject)
 			{
-				Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Unchecking out {entry.Name} ({entry.Id})");
+				Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Unchecking out {entry.name} ({entry.Id})");
 			}
 			await UnCheckOutEntry(entry);
 
@@ -1367,7 +1388,7 @@ public sealed partial class HackFileManager : Page
 		{
 			lock (lockObject)
 			{
-				Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Setting InActive {entry.Name}: {entry.Id}");
+				Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Setting InActive {entry.name}: {entry.Id}");
 			}
 			await entry.LogicalDelete();
 
@@ -1383,7 +1404,7 @@ public sealed partial class HackFileManager : Page
 		{
 			lock (lockObject)
 			{
-				Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Setting Active {entry.Name}: {entry.Id}");
+				Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Setting Active {entry.name}: {entry.Id}");
 			}
 			await entry.LogicalUnDelete();
 		}
@@ -1421,7 +1442,7 @@ public sealed partial class HackFileManager : Page
 	}
 	private async Task<bool> AsyncRunner(Func<Task> function, string statusHeader = "Status", CancellationTokenSource tokenSource = default)
 	{
-		var task = Task.Run(() => function(), tokenSource.Token);
+		var task = Task.Run(function, tokenSource.Token);
 		bool blnWorkCanceled = await AsyncHelper.WaitUntil(() => Dialog.Canceled || task.IsCompleted || task.IsCanceled, 500);
 
 		if (blnWorkCanceled)
@@ -1450,7 +1471,7 @@ public sealed partial class HackFileManager : Page
 	{
 		foreach (HpEntry entry in entries)
 		{
-			if (entry.CheckoutUser == 0)
+			if (entry.checkout_user == 0)
 			{
 				yield return entry;
 			}
@@ -1460,7 +1481,7 @@ public sealed partial class HackFileManager : Page
 	{
 		foreach (HpEntry entry in entries)
 		{
-			if (entry.CheckoutUser != 0)
+			if (entry.checkout_user != 0)
 			{
 				yield return entry;
 			}
@@ -1496,21 +1517,21 @@ public sealed partial class HackFileManager : Page
 			Task<HpEntry> entryTask = Task.Run(() =>
 			{
 				// true means that this entry is checked out
-				if (entry.CheckoutUser != OdooDefaults.OdooId)
+				if (entry.checkout_user != OdooDefaults.OdooId)
 				{
-					if (entry.CheckoutUser == 0)
+					if (entry.checkout_user == 0)
 					{
 						lock (lockObject)
 						{
-							Dialog.AddStatusLine(StatusMessage.ERROR, $"entry is not checked out to you: {entry.Name} ({entry.Id})");
+							Dialog.AddStatusLine(StatusMessage.ERROR, $"entry is not checked out to you: {entry.name} ({entry.Id})");
 						}
 					}
 					else
 					{
 						lock (lockObject)
 						{
-							string userString = OdooDefaults.IdToUser.TryGetValue(entry.CheckoutUser ?? 0, out HpUser user) ? $"{user.Name} (id: {user.Id}))" : $"(id: {entry.CheckoutUser})";
-							Dialog.AddStatusLine(StatusMessage.ERROR, $"checked out to user {userString}: {entry.Name} ({entry.Id}) ");
+							string userString = OdooDefaults.IdToUser.TryGetValue(entry.checkout_user ?? 0, out HpUser user) ? $"{user.name} (id: {user.Id}))" : $"(id: {entry.checkout_user})";
+							Dialog.AddStatusLine(StatusMessage.ERROR, $"checked out to user {userString}: {entry.name} ({entry.Id}) ");
 						}
 					}
 					return null;
@@ -1525,17 +1546,17 @@ public sealed partial class HackFileManager : Page
 				{
 					lock (lockObject)
 					{
-						Dialog.AddStatusLine(StatusMessage.FOUND, $"Remote {temp.Name} has matching local version");
+						Dialog.AddStatusLine(StatusMessage.FOUND, $"Remote {temp.name} has matching local version");
 					}
 
 					return null;
 				}
-				FileInfo file = new(Path.Combine(HackDefaults.PwaPathAbsolute, temp.WinPathway, temp.Name));
+				FileInfo file = new(Path.Combine(HackDefaults.PwaPathAbsolute, temp.WinPathway, temp.name));
 				if (!file.Exists)
 				{
 					lock (lockObject)
 					{
-						Dialog.AddStatusLine(StatusMessage.ERROR, $"{temp.Name} has no local version");
+						Dialog.AddStatusLine(StatusMessage.ERROR, $"{temp.name} has no local version");
 					}
 
 					return null;
@@ -1543,7 +1564,7 @@ public sealed partial class HackFileManager : Page
 
 				lock (lockObject)
 				{
-					Dialog.AddStatusLine(StatusMessage.PROCESSING, $"commiting {entryVersions.First().Name}");
+					Dialog.AddStatusLine(StatusMessage.PROCESSING, $"commiting {entryVersions.First().name}");
 				}
 				return entry;
 			});
@@ -1602,9 +1623,9 @@ public sealed partial class HackFileManager : Page
 			// check to see if the version has a checksum and if it is the
 			// same as the one locally; if not don't download
 			// ==============================================================
-			if (version.Checksum == null || version.Checksum.Length == 0 || version.Checksum == "False")
+			if (version.checksum == null || version.checksum.Length == 0 || version.checksum == "False")
 			{
-				QueueAsyncStatus.Enqueue((StatusMessage.ERROR, $"Checksum not found for version: {version.Name}"));
+				QueueAsyncStatus.Enqueue((StatusMessage.ERROR, $"Checksum not found for version: {version.name}"));
 				SkipCounter++;
 				willProcess = false;
 			}
@@ -1612,7 +1633,7 @@ public sealed partial class HackFileManager : Page
 			{
 
 				//unprocessedVersions.Add(version.ID);
-				QueueAsyncStatus.Enqueue((StatusMessage.FOUND, $"Skipping version download: {version.Name}"));
+				QueueAsyncStatus.Enqueue((StatusMessage.FOUND, $"Skipping version download: {version.name}"));
 				SkipCounter++;
 				willProcess = false;
 			}
@@ -1621,7 +1642,7 @@ public sealed partial class HackFileManager : Page
 			// ==============================================================
 			if (willProcess)
 			{
-				string fileName = Path.Combine(version.WinPathway, version.Name);
+				string fileName = Path.Combine(version.WinPathway, version.name);
 				processVersions.Add(version);
 
 				QueueAsyncStatus.Enqueue((StatusMessage.PROCESSING, $"Downloading latest version: {fileName}"));
@@ -2259,8 +2280,8 @@ public sealed partial class HackFileManager : Page
 	private void History_Click_Download(object sender, RoutedEventArgs e)
 	{
 		var version = GetVersionFromHistory();
-		FileInfo file = new(Path.Combine(version.WinPathway, version.Name));
-		if (FileOperations.SameChecksum(file, version.Checksum))
+		FileInfo file = new(Path.Combine(version.WinPathway, version.name));
+		if (FileOperations.SameChecksum(file, version.checksum))
 		{
 			if (file.Exists)
 			{
@@ -2307,21 +2328,21 @@ public sealed partial class HackFileManager : Page
 		if (item.Version is 0) return;
 		
 		HpVersion version = (await HpVersion.GetRecordsByIdsAsync([item.Version])).First();
-		HpEntry entry = (await HpEntry.GetRecordsByIdsAsync([version.EntryId])).First();
+		HpEntry entry = (await HpEntry.GetRecordsByIdsAsync([version.entry_id])).First();
 		ArrayList versions = await GetVersionList(item.Version);
 		HashSet<int> vIds = versions.ToHashSet<int>();
 		vIds.Add(version.Id);
 		string vIdsText = string.Join(", ", vIds);
-		string eText = entry.LatestVersionId == item.Version ? $"You are trying to download the latest version and dependencies. Continue?" : "You are trying to download a previous version and dependencies. Continue?";
+		string eText = entry.latest_version_id == item.Version ? $"You are trying to download the latest version and dependencies. Continue?" : "You are trying to download a previous version and dependencies. Continue?";
 		string vText = $"version:\n" +
-		               $"\tName = {version.Name}\n" +
+		               $"\tName = {version.name}\n" +
 		               $"\tID = {version.Id}\n" +
-		               $"\tSize = {version.FileSize}\n" +
-		               $"\tChecksum = {version.Checksum}\n" +
-		               $"\tAttachID = {version.AttachmentId}\n" +
-		               $"\tMod Date = {version.FileModifyStamp}\n" +
-		               $"\tNode ID	= {version.NodeId}\n" +
-		               $"\tDir ID = {version.DirId}\n" +
+		               $"\tSize = {version.file_size}\n" +
+		               $"\tChecksum = {version.checksum}\n" +
+		               $"\tAttachID = {version.attachment_id}\n" +
+		               $"\tMod Date = {version.file_modify_stamp}\n" +
+		               $"\tNode ID	= {version.node_id}\n" +
+		               $"\tDir ID = {version.dir_id}\n" +
 		               $"\tWin DL Path = {version.WinPathway}";
 		var response = MessageBox.Show($"{eText}\n this will download version ids: {vIdsText}\n{vText}", "Version Download", type: MessageBoxType.YesNoCancel);
 		if (response != DialogResult.Yes) return;
@@ -2548,7 +2569,7 @@ public sealed partial class HackFileManager : Page
 
 		// download version data and place into temporary folder
 		version.DownloadFile(Path.GetTempPath());
-		FileOperations.OpenFile(Path.Combine(version.WinPathway, version.Name));
+		FileOperations.OpenFile(Path.Combine(version.WinPathway, version.name));
 	}
 	private void PreviewImageSelection(ListViewItem? item, string nameConfigId)
 	{
@@ -2626,7 +2647,7 @@ public sealed partial class HackFileManager : Page
 		if (version == null)
 			return;
 
-		OpenLocalFile(Path.Combine(version.WinPathway, version.Name));
+		OpenLocalFile(Path.Combine(version.WinPathway, version.name));
 	}
 	private HpVersion DownloadHistory(bool toTemp = false)
 	{
@@ -2645,8 +2666,8 @@ public sealed partial class HackFileManager : Page
 		var version = GetVersionFromHistory();
 		if (version == null) return;
 
-		string tempFilePath = Path.Combine(Properties.Settings.Get<string>("TemporaryPath") ?? "", version.Name);
-		string mainFilePath = Path.Combine(version.WinPathway, version.Name);
+		string tempFilePath = Path.Combine(Properties.Settings.Get<string>("TemporaryPath") ?? "", version.name);
+		string mainFilePath = Path.Combine(version.WinPathway, version.name);
 
 		FileInfo fileFrom = new FileInfo(!toTemp ? tempFilePath : mainFilePath);
 		FileInfo fileTo = new FileInfo(toTemp ? tempFilePath : mainFilePath);
@@ -2934,7 +2955,7 @@ public sealed partial class HackFileManager : Page
 		HpEntry[] entries = await HpEntry.GetRecordsByIdsAsync(entryIDs, includedFields: ["latest_version_id"]);
 		//HpEntry[] entries = HpEntry.GetRecordsByIDS(entryIDs, includedFields: ["latest_version_id"]);
 
-		ArrayList newIds = await GetEntryList([.. entries.Select(entry => entry.LatestVersionId)]);
+		ArrayList newIds = await GetEntryList([.. entries.Select(entry => entry.latest_version_id)]);
 
 		newIds.AddRange(entryIDs);
 		newIds = newIds.ToHashSet<int>().ToArrayList();
@@ -2951,7 +2972,7 @@ public sealed partial class HackFileManager : Page
 
 		if (entries is not null && entries.Length > 0)
 		{
-			ArrayList newIds = await GetEntryList([.. entries.Select(e => e.LatestVersionId)]);
+			ArrayList newIds = await GetEntryList([.. entries.Select(e => e.latest_version_id)]);
 			newIds.AddRange(entryIDs);
 			newIds = newIds.ToHashSet<int>().ToArrayList();
 			allEntries = HpEntry.GetRecordsByIds(newIds, excludedFields: ["type_id", "cat_id", "checkout_node"], insertFields: ["directory_complete_name"]);
@@ -2963,7 +2984,7 @@ public sealed partial class HackFileManager : Page
 	{
 		HpEntry[] entriesTemp = HpEntry.GetRecordsByIds(entryIDs, includedFields: ["latest_version_id"]);
 
-		ArrayList newIds = await GetEntryList([.. entriesTemp.Select(e => e.LatestVersionId)]);
+		ArrayList newIds = await GetEntryList([.. entriesTemp.Select(e => e.latest_version_id)]);
 
 		newIds.AddRange(entryIDs);
 		newIds = newIds.ToHashSet<int>().ToArrayList();
@@ -2981,7 +3002,7 @@ public sealed partial class HackFileManager : Page
 		if (entryIDs is null or { Count: < 1 }) return;
 
 		HpEntry[] entriesTemp = HpEntry.GetRecordsByIds(entryIDs, includedFields: ["latest_version_id"]);
-		ArrayList newIds = await GetEntryList([.. entriesTemp.Select(e => e.LatestVersionId)]);
+		ArrayList newIds = await GetEntryList([.. entriesTemp.Select(e => e.latest_version_id)]);
 
 		newIds.AddRange(entryIDs);
 		newIds = newIds.ToHashSet<int>().ToArrayList();
@@ -3001,7 +3022,7 @@ public sealed partial class HackFileManager : Page
 	{
 		HpEntry[] entriesTemp = HpEntry.GetRecordsByIds(entryIDs, includedFields: ["latest_version_id"]);
 
-		ArrayList newIds = await GetEntryList([.. entriesTemp.Select(e => e.LatestVersionId)]);
+		ArrayList newIds = await GetEntryList([.. entriesTemp.Select(e => e.latest_version_id)]);
 
 		newIds.AddRange(entryIDs);
 		newIds = newIds.ToHashSet<int>().ToArrayList();

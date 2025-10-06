@@ -82,9 +82,9 @@ internal static class Latest
 			// check to see if the version has a checksum and if it is the
 			// same as the one locally; if not don't download
 			// ==============================================================
-			if (version.Checksum == null || version.Checksum.Length == 0 || version.Checksum == "False")
+			if (version.checksum == null || version.checksum.Length == 0 || version.checksum == "False")
 			{
-				HackFileManager.QueueAsyncStatus.Enqueue((StatusMessage.ERROR, $"Checksum not found for version: {version.Name}"));
+				HackFileManager.QueueAsyncStatus.Enqueue((StatusMessage.ERROR, $"Checksum not found for version: {version.name}"));
 				sd.SkipCounter++;
 				willProcess = false;
 			}
@@ -92,7 +92,7 @@ internal static class Latest
 			{
 
 				//unprocessedVersions.Add(version.ID);
-				HackFileManager.QueueAsyncStatus.Enqueue((StatusMessage.FOUND, $"Skipping version download: {version.Name}"));
+				HackFileManager.QueueAsyncStatus.Enqueue((StatusMessage.FOUND, $"Skipping version download: {version.name}"));
 				sd.SkipCounter++;
 				willProcess = false;
 			}
@@ -101,7 +101,7 @@ internal static class Latest
 			// ==============================================================
 			if (willProcess)
 			{
-				string fileName = Path.Combine(version.WinPathway, version.Name);
+				string fileName = Path.Combine(version.WinPathway, version.name);
 				processVersions.Add(version);
 
 				HackFileManager.QueueAsyncStatus.Enqueue((StatusMessage.PROCESSING, $"Downloading latest version: {fileName}"));
@@ -247,7 +247,7 @@ internal static class Latest
 		HpEntry[] entries = await HpEntry.GetRecordsByIdsAsync(entryIDs, includedFields: ["latest_version_id"]);
 		//HpEntry[] entries = HpEntry.GetRecordsByIDS(entryIDs, includedFields: ["latest_version_id"]);
 
-		ArrayList newIds = await HpEntry.GetEntryList([.. entries.Select(entry => entry.LatestVersionId)]);
+		ArrayList newIds = await HpEntry.GetEntryList([.. entries.Select(entry => entry.latest_version_id)]);
 
 		newIds.AddRange(entryIDs);
 		newIds = newIds.ToHashSet<int>().ToArrayList();

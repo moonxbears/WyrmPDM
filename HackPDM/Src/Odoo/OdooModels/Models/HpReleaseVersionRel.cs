@@ -1,12 +1,13 @@
 ﻿//using static System.Net.Mime.MediaTypeNames;
 
+// ReSharper disable InconsistentNaming
 namespace HackPDM.Odoo.OdooModels.Models;
 
 public class HpReleaseVersionRel : HpBaseModel<HpReleaseVersionRel>
 {
-    public int ReleaseId;
-    public int ReleaseVersion;
-    public int ReleaseUser;
+    public int release_id;
+    public int release_version;
+    public int release_user;
 
     public HpReleaseVersionRel() { }
     public HpReleaseVersionRel(
@@ -14,8 +15,8 @@ public class HpReleaseVersionRel : HpBaseModel<HpReleaseVersionRel>
         int releaseVersion = 0,
         int releaseUser = 0)
     {
-        this.ReleaseId = releaseId;
-        this.ReleaseVersion = releaseVersion;
-        this.ReleaseUser = releaseUser;
+        this.release_id = releaseId;
+        this.release_version = releaseVersion;
+        this.release_user = releaseUser;
     }
 }

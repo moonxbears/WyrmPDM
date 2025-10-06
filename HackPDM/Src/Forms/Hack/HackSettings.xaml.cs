@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Text;
 
 using HackPDM.Forms.Helper;
+using HackPDM.Extensions.Controls;
 
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -60,7 +61,7 @@ public sealed partial class HackSettings : Page
         StorageBox.PwaPathAbsolute = txtPwaInput.Text;
         StorageBox.PwaPathRelative = dirInfo.Name;
         StorageBox.TemporaryPath = HackTempFolderPath.Text;
-        Window.Current.Close();
+        this.Window?.Close();
     }
 
     private bool TryCreateDirectory(string path)

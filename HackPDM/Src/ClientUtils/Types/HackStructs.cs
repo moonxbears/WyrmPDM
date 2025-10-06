@@ -44,28 +44,35 @@ public class Notifier
 {
     private static CancellationTokenSource _fileSystemCancel = new();
     public static ConcurrentQueue<FileCheck> QueueFileCheck = new();
-    public static DirectoryInfo Directory;
+    public static DirectoryInfo? Directory;
     public static FileSystemWatcher? FileWatcher { get; set; }
     public static NotifyIcon Notify { get; set; } = new();
     public static bool IsRunning { get; private set; } = false;
+    public static bool IsInvalidDirectory  { get; private set; } = true;
     static Notifier()
     {
-        Directory = new(StorageBox.PwaPathAbsolute ?? "");
-        FileWatcher = null;
-        if (!Directory.Exists) return;
-        FileWatcher = new()
+        try
         {
-            IncludeSubdirectories = true,
-            NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.CreationTime | NotifyFilters.Attributes,
-            Path = StorageBox.PwaPathAbsolute ?? "",
-            EnableRaisingEvents = true,
-        };
-            
-        FileWatcher.Created += (s, e) => QueueFileCheck.Enqueue(new FileCheck(e));
-        FileWatcher.Deleted += (s, e) => QueueFileCheck.Enqueue(new FileCheck(e));
-        FileWatcher.Changed += (s, e) => QueueFileCheck.Enqueue(new FileCheck(e));
-        FileWatcher.Renamed += (s, e) => QueueFileCheck.Enqueue(new FileCheck(e));
-        FileWatcher.EnableRaisingEvents = true;
+            FileWatcher = null;
+            FileWatcher = new()
+            {
+                IncludeSubdirectories = true,
+                NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.CreationTime | NotifyFilters.Attributes,
+                Path = StorageBox.PwaPathAbsolute ?? "",
+                EnableRaisingEvents = true,
+            };
+            FileWatcher.Created += (s, e) => QueueFileCheck.Enqueue(new FileCheck(e));
+            FileWatcher.Deleted += (s, e) => QueueFileCheck.Enqueue(new FileCheck(e));
+            FileWatcher.Changed += (s, e) => QueueFileCheck.Enqueue(new FileCheck(e));
+            FileWatcher.Renamed += (s, e) => QueueFileCheck.Enqueue(new FileCheck(e));
+            FileWatcher.EnableRaisingEvents = true;
+            Directory = new(StorageBox.PwaPathAbsolute ?? "");
+            IsInvalidDirectory = Directory?.Exists ?? false;
+        }
+        catch (Exception e)
+        {
+            Debug.WriteLine(e);
+        }
     }
     public static void CancelCheckLoop()
     {

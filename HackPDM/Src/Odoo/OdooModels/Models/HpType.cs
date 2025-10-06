@@ -1,5 +1,6 @@
 ﻿using System.Drawing;
 using HackPDM.Extensions.General;
+// ReSharper disable InconsistentNaming
 
 
 //using static System.Net.Mime.MediaTypeNames;
@@ -10,11 +11,11 @@ namespace HackPDM.Odoo.OdooModels.Models;
 
 public class HpType : HpBaseModel<HpType>
 {
-	public string Description;
-	public string FileExt;
-	public string Icon;
-	public string TypeRegex;
-	public int CatId;
+	public string description;
+	public string file_ext;
+	public string icon;
+	public string type_regex;
+	public int cat_id;
 	public Image ImageSave {get;set;}
 
 	public HpType()
@@ -27,11 +28,11 @@ public class HpType : HpBaseModel<HpType>
 		string typeRegex = null,
 		int catId = 0)
 	{
-		this.Description = description;
-		this.FileExt = fileExt; 
-		this.Icon = iconBase64;
-		this.TypeRegex = typeRegex;
-		this.CatId = catId;
+		this.description = description;
+		this.file_ext = fileExt; 
+		this.icon = iconBase64;
+		this.type_regex = typeRegex;
+		this.cat_id = catId;
 		this.ImageSave = null;
 	}
 	public HpType(
@@ -42,14 +43,14 @@ public class HpType : HpBaseModel<HpType>
 		int catId = 0,
 		bool saveImageType = false)
 	{
-		this.Description = description;
-		this.FileExt = fileExt;
-		this.TypeRegex = typeRegex;
-		this.CatId = catId;
+		this.description = description;
+		this.file_ext = fileExt;
+		this.type_regex = typeRegex;
+		this.cat_id = catId;
 
 		if (saveImageType) this.ImageSave = icon;
 		else this.ImageSave = null;
 
-		this.Icon = icon?.ToBase64String();
+		this.icon = icon?.ToBase64String();
 	}
 }
