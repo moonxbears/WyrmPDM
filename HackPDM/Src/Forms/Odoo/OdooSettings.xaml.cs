@@ -9,6 +9,8 @@ using Sett = HackPDM.Properties.Settings;
 using Window = Microsoft.UI.Xaml.Window;
 
 using Microsoft.UI.Xaml.Controls;
+using HackPDM.Helper;
+using HackPDM.Extensions.Controls;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -29,7 +31,8 @@ public sealed partial class OdooSettings : Page
     private void SubmitOdooSettings(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {
         SetInfoDefault();
-        Window.Current.Close();
+
+        this.Window?.Close();
     }
     private void GetInfoDefault()
     {

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Text;
@@ -64,16 +65,16 @@ public class XmlRpcRequest
 
 	public object Invoke( string url )
 	{
-		XmlRpcResponse xmlRpcResponse = Send(url);
-		if ( xmlRpcResponse.IsFault )
+		XmlRpcResponse? xmlRpcResponse = Send(url);
+		if ( xmlRpcResponse?.IsFault == true )
 		{
 			throw new XmlRpcException( xmlRpcResponse.FaultCode, xmlRpcResponse.FaultString );
 		}
 
-		return xmlRpcResponse.Value;
+		return xmlRpcResponse?.Value ?? false;
 	}
 
-	public XmlRpcResponse Send( string url, int timeout = 0, IWebProxy proxy = null )
+	public XmlRpcResponse? Send( string url, int timeout = 0, IWebProxy proxy = null )
 	{
 		HttpWebRequest httpWebRequest = (HttpWebRequest)WebRequest.Create(url);
 		if ( httpWebRequest == null )
@@ -94,8 +95,17 @@ public class XmlRpcRequest
 		_serializer.Serialize( xmlTextWriter, this );
 		xmlTextWriter.Flush();
 		xmlTextWriter.Close();
-		HttpWebResponse httpWebResponse = (HttpWebResponse)httpWebRequest.GetResponse();
-		StreamReader streamReader = new StreamReader(httpWebResponse.GetResponseStream());
+		HttpWebResponse? httpWebResponse;
+		try
+		{
+			httpWebResponse = (HttpWebResponse)httpWebRequest.GetResponse();
+		}
+		catch
+		{
+			Debug.WriteLine("web request exception");
+			return null;
+		}
+		StreamReader streamReader = new StreamReader(httpWebResponse?.GetResponseStream());
 		XmlRpcResponse result = (XmlRpcResponse)_deserializer.Deserialize(streamReader);
 		streamReader.Close();
 		httpWebResponse.Close();

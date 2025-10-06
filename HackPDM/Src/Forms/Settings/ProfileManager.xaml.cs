@@ -121,6 +121,7 @@ public sealed partial class ProfileManager : Page
     }
     public void OdooSetting(object sender, RoutedEventArgs e)
     {
+        WindowConfig config = new("Odoo Settings", new Src.Data.Numeric.int4(0, 0, 1280, 720));
         WindowHelper.CreateWindowPage<OdooSettings>();
     }
     public void HackSetting(object sender, RoutedEventArgs e)

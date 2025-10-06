@@ -3,15 +3,30 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
 namespace HackPDM.Src.ClientUtils.Types
 {
     public static class InstanceManager
     {
+        private static readonly Dictionary<Page, Window> _window = []; 
         private static readonly Dictionary<Type, List<Page>> _pages = [];
-
-        public static T GetAPage<T>() where T : Page, new()
+        public static TWin? GetAWindow<TPage, TWin>(TPage page) where TPage : Page where TWin : Window
+        {
+            if (page is null) return null;
+			return _window.TryGetValue(page, out var window) ? (TWin)window : null;
+		}
+        public static void RegisterWindow<TPage, TWin>(TPage page, TWin win) where TPage : Page where TWin : Window
+        {
+            if (page is null || win is null) return;
+            if (!_window.ContainsKey(page))
+            {
+                _window.Add(page, win);
+            }
+            Register(page);
+        }
+		public static T GetAPage<T>() where T : Page, new()
         {
             if (_pages.TryGetValue(typeof(T), out var page))
                 return (T)page.First();

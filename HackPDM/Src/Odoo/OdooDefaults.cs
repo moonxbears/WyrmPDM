@@ -108,8 +108,9 @@ public static class OdooDefaults
         }
     }
     public static string? OdooCredentialTarget 
-    { 
-        get => field ??= Settings.Get<string?>("OdooCredentialTarget", StorageBox.DEFAULT_ODOO_CREDENTIALS) ?? StorageBox.DEFAULT_ODOO_CREDENTIALS;
+    {
+        // Settings.Get<string?>("OdooCredentialTarget", StorageBox.DEFAULT_ODOO_CREDENTIALS)
+        get => field ??= StorageBox.DEFAULT_ODOO_CREDENTIALS;
 
         set
         {
@@ -121,14 +122,14 @@ public static class OdooDefaults
     {
         get 
         {
-            var cm = CredentialManager.ReadCredential(OdooCredentialTarget ?? StorageBox.DEFAULT_ODOO_CREDENTIALS, CredentialType.Generic);
+            var cm = CredentialManager.ReadCredential(StorageBox.DEFAULT_ODOO_CREDENTIALS, CredentialType.Generic);
             field = cm?.UserName;
             return field;
         }
 
         set
         {
-            CredentialManager.WriteCredential(OdooCredentialTarget ?? StorageBox.DEFAULT_ODOO_CREDENTIALS, value, OdooPass, CredentialPersistence.LocalMachine);
+            CredentialManager.WriteCredential(StorageBox.DEFAULT_ODOO_CREDENTIALS, value, OdooPass, CredentialPersistence.LocalMachine);
             field = value;
         }
     }
@@ -136,14 +137,14 @@ public static class OdooDefaults
     {
         get
         {
-            var cm = CredentialManager.ReadCredential(OdooCredentialTarget ?? StorageBox.DEFAULT_ODOO_CREDENTIALS, CredentialType.Generic);
+            var cm = CredentialManager.ReadCredential(StorageBox.DEFAULT_ODOO_CREDENTIALS, CredentialType.Generic);
             field = cm?.Password;
             return field;
         }
 
         set
         {
-            CredentialManager.WriteCredential(OdooCredentialTarget ?? StorageBox.DEFAULT_ODOO_CREDENTIALS, OdooUser, value, CredentialPersistence.LocalMachine);
+            CredentialManager.WriteCredential(StorageBox.DEFAULT_ODOO_CREDENTIALS, OdooUser, value, CredentialPersistence.LocalMachine);
             field = value;
         }
     }

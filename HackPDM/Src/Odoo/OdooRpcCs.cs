@@ -97,12 +97,17 @@ public static class OdooClient
         try
         {
             XmlRpcResponse response = client.Send(OdooDefaults.OdooUrl + XmlrpcEndpoint + AuthenticationEndpoint, userTimeout);
-            if (response.IsFault)
+            if (response is null)
+            {
+                _latestException = "web request exception";
+                return 0;
+            }
+            else if (response?.IsFault == true)
             {
                 _latestException = response.Value.ToString();
                 return 0;
             }
-            else if (response.Value is bool)
+            else if (response?.Value is bool)
             {
                 _latestException = "login username or password failed";
                 return 0;
@@ -142,8 +147,12 @@ public static class OdooClient
         object resVal;
         try
         {
-            XmlRpcResponse objectResponse = objectClient.Send(OdooDefaults.OdooUrl + XmlrpcEndpoint + ObjectEndpoint, userTimeout);
-            if (objectResponse.IsFault)
+            XmlRpcResponse? objectResponse = objectClient.Send(OdooDefaults.OdooUrl + XmlrpcEndpoint + ObjectEndpoint, userTimeout);
+            if (objectResponse is null)
+            {
+                throw new Exception("web exception");
+            }
+            else if (objectResponse?.IsFault == true)
             {
                 // possible for faultCode to have a null value
                 string faultCode = (string)((Hashtable)objectResponse.Value)["faultCode"];
@@ -151,7 +160,7 @@ public static class OdooClient
                 //latestException = objectResponse.Value.ToString();
                 //return null;
             }
-            resVal = objectResponse.Value;
+            resVal = objectResponse?.Value ?? "no response";
         }
         catch (Exception exc)
         {

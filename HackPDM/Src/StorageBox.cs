@@ -1,9 +1,17 @@
-﻿using HackPDM.Properties;
+﻿using System.Collections.Generic;
+using System.Windows.Controls;
+
+using HackPDM.Forms.Settings;
+using HackPDM.Helper;
+using HackPDM.Properties;
 using HackPDM.Src.ClientUtils.Types;
 
 using Microsoft.UI.Xaml.Media;
 
+using HackPDM.Src.Data.Numeric;
 using Color = Windows.UI.Color;
+using HackPDM.Forms.Odoo;
+using HackPDM.Forms.Hack;
 
 
 namespace HackPDM;
@@ -29,6 +37,12 @@ public static class StorageBox
 		get => field ??= Settings.Get<string>("TemporaryPath");
 		set => Settings.Set("TemporaryPath", field = value);
 	}
+	public static Dictionary<string, WindowConfig> PresetWindowConfig = new ()
+	{
+		{nameof(ProfileManager), new WindowConfig("Profile Manager", new int4(200, 200, 500, 200))},
+        {nameof(OdooSettings), new WindowConfig("Odoo Settings", new int4(200, 200, 500, 500))},
+        {nameof(HackSettings), new WindowConfig("Hack Settings", new int4(200, 200, 500, 200))},
+    };
 	#endregion
 	#region Profile Manager
 	public const int PROFILE_MANAGER_WIDTH = 600;

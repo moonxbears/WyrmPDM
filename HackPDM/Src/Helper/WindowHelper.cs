@@ -2,6 +2,7 @@
 using System.Numerics;
 using System.Runtime.InteropServices;
 
+using HackPDM.Src.ClientUtils.Types;
 using HackPDM.Src.Data.Numeric;
 
 using Microsoft.UI.Xaml;
@@ -35,16 +36,30 @@ public static partial class WindowHelper
         var window = new MainWindow();
         var rootFrame = new Frame();
         window.Activate();
-        window.Content = rootFrame;    
+        window.Content = rootFrame;
+        string name = typeof(T).Name;
+        if (StorageBox.PresetWindowConfig.TryGetValue(name, out WindowConfig? value))
+        {
+            SetWindowConfig(window, value);
+        }
         rootFrame.Navigate(typeof(T));
+        Page? page = rootFrame.Content as Page;
+        if (page != null)
+        {
+            InstanceManager.RegisterWindow(page, window);
+        }
         return window;
     }
     public static Window CreateWindowPage<T>(WindowConfig winConfig) where T : Page
     {
         Window win = CreateWindowPage<T>();
-        win.AppWindow.MoveAndResize(winConfig.PositionAndSize);
-        win.Title = winConfig.Title;
+        SetWindowConfig(win, winConfig);
         return win;
+    }
+    private static void SetWindowConfig(Window window, WindowConfig windowConfig)
+    {
+        window.AppWindow.MoveAndResize(windowConfig.PositionAndSize);
+        window.Title = windowConfig.Title;
     }
 }
 public class WindowConfig(string title, int4 positionAndSize)

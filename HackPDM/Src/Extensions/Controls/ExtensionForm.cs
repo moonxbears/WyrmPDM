@@ -114,7 +114,17 @@ public static class ExtensionForm
 		}
 	}
 
-
+	extension<T>(T page) where T : Page
+	{
+		public TWin? GetWindow<TWin>() where TWin : Window
+		{
+			return InstanceManager.GetAWindow<T, TWin>(page);
+		}
+		public Window? Window
+        {
+			get => InstanceManager.GetAWindow<T, Window>(page);
+		}
+	}
 	public static T? Content<T>(this TreeViewNode node) where T : class
 	{   
 		ArgumentNullException.ThrowIfNull(node);
