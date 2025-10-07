@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -10,7 +11,7 @@ namespace HackPDM.ClientUtils;
 
 internal static class FormHelper
 {
-    internal async static Task ExecuteUI(this DispatcherQueue dispatcher, Func<Task> function)
+    internal static async Task ExecuteUI(this DispatcherQueue dispatcher, Func<Task> function)
     {
         if (dispatcher.HasThreadAccess)
         {
@@ -18,7 +19,17 @@ internal static class FormHelper
         }
         else
         {
-            dispatcher.TryEnqueue(async ()=>await function());
+            dispatcher.TryEnqueue(async void ()=>
+            {
+                try
+                {
+                    await function();
+                }
+                catch (Exception e)
+                {
+                    Debug.Fail(e.Message, e.StackTrace);
+                }
+            });
         }
     }
     internal static void ExecuteUI(this DispatcherQueue dispatcher, Action function)

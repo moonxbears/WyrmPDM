@@ -4,9 +4,11 @@
     xmlns="using:Microsoft.UI.Xaml.Controls"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="using:HackPDM.Data"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:sys="using:System"
     xmlns:ui="using:CommunityToolkit.WinUI"
+    xmlns:xaml="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     mc:Ignorable="d">
 
     <Grid Margin="12">
@@ -49,6 +51,20 @@
                     <MenuFlyoutItem x:Name="TreeOpenDirectory" Text="Open Directory" />
                 </MenuFlyout>
             </TreeView.ContextFlyout>
+            <TreeView.ItemTemplate>
+                <xaml:DataTemplate x:DataType="local:TreeData">
+                    <TreeViewItem Loaded="TreeViewItem_Loaded" Unloaded="TreeViewItem_Unloaded">
+                        <StackPanel Orientation="Horizontal">
+                            <Image
+                                Width="16"
+                                Height="16"
+                                Margin="0,0,4,0"
+                                Source="{x:Bind Icon}" />
+                            <TextBlock Text="{x:Bind Name}" />
+                        </StackPanel>
+                    </TreeViewItem>
+                </xaml:DataTemplate>
+            </TreeView.ItemTemplate>
         </TreeView>
 
         <!--  TabView for file lists  -->

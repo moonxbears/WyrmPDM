@@ -1,17 +1,21 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Text;
 using HackPDM.Odoo.OdooModels.Models;
 using HackPDM.Properties;
 using HackPDM.Extensions.Controls;
+using HackPDM.Forms.Hack;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Imaging;
 
 using static HackPDM.Odoo.OdooModels.Models.HpVersionProperty;
 using HackPDM.Src.ClientUtils.Types;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Media;
 
 namespace HackPDM.Data;
 
@@ -120,106 +124,41 @@ public class FileTypeLocDatRow : ItemData, IRowData
 	public object? Icon { get; set; } // Type is Unknown, so use object
 	public object? RemoveIcon { get; set; } // Type is Unknown, so use object
 }
-public partial class TreeData : ITreeItem, IEnumerable<TreeData>
+public partial class TreeData : IEnumerable<TreeData>
 {
 	public string? Name 
 	{
 		get
 		{
-			if (string.IsNullOrEmpty(field))
-			{
-				field = StorageBox.EMPTY_PLACEHOLDER;
-			}
-			return field;
+			return field ??= Depth is < 0 ? null : StorageBox.EMPTY_PLACEHOLDER;
 		} 
 		set; 
 	}
-	public string? FullPath 
-	{
-		get
-		{
-			if (Parent is null)
-			{
-				field = Name;
-				return field;
-			}
-			field = $"{Parent.FullPath}\\{Name}";
-			return field;
-		} 
-		set; 
-	}
-	public TreeData? Parent 
-	{ 
-		get
-		{
-			field ??= Node?.Parent.LinkedData;
-			return field;
-		}
-		set; 
-	}
+	public string? FullPath => Parent is null ? Depth < 0 ? null : Name : $"{Parent?.FullPath}\\{Name}";
+	
+	public TreeData? Parent => Node?.Depth <= 0 ? null : Node?.Parent?.LinkedData;
+	
 	public object? Tag { get; set; }
 	public int? DirectoryId { get; set; }
 	public BitmapImage? Icon { get; set; } = Assets.GetImage("simple-folder-icon_32") as BitmapImage;
+	public TreeView? ParentTree { get; internal set; }
 	public TreeViewNode? Node { get; internal set; }
-	public List<ITreeItem>? Children
-	{
-		get
-		{
-			field ??= Node?.Children.Select(n => n.LinkedData as ITreeItem).ToList();
-			return field;
-		}
-		set
-		{
-			field = value;
-		}
-	}
+	public TreeViewItem? VisualContainer => ParentTree?.ContainerFromNode(Node) as TreeViewItem;
+	public IEnumerable<TreeData>? Children => Node?.Children.Select(n => n.LinkedData);
 	public bool IsLinked => Node is not null;
 	public bool HasChildren => Node?.HasChildren ?? false;
+	public int Depth => Node?.Depth ?? -1;
 	public bool IsExpanded
 	{
 		get => Node?.IsExpanded ?? false;
 		set => Node?.IsExpanded = value;
 	}
-	public TreeData(string? name, TreeData? parent = null)
+	public TreeData(string? name)
 	{
 		Name = name;
-		Parent = parent;
-		Parent?.AddChild(this);
-		FullPath = Parent is null ? Name : $"{parent?.FullPath}\\{Name}";
-		Children = [];
 		Tag = null;
 	}
-	public void AddChild(TreeData child)
-	{
-		child.Parent = this;
-		Children.Add(child);
-	}
-	public void AddChildren(IEnumerable<TreeData> children)
-	{
-		foreach (var child in children)
-		{
-			AddChild(child);
-		}
-	}
-	public void RemoveChild(TreeData child)
-	{
-		if (Children.Contains(child))
-		{
-			child.Parent = null;
-			Children.Remove(child);
-		}
-	}
-	public void RemoveChildren(IEnumerable<TreeData>? children)
-	{
-		if (children is null) return;
-		foreach (var child in children)
-		{
-			RemoveChild(child);
-		}
-	}
-	public void Clear() => RemoveChildren(Children as IEnumerable<TreeData>);
-
-	public IEnumerator<TreeData> GetEnumerator() => Children.Cast<TreeData>().GetEnumerator();
+	public IEnumerator<TreeData> GetEnumerator() => Children?.GetEnumerator() ?? Enumerable.Empty<TreeData>().GetEnumerator();
 	IEnumerator IEnumerable.GetEnumerator()
 	{
 		return GetEnumerator();
@@ -227,6 +166,25 @@ public partial class TreeData : ITreeItem, IEnumerable<TreeData>
 	public override string ToString()
 	{
 		return Name ?? "";
+	}
+
+	public void SortTree()
+	{
+		var root = Node;
+		if (root is null || root.Children.Count == 0) return;
+		
+		// sort children by TreeData.Name
+		ObservableCollection<TreeViewNode> sortedChildren =
+		[
+			.. root.Children
+				.OrderBy(n => (n.LinkedData?.Name ?? string.Empty), StringComparer.OrdinalIgnoreCase)
+		];
+		root.Children.Clear();
+		foreach (var child in sortedChildren)
+		{
+			root.Children.Add(child);
+			child.LinkedData.SortTree();
+		}
 	}
 }
 

@@ -183,12 +183,20 @@ internal static class Assets
 	}
 	internal static async void LoadInLocalDictionary()
 	{
-		string directory = Path.Combine(SB.LOCALPREFIX, SB.ASSETSFOLDER, SB.IMAGEFOLDER);
-		StorageFolder localFolder = await Storage.GetFolderAsync(directory);
-		StorageFile[] files = [.. await localFolder.GetFilesAsync()];
+		StorageFolder assetFolder;
+		StorageFolder imageFolder;
+
+		string relativeDir = $"{SB.ASSETSFOLDER}/{SB.IMAGEFOLDER}";
+		string msDir = $"{SB.LOCALPREFIX}/{relativeDir}";
+
+		assetFolder = await Storage.CreateFolderAsync(SB.ASSETSFOLDER, CreationCollisionOption.OpenIfExists);
+		imageFolder = await assetFolder.CreateFolderAsync(SB.IMAGEFOLDER, CreationCollisionOption.OpenIfExists);
+		
+
+		StorageFile[] files = [.. await imageFolder.GetFilesAsync()];
 		foreach (var file in files)
 		{
-			AssetMap.Add(file.Name, Path.Combine(directory, $"{file.Name}.{file.FileType.ToLower()}"));
+			AssetMap.Add(file.Name, $"{msDir}/{file.Name}.{file.FileType.ToLower()}");
 		}
 	}
 	private static IImageProvider GetProvider(Dictionary<string, string>? assetmap = null)

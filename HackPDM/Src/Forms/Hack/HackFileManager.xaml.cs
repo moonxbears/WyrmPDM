@@ -36,6 +36,7 @@ using OClient = HackPDM.Odoo.OdooClient;
 using Path = System.IO.Path;
 using static HackPDM.Forms.Helper.MessageBox;
 using HackPDM.Src.ClientUtils.Types;
+using Microsoft.UI.Dispatching;
 
 
 // To learn more about WinUI, the WinUI project structure,
@@ -61,6 +62,7 @@ public sealed partial class HackFileManager : Page
 	public static StatusDialog Dialog { get; set; }
 	public static ConcurrentQueue<(StatusMessage action, string description)> QueueAsyncStatus = new();
 	public static ListDetail ActiveList { get; set; }
+	public static Dictionary<object, TreeViewNode> ItemToContainerMap = new();
 	public static int DownloadBatchSize
 	{
 		get => OdooDefaults.DownloadBatchSize;
@@ -100,6 +102,7 @@ public sealed partial class HackFileManager : Page
 	private delegate void BackgroundCompleteDel(object sender, RunWorkerCompletedEventArgs e);
 
 	public const string EMPTY_PLACEHOLDER = "-";
+	private static DispatcherQueue _dispatcherQueue;
 
 	// temp
 	//public ListView OdooEntryList = new();
@@ -116,6 +119,7 @@ public sealed partial class HackFileManager : Page
 	public HackFileManager()
 	{
 		InitializeComponent();
+		_dispatcherQueue = DispatcherQueue.GetForCurrentThread();
 		InitializeCollections();
 		InitializeEvents();
 		// this.SetFormTheme(StorageBox.MyTheme ?? ThemePreset.DefaultTheme);
@@ -181,7 +185,7 @@ public sealed partial class HackFileManager : Page
 		ListPreview.Click               += List_Click_OpenLatestRemote;
 		ListFileDirectory.Click         += List_Click_OpenDirectory;
 		OdooHistory.SelectionChanged	+= OdooHistory_ItemSelectionChanged;
-		
+		OdooRefreshDropdown.Click		+= AdditionalTools_Click_Refresh;
 	}
 
 	private async void Tree_Click_Undelete(object sender, RoutedEventArgs e)
@@ -196,6 +200,7 @@ public sealed partial class HackFileManager : Page
 
 	private async Task HackFileManager_Load()
 	{
+		await Task.Delay(2000);
 		await CreateTreeViewBackground();
 	}
 
@@ -221,25 +226,36 @@ public sealed partial class HackFileManager : Page
 
 		try
 		{
-			SafeInvoker(OdooDirectoryTree, () =>
+			await SafeInvokerAsync(OdooDirectoryTree, async void () =>
 			{
-				CreateTreeHash(_root);
-				// Debug.WriteLine("");
-				// foreach (EntryRow row in OdooDirectoryTree.ItemsSource as ObservableCollection<EntryRow>)
-				// {
-				// 	Debug.WriteLine(row.Name);
-				// }
-				// Debug.WriteLine("");
-				CreateLocalTree(OdooDirectoryTree);
-
-				if (LastSelectedNode != null)
+				try
 				{
-					LastSelectedNode = OdooDirectoryTree.FindTreeNode(LastSelectedNodePath)?.Node;
-				}
+					await CreateTreeHash(_root);
+					// Debug.WriteLine("");
+					// foreach (EntryRow row in OdooDirectoryTree.ItemsSource as ObservableCollection<EntryRow>)
+					// {
+					// 	Debug.WriteLine(row.Name);
+					// }
+					// Debug.WriteLine("");
+					CreateLocalTree(OdooDirectoryTree);
 
-				var tData = OdooDirectoryTree.ItemsSource as List<TreeData>;
-				tData?.Sort((TreeData x, TreeData y) => string.Compare(x.Name, y.Name, StringComparison.OrdinalIgnoreCase));
-				LastSelectedNode?.LinkedData.EnsureVisible(OdooDirectoryTree);
+					if (LastSelectedNode != null)
+					{
+						LastSelectedNode = OdooDirectoryTree.FindTreeNode(LastSelectedNodePath)?.Node;
+					}
+
+					var tData = OdooDirectoryTree.RootNodes;
+					foreach (var n in tData)
+					{
+						n.LinkedData.SortTree();
+					}
+
+					LastSelectedNode?.LinkedData.EnsureVisible(OdooDirectoryTree);
+				}
+				catch (Exception e)
+				{
+					Debug.Fail(e.Message);
+				}
 			});
 			IsTreeLoaded = true;
 		}
@@ -432,9 +448,9 @@ public sealed partial class HackFileManager : Page
 		}
 		return false;
 	}
-	private void CreateTreeHash(HpDirectory directory)
+	private async Task CreateTreeHash(HpDirectory directory)
 	{
-		AddDirectoriesToTree(directory.GetSubdirectories(false));
+		await AddDirectoriesToTree(directory.GetSubdirectories(false));
 	}
 	private void CreateLocalTree(in TreeView treeView)
 	{
@@ -456,32 +472,28 @@ public sealed partial class HackFileManager : Page
 	}
 	private void AddLocalDirectories(TreeViewNode node, Span<string> pathway, Dictionary<string, TreeViewNode> treeDict)
 	{
-		string[] paths = pathway.ToArray();
+		string[] paths = [.. pathway];
 		SafeInvoker(OdooDirectoryTree, () =>
 		{
 			for (int i = 0; i < paths.Length; i++)
 			{
-				TreeData? parentData = node?.Content as TreeData;
-				TreeData newNode = new(paths[i], parentData)
-				{
-					Icon = Assets.GetImage("simple-folder-icon_32.gif") as BitmapImage,
-					Tag = 0
-				};
-
-				TreeViewNode tNode = new()
-				{
-					Content = newNode
-				};
-
+				var parentData = node?.Content as TreeData;
+				TreeViewNode tNode = new();
+				var newNode = tNode.LinkedData;
+				newNode.Name = paths[i];
+				newNode.Icon = Assets.GetImage("simple-folder-icon_32.gif") as BitmapImage;
+				newNode.DirectoryId = 0;
+				
 				node.Children.Add(tNode);
-				treeDict.Add(parentData?.FullPath ?? "", node);
+				treeDict.TryAdd(newNode?.FullPath ?? "", tNode);
+				//treeDict.Add(parentData?.FullPath ?? "", node);
 			}
 		});
 
 	}
-	private void AddDirectoriesToTree(Hashtable entries)
+	private async Task AddDirectoriesToTree(Hashtable entries)
 	{
-		SafeInvoker(OdooDirectoryTree, () =>
+		await SafeInvokerAsync(OdooDirectoryTree, () =>
 		{
 			OdooDirectoryTree.RootNodes.Clear();
 			var child = RecurseAddNodesAsync(entries);
@@ -490,28 +502,33 @@ public sealed partial class HackFileManager : Page
 			OdooDirectoryTree.RootNodes.Add(child.Result.Item1);
 		});
 	}
-	private static async Task<(TreeViewNode, TreeData)> RecurseAddNodesAsync(Hashtable node, int depth = 0)
+	private static async Task<(TreeViewNode?, TreeData)> RecurseAddNodesAsync(Hashtable node, int depth = 0)
 	{
 		// add container node (directory name)
-		TreeViewNode treeNodeName = new();
 		
 		// refresh to show active changes
 		// add children
+		TreeViewNode treeNodeName = new();
 		if (node["directories"] is Hashtable { Count: > 0 } directory)
 		{
 			foreach (DictionaryEntry pair in directory)
 			{
 				if (pair.Value is not Hashtable childDirectory) continue;
 				var child = await RecurseAddNodesAsync(childDirectory, depth + 1);
-				treeNodeName.Children.Add(child.Item1);
+				if (child.Item1 is not null) treeNodeName.Children.Add(child.Item1);
 			}
 		}
-
-		TreeData dat = treeNodeName.LinkedData;
+		var dat = treeNodeName.LinkedData;
 		dat.Name = node["name"] as string;
 		dat.DirectoryId = node["id"] as int?;
 		// if treeNode == null then it will be the root node
-		string path = HackDefaults.DefaultPath(dat.FullPath, true);
+		string? fullPath;
+		if (dat.FullPath is null)
+			fullPath = dat?.Name;
+		else
+			fullPath = dat?.FullPath;
+		string path = HackDefaults.DefaultPath(fullPath ?? "root", true);
+		
 		if (!Directory.Exists(path))
 		{
 			dat.Icon = Assets.GetImage("folder-icon_remoteonly_32") as BitmapImage;
@@ -2544,17 +2561,45 @@ public sealed partial class HackFileManager : Page
 	// private delegate void SafeInvokeDel(Control c, Action action);
 	private static void UpdateTabPageText(TabViewItem page, string text)
 	{
-		page.DispatcherQueue.TryEnqueue(()=>page.Header = text);
+		_dispatcherQueue.TryEnqueue(()=>page.Header = text);
 	}
 
 	internal static void SafeInvokeGen<T>(Control control, T data, Action<T> action)
 	{
-		control.DispatcherQueue.TryEnqueue(()=>action.Invoke(data));
+		_dispatcherQueue.TryEnqueue(()=>action.Invoke(data));
 	}
 
 	internal static void SafeInvoker(Control control, Action action)
 	{
-		control.DispatcherQueue.TryEnqueue(action.Invoke);
+		_dispatcherQueue.TryEnqueue(() =>
+		{
+			try
+			{
+				action.Invoke();
+			}
+			catch (Exception ex)
+			{
+				Debug.Fail(ex.Message, ex.StackTrace);
+			}
+		});
+	}
+	internal static Task SafeInvokerAsync(Control control, Action action)
+	{
+		var tcs = new TaskCompletionSource<bool>();
+		
+		_dispatcherQueue.TryEnqueue(() =>
+		{
+			try
+			{
+				action();
+				tcs.SetResult(true);
+			}
+			catch (Exception ex)
+			{
+				tcs.SetException(ex);
+			}
+		});
+		return tcs.Task;
 	}
 	private void OpenLocalFile(string path)
 	{
@@ -3041,4 +3086,17 @@ public sealed partial class HackFileManager : Page
 
 
 	#endregion
+
+	private void TreeViewItem_Loaded(object sender, RoutedEventArgs e)
+	{
+		var tvi = sender as TreeViewItem;
+		var data = tvi.DataContext as TreeData;
+	}
+
+	private void TreeViewItem_Unloaded(object sender, RoutedEventArgs e)
+	{
+		var tvi = sender as TreeViewItem;
+		var data = tvi.DataContext;
+		ItemToContainerMap.Remove(data);
+	}
 }

@@ -87,16 +87,12 @@ public static class ExtensionForm
 				if (holder.TreeNodeData is not null && dat is not null && holder.TreeNodeData != dat)
 				{
 					holder.TreeNodeData.Name ??= dat.Name;
-					holder.TreeNodeData.Node = node;
-					List<ITreeItem?> children = [.. holder.TreeNodeData.Children?.Union(dat.Children ?? []) ?? []];
-					holder.TreeNodeData.Children = children?.Count is not null and > 0 ? children?.Distinct()?.ToList() : null;
-					holder.TreeNodeData.Parent ??= dat.Parent;
-					holder.TreeNodeData.FullPath ??= dat.FullPath;
 					holder.TreeNodeData.Tag ??= dat.Tag;
 					holder.TreeNodeData.Icon ??= dat.Icon;
 				}
 
 				holder.TreeNodeData ??= dat ?? new("");
+				holder.TreeNodeData.Node = node;
 				node.Content = holder.TreeNodeData;
 
 				return holder.TreeNodeData;

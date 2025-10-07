@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using System.Drawing;
-
+using HackPDM.Data;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 
@@ -15,7 +15,7 @@ public interface IRowData { }
 public interface ITreeItem
 {
 	public object? Tag { get; set; }
-	public List<ITreeItem>? Children { get; set; }
+	public IEnumerable<TreeData>? Children { get; set; }
 }
 public interface IListItem<T>
 {

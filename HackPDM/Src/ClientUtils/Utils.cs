@@ -240,9 +240,9 @@ public static class Utils
     }
     private static void RecurseNodesConvert(in TreeViewNode node, in Dictionary<string, TreeViewNode>? nodeMap)
     {
-        var content = node?.Content as EntryRow;
+        var content = node?.Content as TreeData;
             
-        nodeMap?.Add(content?.FullName, node);
+        nodeMap?.Add(content?.FullPath, node);
             
         foreach (TreeViewNode child in node.Children)
         {
