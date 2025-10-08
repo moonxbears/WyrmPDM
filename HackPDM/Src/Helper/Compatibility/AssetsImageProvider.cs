@@ -1,13 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices.WindowsRuntime;
-using Windows.Graphics.Imaging;
-using Windows.Storage;
+using System.Threading.Tasks;
+
+using HackPDM.Forms.Hack;
+using HackPDM.Src.ClientUtils.Types;
+
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
-using HackPDM.Src.ClientUtils.Types;
+
+using Windows.Graphics.Imaging;
+using Windows.Storage;
 
 namespace HackPDM.Helper.Compatibility;
 
@@ -16,7 +22,12 @@ public class AssetsImageProvider : IImageProvider
 		
 
 	internal static readonly Dictionary<string, string> AssetMap;
+	internal static readonly Dictionary<string, StorageFile> FileCache;
 	private static StorageFolder Storage => ApplicationData.Current.LocalFolder;
+	private static string ImagesFolderPath => $"{StorageBox.ASSETSFOLDER}/{StorageBox.IMAGEFOLDER}";
+    private static string ImagesFolderPathUri => $"{StorageBox.LOCALPREFIX}/{ImagesFolderPath}";
+	private static StorageFolder AssetsFolder => field ??= Storage.CreateFolderAsync(StorageBox.ASSETSFOLDER, CreationCollisionOption.OpenIfExists).Get();
+    private static StorageFolder ImagesFolder => field ??= AssetsFolder.CreateFolderAsync(StorageBox.IMAGEFOLDER, CreationCollisionOption.OpenIfExists).Get();
 	public AssetsImageProvider() : this([]) {}
 	public AssetsImageProvider(Dictionary<string, string>? assetMap)
 	{
@@ -24,35 +35,72 @@ public class AssetsImageProvider : IImageProvider
 		{
 			foreach (var item in assetMap)
 			{
-				if (!AssetsImageProvider.AssetMap.ContainsKey(item.Key)) AssetsImageProvider.AssetMap.Add(item.Key, item.Value);
+				if (!AssetMap.ContainsKey(item.Key)) AssetMap.Add(item.Key, item.Value);
 			}
 		}
 	}
 	static AssetsImageProvider()
 	{
-		AssetMap = new Dictionary<string, string>();
+		AssetMap = new();
+		FileCache = new();
 	}
 	public ImageSource? GetImage(string key)
 	{
-		return AssetMap.TryGetValue(key, out var uri) ? new BitmapImage(new Uri(uri)) : (ImageSource?)null;
+		return GetImageAsync(key).GetAwaiter().GetResult();
+		// return AssetMap.TryGetValue(key, out var uri) ? new BitmapImage(new Uri(uri)) : (ImageSource?)null;
 	}
+	public async Task<ImageSource?> GetImageAsync(string key)
+	{
+        if (!AssetMap.TryGetValue(key, out var uriString)) return null;
+		Uri uri = new Uri(uriString);
+		return new BitmapImage(uri);
+		if (uri.Scheme == "ms-appx")
+		{
+		}
+		if (!FileCache.TryGetValue(key, out var file))
+		{
+			file = await StorageFile.GetFileFromPathAsync(uri.AbsolutePath);
+			FileCache.TryAdd(key, file);
+		}
+		try
+		{
+			var stream = await file.OpenAsync(FileAccessMode.Read);
+			var bitmap = new BitmapImage();
+			await bitmap.SetSourceAsync(stream);
+			return bitmap;
+		}
+		catch { Debug.WriteLine("Unable to load image"); }
+		return null;
+    }
 	public async void SetImage(string key, byte[] imageBytes)
 	{
-		StorageFolder localfolder = await Storage.CreateFolderAsync("Assets/Images", CreationCollisionOption.OpenIfExists);
-		StorageFile imgFile = await localfolder.CreateFileAsync(key, CreationCollisionOption.ReplaceExisting);
-		using var fileStream = await imgFile.OpenAsync(FileAccessMode.ReadWrite);
-		await fileStream.WriteAsync(imageBytes.AsBuffer());
-		AssetMap.Add(key, Path.Combine(StorageBox.LOCALPREFIX, StorageBox.ASSETSFOLDER, StorageBox.IMAGEFOLDER, key));
+		try
+		{
+			StorageFile imgFile = await ImagesFolder.CreateFileAsync($"{key}.png", CreationCollisionOption.ReplaceExisting);
+			using var fileStream = await imgFile.OpenAsync(FileAccessMode.ReadWrite, StorageOpenOptions.AllowReadersAndWriters);
+			await fileStream.WriteAsync(imageBytes.AsBuffer());
+			AssetMap.TryAdd(key, $"{ImagesFolderPathUri}/{key}.png");
+		}
+		catch
+		{
+			Debug.WriteLine("Can't create image");
+		}
 	}
 	public async void SetImage(string key, SoftwareBitmap softwareBitmap)
 	{
-		StorageFolder localfolder = await Storage.CreateFolderAsync("Assets/Images", CreationCollisionOption.OpenIfExists);
-		StorageFile imgFile = await localfolder.CreateFileAsync(key, CreationCollisionOption.ReplaceExisting);
-		using var fileStream = await imgFile.OpenAsync(FileAccessMode.ReadWrite);
-		BitmapEncoder encoder = await BitmapEncoder.CreateAsync(BitmapEncoder.PngEncoderId, fileStream);
-		encoder.SetSoftwareBitmap(softwareBitmap);
-		await encoder.FlushAsync();
-		AssetMap.Add(key, Path.Combine(StorageBox.LOCALPREFIX, StorageBox.ASSETSFOLDER, StorageBox.IMAGEFOLDER, key));
+		try
+		{
+			StorageFile imgFile = await ImagesFolder.CreateFileAsync($"{key}.png", CreationCollisionOption.ReplaceExisting);
+			using var fileStream = await imgFile.OpenAsync(FileAccessMode.ReadWrite, StorageOpenOptions.AllowReadersAndWriters);
+			BitmapEncoder encoder = await BitmapEncoder.CreateAsync(BitmapEncoder.PngEncoderId, fileStream);
+			encoder.SetSoftwareBitmap(softwareBitmap);
+			await encoder.FlushAsync();
+			AssetMap.TryAdd(key, $"{ImagesFolderPathUri}/{key}.png");
+		}
+		catch
+		{
+            Debug.WriteLine("Can't create image");
+        }
 	}
 	public IEnumerable<string> GetAvailableKeys() => AssetMap.Keys;
 	public Bitmap? GetBitmap(string key) => throw new NotSupportedException("WinUI doesn't use System.Drawing");

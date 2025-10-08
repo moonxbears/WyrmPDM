@@ -102,7 +102,7 @@ public sealed partial class HackFileManager : Page
 	private delegate void BackgroundCompleteDel(object sender, RunWorkerCompletedEventArgs e);
 
 	public const string EMPTY_PLACEHOLDER = "-";
-	private static DispatcherQueue _dispatcherQueue;
+	internal static DispatcherQueue HackDispatcherQueue;
 
 	// temp
 	//public ListView OdooEntryList = new();
@@ -119,7 +119,7 @@ public sealed partial class HackFileManager : Page
 	public HackFileManager()
 	{
 		InitializeComponent();
-		_dispatcherQueue = DispatcherQueue.GetForCurrentThread();
+		HackDispatcherQueue = DispatcherQueue.GetForCurrentThread();
 		InitializeCollections();
 		InitializeEvents();
 		// this.SetFormTheme(StorageBox.MyTheme ?? ThemePreset.DefaultTheme);
@@ -200,7 +200,7 @@ public sealed partial class HackFileManager : Page
 
 	private async Task HackFileManager_Load()
 	{
-		await Task.Delay(2000);
+		//await Task.Delay(2000);
 		await CreateTreeViewBackground();
 	}
 
@@ -295,10 +295,20 @@ public sealed partial class HackFileManager : Page
 	}
 	private void InitListViewInternal(ListView list, ListDetail rows)
 		=> InitListView(list, rows);
-	internal static void InitListView(ItemsControl control, ListDetail rows) 
-		=> SafeInvoker(control, () => control.ItemsSource = null);
-	internal static void InitGridView(ItemsControl control) 
-		=> SafeInvoker(control, () => control.ItemsSource = null);
+	internal static void InitListView(ItemsControl control, ListDetail? rows) 
+		=> SafeInvoker(control, () =>
+		{
+			control.ItemsSource = null;
+			try
+			{
+				(control.ItemsSource as IList)?.Clear();
+				control.Items.Clear();
+			}
+			catch
+			{
+			}
+		});
+	internal static void InitGridView(ItemsControl control) => InitListView(control, null);
 	//internal static void InitListViewPercentage(ListView list, ListDetail rows)
 	//{
 	//	SafeInvokeGen(list, rows, (row) =>
@@ -836,7 +846,7 @@ public sealed partial class HackFileManager : Page
 				using var writer = new DataWriter(stream);
 				try
 				{
-					byte[] imgBytes = FileOperations.ConvertFromBase64(hpType.icon);
+					byte[] imgBytes = FileOperations.ConvertFromBase64(hpType?.icon ?? "");
 					writer.WriteBytes(imgBytes);
 					await writer.StoreAsync();
 					await writer.FlushAsync();
@@ -1803,7 +1813,7 @@ public sealed partial class HackFileManager : Page
 		_queuedTreeChange = (null, null);
 		if (_treeItemChange is not null and { IsCompleted: false })
 		{
-			_queuedTreeChange = (sender, args);
+			//_queuedTreeChange = (sender, args);
 			return;
 		}
 
@@ -1811,9 +1821,14 @@ public sealed partial class HackFileManager : Page
 		{
 			_cSource.Cancel();
 			_cTreeSource = new();
+
 			// Store the currently selected node
-			LastSelectedNode = args.AddedItems.First() as TreeViewNode;
-			LastSelectedNodePath = LastSelectedNode?.LinkedData.FullPath;
+			if (args.AddedItems.Count > 0)
+			{
+				LastSelectedNode = (args.AddedItems.First() as TreeData).Node;
+				LastSelectedNodePath = LastSelectedNode?.LinkedData.FullPath;
+			}
+
 			_treeItemChange = TreeSelectItem(LastSelectedNode, _cTreeSource.Token);
 			await _treeItemChange;
 			if (_queuedTreeChange.sender != null && _queuedTreeChange.args != null)
@@ -2561,17 +2576,17 @@ public sealed partial class HackFileManager : Page
 	// private delegate void SafeInvokeDel(Control c, Action action);
 	private static void UpdateTabPageText(TabViewItem page, string text)
 	{
-		_dispatcherQueue.TryEnqueue(()=>page.Header = text);
+		HackDispatcherQueue.TryEnqueue(()=>page.Header = text);
 	}
 
 	internal static void SafeInvokeGen<T>(Control control, T data, Action<T> action)
 	{
-		_dispatcherQueue.TryEnqueue(()=>action.Invoke(data));
+		HackDispatcherQueue.TryEnqueue(()=>action.Invoke(data));
 	}
 
 	internal static void SafeInvoker(Control control, Action action)
 	{
-		_dispatcherQueue.TryEnqueue(() =>
+		HackDispatcherQueue.TryEnqueue(() =>
 		{
 			try
 			{
@@ -2587,7 +2602,7 @@ public sealed partial class HackFileManager : Page
 	{
 		var tcs = new TaskCompletionSource<bool>();
 		
-		_dispatcherQueue.TryEnqueue(() =>
+		HackDispatcherQueue.TryEnqueue(() =>
 		{
 			try
 			{

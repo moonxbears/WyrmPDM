@@ -19,7 +19,7 @@
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
+            <RowDefinition Height="*" MaxHeight="400" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
@@ -91,6 +91,25 @@
                             </MenuFlyoutSubItem>
                         </MenuFlyout>
                     </ListView.ContextFlyout>
+                    <ListView.ItemTemplate>
+                        <xaml:DataTemplate x:DataType="local:EntryRow">
+                            <ListViewItem>
+                                <StackPanel Orientation="Horizontal">
+                                    <Image
+                                        Width="32"
+                                        Height="32"
+                                        Margin="0,0,5,0"
+                                        Source="{x:Bind Icon}" />
+                                    <TextBlock Text="{x:Bind Name}" />
+                                    <TextBlock Text="{x:Bind Category}" />
+                                    <TextBlock Text="{x:Bind Checkout}" />
+                                    <TextBlock Text="{x:Bind LocalDate}" />
+                                    <TextBlock Text="{x:Bind RemoteDate}" />
+                                    <TextBlock Text="{x:Bind FullName}" />
+                                </StackPanel>
+                            </ListViewItem>
+                        </xaml:DataTemplate>
+                    </ListView.ItemTemplate>
                 </ListView>
             </TabViewItem>
             <TabViewItem Header="Changes" IsClosable="False">
@@ -108,9 +127,10 @@
         <!--  Right-side controls (image, version tabs)  -->
         <TabView
             x:Name="VersionTabs"
-            Grid.Row="1"
+            Grid.Row="2"
             Grid.RowSpan="2"
-            Grid.Column="2"
+            Grid.Column="1"
+            Grid.ColumnSpan="1"
             Margin="10,0,0,0">
             <TabViewItem x:Name="HistoryTab" Header="History">
                 <ListView x:Name="OdooHistory" />
