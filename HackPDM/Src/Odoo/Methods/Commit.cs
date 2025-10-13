@@ -11,11 +11,13 @@ using HackPDM.ClientUtils;
 using HackPDM.Extensions.General;
 using HackPDM.Extensions.Odoo;
 using HackPDM.Forms.Hack;
-using HackPDM.Forms.Helper;
+
 using HackPDM.Forms.Settings;
 using HackPDM.Hack;
 using HackPDM.Odoo.OdooModels.Models;
 using HackPDM.Src.ClientUtils.Types;
+
+using MessageBox = System.Windows.Forms.MessageBox;
 
 namespace HackPDM.Odoo.Methods;
 
@@ -98,7 +100,7 @@ public static class Commit
             //versions.Add(newVersion);
         }
 
-        var versionBatches = Utils.BatchList(datas, OdooDefaults.DownloadBatchSize);
+        var versionBatches = Help.BatchList(datas, OdooDefaults.DownloadBatchSize);
 
 
         sd.ProcessCounter = 0;

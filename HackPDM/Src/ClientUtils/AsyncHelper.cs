@@ -51,7 +51,7 @@ internal class AsyncHelper
         while (!_signal)
         {
             TimeSpan leftOver = timeout - DateTime.UtcNow;
-            int min = indefinite ? _pollDelayMsInt : Convert.ToInt32(Utils.MinDownTo(0, leftOver.TotalMilliseconds, _pollDelayMs));
+            int min = indefinite ? _pollDelayMsInt : Convert.ToInt32(Help.MinDownTo(0, leftOver.TotalMilliseconds, _pollDelayMs));
             bool willEval = indefinite || min == _pollDelayMsInt;
 
             try { await Task.Delay(min, _token); }
@@ -95,7 +95,7 @@ internal class AsyncHelper
     private async Task<T> IterationInternal<T>(DateTime timeout, Func<T> func, bool indefinite = false, bool wantTrue = true)
     {
         TimeSpan leftOver = timeout - DateTime.UtcNow;
-        int min = indefinite ? _pollDelayMsInt : Convert.ToInt32(Utils.MinDownTo(0, leftOver.TotalMilliseconds, _pollDelayMs));
+        int min = indefinite ? _pollDelayMsInt : Convert.ToInt32(Help.MinDownTo(0, leftOver.TotalMilliseconds, _pollDelayMs));
         bool willEval = indefinite || min == _pollDelayMsInt;
 
         try 

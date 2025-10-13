@@ -11,12 +11,13 @@ using System.Threading.Tasks;
 using HackPDM.Extensions.General;
 using HackPDM.Extensions.Odoo;
 using HackPDM.Forms.Hack;
-using HackPDM.Forms.Helper;
 using HackPDM.Forms.Settings;
 using HackPDM.Hack;
 using HackPDM.Odoo;
 using HackPDM.Odoo.OdooModels.Models;
 using HackPDM.Src.ClientUtils.Types;
+
+using MessageBox = System.Windows.Forms.MessageBox;
 
 using OClient = HackPDM.Odoo.OdooClient;
 
@@ -229,7 +230,7 @@ public static class FileOperations
 
         // Hashtable of all results
         // might have array or value
-        ArrayList values = Utils.GetResults(result, "checksum", true);
+        ArrayList values = Help.GetResults(result, "checksum", true);
         return values;
     }
     public async static Task<HackFile[]> FilesNotInOdoo(IEnumerable<HackFile> hackFiles)

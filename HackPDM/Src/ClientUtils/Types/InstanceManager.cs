@@ -36,6 +36,7 @@ namespace HackPDM.Src.ClientUtils.Types
             _pages[typeof(T)] = newPages;
             return newPage;
         }
+        
 		public static List<T> GetPages<T>() where T : Page, new()
 		{
 			if (_pages.TryGetValue(typeof(T), out var page))

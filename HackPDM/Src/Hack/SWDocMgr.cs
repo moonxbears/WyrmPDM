@@ -5,11 +5,13 @@ using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
 
-using HackPDM.Forms.Helper;
+using MessageBox = System.Windows.Forms.MessageBox;
+using DialogResult = System.Windows.Forms.DialogResult;
+using MessageBoxIcon = System.Windows.Forms.MessageBoxIcon;
+using MessageBoxButtons = System.Windows.Forms.MessageBoxButtons;
 
 using SolidWorks.Interop.swdocumentmgr;
 
-using static HackPDM.Forms.Helper.MessageBox;
 
 namespace HackPDM.Hack;
 
@@ -33,7 +35,7 @@ public class SwDocMgr
         {
             DialogResult dr = MessageBox.Show("Failed to get an instance of the SolidWorks Document Manager API: " + ex.Message,
                 "Loading SW",
-                type: MessageBoxType.Ok,
+                buttons: MessageBoxButtons.OK,
                 icon: MessageBoxIcon.Error);
         }
 
@@ -67,7 +69,7 @@ public class SwDocMgr
             {
                 DialogResult dr = MessageBox.Show("Failed to open solidworks file: " + fileName,
                     "Loading SW File",
-                    type: MessageBoxType.Ok,
+                    buttons: MessageBoxButtons.OK,
                     icon: MessageBoxIcon.Error);
             }
             return null;
@@ -130,7 +132,7 @@ public class SwDocMgr
         {
             DialogResult dr = MessageBox.Show("Failed to open solidworks file: " + fileName,
                 "Loading SW File",
-                type: MessageBoxType.Ok,
+                buttons: MessageBoxButtons.OK,
                 icon: MessageBoxIcon.Error);
         }
 
@@ -256,7 +258,7 @@ public class SwDocMgr
         {
             DialogResult dr = MessageBox.Show("Failed to open solidworks file: " + fileName,
                 "Loading SW File",
-                type: MessageBoxType.Ok,
+                buttons: MessageBoxButtons.OK,
                 icon: MessageBoxIcon.Error);
             return null;
         }

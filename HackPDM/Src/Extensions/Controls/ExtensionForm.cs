@@ -12,6 +12,8 @@ using Microsoft.UI.Xaml.Media;
 using Theme = HackPDM.Src.ClientUtils.Types.Theme;
 using Control = Microsoft.UI.Xaml.Controls.Control;
 using HackPDM.Src.ClientUtils.Types;
+using CommunityToolkit.WinUI.UI.Controls;
+using System.Collections.ObjectModel;
 //using System.Windows.Controls;
 
 namespace HackPDM.Extensions.Controls;
@@ -43,7 +45,35 @@ public static class ExtensionForm
 			EndPoint = new Windows.Foundation.Point(1, 1)
 		};
 	}
-
+	extension(DataGrid grid)
+	{
+		public void SetAlternatingRowColors()
+		{
+			grid.RowBackground = _brush;
+			grid.AlternatingRowBackground = StorageBox.BrushWhite;
+		}
+		public void ItemAdd<T>(T item)
+		{
+			if (grid.ItemsSource is ObservableCollection<T> list)
+			{
+				list.Add(item);
+				// grid.ItemsSource = list;
+			}
+		}
+		public void ItemRemove<T>(T item)
+		{
+			if (grid.ItemsSource is ObservableCollection<T> list)
+			{
+				list.Remove(item);
+				// grid.ItemsSource = list;
+			}
+		}
+		//public Collection<object>? Items
+		//{
+		//	get => grid.ItemsSource as Collection<object>;
+		//	set => grid.ItemsSource = value;
+		//}
+	}
 	extension(ListViewItem item)
 	{
 		public ItemData LinkedItem

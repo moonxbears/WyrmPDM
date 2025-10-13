@@ -7,6 +7,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:ui="using:CommunityToolkit.WinUI"
     xmlns:rep="using:HackPDM.Data"
+    xmlns:com="using:CommunityToolkit.WinUI.UI.Controls" 
     mc:Ignorable="d"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
     <Grid Margin="12">
@@ -23,40 +24,62 @@
         </Grid.ColumnDefinitions>
 
         <!-- Main Status List -->
-        <ListView x:Name="StatusList" Grid.Row="0" Grid.ColumnSpan="2" Height="224" Margin="0,0,0,5">
-            <ListView.Header>
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="Action" Width="120"/>
-                    <TextBlock Text="Description" Width="1158"/>
-                </StackPanel>
-            </ListView.Header>
-        </ListView>
+        <com:DataGrid 
+            x:Name="StatusList" 
+            ItemsSource="{x:Bind OStatus, Mode=OneWay}"
+            Grid.Row="0" 
+            Grid.ColumnSpan="2" 
+            Height="224" 
+            Margin="0,0,0,5"
+            AutoGenerateColumns="False"
+            CanUserSortColumns="False"
+            IsReadOnly="True"
+            RowDetailsVisibilityMode="Collapsed">
+            <com:DataGrid.Columns>
+                <com:DataGridTextColumn Binding="{Binding Status}" Header="Action" Width="120"/>
+                <com:DataGridTextColumn Binding="{Binding Message}" Header="Description" Width="1158"/>
+            </com:DataGrid.Columns>
+        </com:DataGrid>
 
         <!-- Splitter between StatusList and the two lower lists -->
         <SplitView Grid.Row="1" Grid.ColumnSpan="2" Height="5" HorizontalAlignment="Stretch" Background="Gray"/>
 
         <!-- Info List -->
-        <ListView x:Name="InfoList" Grid.Row="2" Grid.Column="0" Margin="0,5,5,5">
-            <ListView.Header>
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="Action" Width="94"/>
-                    <TextBlock Text="Description" Width="514"/>
-                </StackPanel>
-            </ListView.Header>
-        </ListView>
+        <com:DataGrid 
+            x:Name="InfoList" 
+            ItemsSource="{x:Bind OInfo, Mode=OneWay}"
+            Grid.Row="2" 
+            Grid.Column="0" 
+            Margin="0,5,5,5"
+            AutoGenerateColumns="False"
+            CanUserSortColumns="False"
+            IsReadOnly="True"
+            RowDetailsVisibilityMode="Collapsed">
+            <com:DataGrid.Columns>
+                <com:DataGridTextColumn Binding="{Binding Status}" Header="Action" Width="120"/>
+                <com:DataGridTextColumn Binding="{Binding Message}" Header="Description" Width="1158"/>
+            </com:DataGrid.Columns>
+        </com:DataGrid>
 
         <!-- Splitter between InfoList and ErrorList -->
         <AppBarSeparator Grid.Row="2" Grid.Column="0" Width="5" Background="Gray"/>
 
         <!-- Error List -->
-        <ListView x:Name="ErrorList" Grid.Row="2" Grid.Column="1" Margin="5,5,0,5">
-            <ListView.Header>
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="Action" Width="120"/>
-                    <TextBlock Text="Description" Width="535"/>
-                </StackPanel>
-            </ListView.Header>
-        </ListView>
+        <com:DataGrid 
+            x:Name="ErrorList" 
+            ItemsSource="{x:Bind OError, Mode=OneWay}"
+            Grid.Row="2" 
+            Grid.Column="1" 
+            Margin="5,5,0,5"
+            AutoGenerateColumns="False"
+            CanUserSortColumns="False"
+            IsReadOnly="True"
+            RowDetailsVisibilityMode="Collapsed">
+            <com:DataGrid.Columns>
+                <com:DataGridTextColumn Binding="{Binding Status}" Header="Action" Width="120"/>
+                <com:DataGridTextColumn Binding="{Binding Message}" Header="Description" Width="1158"/>
+            </com:DataGrid.Columns>
+        </com:DataGrid>
 
         <!-- Progress Bar -->
         <ProgressBar x:Name="fileCheckStatus" Grid.Row="3" Grid.ColumnSpan="2" HorizontalAlignment="Stretch" VerticalAlignment="Center" Height="15"/>

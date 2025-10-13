@@ -2,9 +2,12 @@
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Drawing;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+
 using HackPDM.ClientUtils;
 using HackPDM.Src.ClientUtils.Types;
 
@@ -274,6 +277,47 @@ public static class ExtensionMethods
         }
         return hashset;
     }
+	private static void SortInternal<T>(this ObservableCollection<T> oc, Comparison<T> comparer, bool reverse = false)
+	{
+		// Step 1: Capture original items with their indices
+		var indexed = oc
+			.Select((item, index) => (item, index))
+			.ToList();
+
+		// Step 2: Sort the indexed list using the comparer
+		indexed.Sort((a, b) =>
+		{
+			int compare = comparer(a.item, b.item);
+			return reverse ? -compare : compare;
+		});
+
+		// Step 3: Create a map from item to its new position
+		var newPositions = new Dictionary<T, int>(oc.Count);
+		for (int i = 0; i < indexed.Count; i++)
+			newPositions[indexed[i].item] = i;
+
+		// Step 4: Reorder the collection with minimal moves
+		for (int i = 0; i < oc.Count; i++)
+		{
+			var item = oc[i];
+			var targetIndex = newPositions[item];
+
+			if (targetIndex != i)
+			{
+				oc.Move(i, targetIndex);
+
+				// After move, update map to reflect new positions
+				newPositions[oc[i]] = i;
+				newPositions[oc[targetIndex]] = targetIndex;
+			}
+		}
+	}
+
+	extension<T>(ObservableCollection<T> oc)
+    {
+        public void Sort(Comparison<T> comparer) => oc.SortInternal(comparer, false);
+		public void ReverseSort(Comparison<T> comparer) => oc.SortInternal(comparer, true);
+	}
 }
 public static class ExtensionConvertMethods
 {

@@ -8,9 +8,28 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:sys="using:System"
     xmlns:ui="using:CommunityToolkit.WinUI"
+    xmlns:com="using:CommunityToolkit.WinUI.UI.Controls"
     xmlns:xaml="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     mc:Ignorable="d">
-
+<!--
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <Grid.Resources>
+            <xaml:DataTemplate x:Key="RowDetailsTemplate">
+                Add your row details UI here. Example:
+                <StackPanel Orientation="Horizontal">
+                    <Grid>
+                        
+                        
+                    </Grid>
+                </StackPanel>
+            </xaml:DataTemplate>
+        </Grid.Resources>
+    </Grid>
+-->
     <Grid Margin="12">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto" />
@@ -76,8 +95,45 @@
             Margin="0,0,10,0">
 
             <TabViewItem Header="Entries" IsClosable="False">
-                <ListView x:Name="OdooEntryList">
-                    <ListView.ContextFlyout>
+                <com:DataGrid x:Name="OdooEntryList"
+                              AutoGenerateColumns="False"
+                              CanUserSortColumns="True"
+                              IsReadOnly="True"
+                              RowDetailsVisibilityMode="Collapsed"
+                              Sorting="OdooEntryDataGrid_Sorting"
+                              LoadingRowGroup="OdooEntryDataGrid_LoadingRowGroup"
+                              SelectionMode="Extended"
+                              ItemsSource="{x:Bind OEntries}">
+                    <com:DataGrid.Columns>
+                    
+                        <!--
+                        <Image
+                            Width="32"
+                            Height="32"
+                            Margin="0,0,5,0"
+                            Source="{x:Bind Icon}" />
+                        -->
+
+                        <com:DataGridTextColumn 
+                            Header="Name"
+                            Binding="{xaml:Binding Name}"/>
+                        <com:DataGridTextColumn 
+                            Header="Category"
+                            Binding="{xaml:Binding Category}" />
+                        <com:DataGridTextColumn 
+                            Header="Checkout"
+                            Binding="{xaml:Binding Checkout}" />
+                        <com:DataGridTextColumn 
+                            Header="Local Date"
+                            Binding="{xaml:Binding LocalDate}" />
+                        <com:DataGridTextColumn 
+                            Header="Remote Date"
+                            Binding="{xaml:Binding RemoteDate}" />
+                        <com:DataGridTextColumn 
+                            Header="Full Name"
+                            Binding="{xaml:Binding FullName}" />
+                    </com:DataGrid.Columns>
+                    <com:DataGrid.ContextFlyout>
                         <MenuFlyout>
                             <MenuFlyoutItem x:Name="ListGetLatest" Text="Get Latest" />
                             <MenuFlyoutItem x:Name="ListCheckout" Text="Checkout" />
@@ -90,27 +146,8 @@
                                 <MenuFlyoutItem x:Name="ListFileDirectory" Text="File Directory" />
                             </MenuFlyoutSubItem>
                         </MenuFlyout>
-                    </ListView.ContextFlyout>
-                    <ListView.ItemTemplate>
-                        <xaml:DataTemplate x:DataType="local:EntryRow">
-                            <ListViewItem>
-                                <StackPanel Orientation="Horizontal">
-                                    <Image
-                                        Width="32"
-                                        Height="32"
-                                        Margin="0,0,5,0"
-                                        Source="{x:Bind Icon}" />
-                                    <TextBlock Text="{x:Bind Name}" />
-                                    <TextBlock Text="{x:Bind Category}" />
-                                    <TextBlock Text="{x:Bind Checkout}" />
-                                    <TextBlock Text="{x:Bind LocalDate}" />
-                                    <TextBlock Text="{x:Bind RemoteDate}" />
-                                    <TextBlock Text="{x:Bind FullName}" />
-                                </StackPanel>
-                            </ListViewItem>
-                        </xaml:DataTemplate>
-                    </ListView.ItemTemplate>
-                </ListView>
+                    </com:DataGrid.ContextFlyout>
+                </com:DataGrid>
             </TabViewItem>
             <TabViewItem Header="Changes" IsClosable="False">
                 <Grid>
@@ -133,19 +170,34 @@
             Grid.ColumnSpan="1"
             Margin="10,0,0,0">
             <TabViewItem x:Name="HistoryTab" Header="History">
-                <ListView x:Name="OdooHistory" />
+                <com:DataGrid 
+                    x:Name="OdooHistory" 
+                    ItemsSource="{x:Bind OHistories}" 
+                    RowDetailsVisibilityMode="Collapsed"/>
             </TabViewItem>
             <TabViewItem x:Name="ParentTab" Header="Where Used">
-                <ListView x:Name="OdooParents" />
+                <com:DataGrid 
+                    x:Name="OdooParents" 
+                    ItemsSource="{x:Bind OParents}" 
+                    RowDetailsVisibilityMode="Collapsed"/>
             </TabViewItem>
             <TabViewItem x:Name="ChildTab" Header="Dependents">
-                <ListView x:Name="OdooChildren" />
+                <com:DataGrid 
+                    x:Name="OdooChildren" 
+                    ItemsSource="{x:Bind OChildren}" 
+                    RowDetailsVisibilityMode="Collapsed"/>
             </TabViewItem>
             <TabViewItem x:Name="PropertiesTab" Header="Properties">
-                <ListView x:Name="OdooProperties" />
+                <com:DataGrid 
+                    x:Name="OdooProperties" 
+                    ItemsSource="{x:Bind OProperties}" 
+                    RowDetailsVisibilityMode="Collapsed"/>
             </TabViewItem>
             <TabViewItem x:Name="InfoTab" Header="Info">
-                <ListView x:Name="OdooVersionInfoList" />
+                <com:DataGrid 
+                    x:Name="OdooVersionInfoList" 
+                    ItemsSource="{x:Bind OVersions}" 
+                    RowDetailsVisibilityMode="Collapsed"/>
             </TabViewItem>
         </TabView>
 

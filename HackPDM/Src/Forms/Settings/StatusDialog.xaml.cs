@@ -2,10 +2,14 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
+
+using CommunityToolkit.WinUI.UI.Controls;
 
 using HackPDM.ClientUtils;
 using HackPDM.Data;
+using HackPDM.Extensions.Controls;
 using HackPDM.Forms.Hack;
 using HackPDM.Helper;
 using HackPDM.Src.ClientUtils.Types;
@@ -28,9 +32,9 @@ public sealed partial class StatusDialog : Page
 {
     public Window? ParentWindow { get; set; }
 
-    public static ObservableCollection<BasicStatusMessage> OStatus { get; internal set; } = [];
-    public static ObservableCollection<BasicStatusMessage> OInfo { get; internal set; } = [];
-    public static ObservableCollection<BasicStatusMessage> OError { get; internal set; } = [];
+    public ObservableCollection<BasicStatusMessage> OStatus { get; internal set; } = [];
+    public ObservableCollection<BasicStatusMessage> OInfo { get; internal set; } = [];
+    public ObservableCollection<BasicStatusMessage> OError { get; internal set; } = [];
     public static Brush ColorProcessing { get; set; } = StorageBox.BrushDarkBlue;
     public static Brush ColorSkip { get; set; } = StorageBox.BrushDarkGray;
     public static Brush ColorFound { get; set; } = StorageBox.BrushDarkGray;
@@ -147,8 +151,8 @@ public sealed partial class StatusDialog : Page
         {
             foreach (var (action, description) in values)
             {
-                var messageLog = GetList(action);
-                int totalCount = messageLog.Items.Count;
+				GetDataGrid(action, out var collection, out var messageLog);
+				int totalCount = collection.Count;
 
                 if (totalCount > HistoryLength)
                 {
@@ -161,19 +165,21 @@ public sealed partial class StatusDialog : Page
                     int histOffset = totalCount - HistoryLength ?? 1000;
                     for (int i = 0; i < histOffset; i++)
                     {
-                        if (messageLog.Items.Count > 0)
+                        if (collection.Count > 0)
                         {
-                            messageLog.Items.RemoveAt(0);
+                            collection.RemoveAt(0);
                         }
                     }
                 }
                 var lvItem = HackFileManager.EmptyListItem<BasicStatusMessage>(messageLog);
-                //ColorizeStatus(item, lvItem);
-                // set background color, based on status action
+				lvItem.Status = action;
+				lvItem.Message = description;
+				//ColorizeStatus(item, lvItem);
+				// set background color, based on status action
 
-                messageLog.Items.Add(lvItem);
-                messageLog.StartBringIntoView();
-            }
+				collection.Add(lvItem);
+				messageLog?.ScrollIntoView(lvItem, messageLog.Columns.First());
+			}
         });
     }
     private delegate void AddStatusLineDel(string[] @params);
@@ -182,13 +188,15 @@ public sealed partial class StatusDialog : Page
         this.DispatcherQueue.ExecuteUI(()=>
         {
             // we are executing in the UI thread
-            var messageLog = GetList(statusMessage.action);
+            GetDataGrid(statusMessage.action, out var collection, out var messageLog);
             var lvItem = HackFileManager.EmptyListItem<BasicStatusMessage>(messageLog);
-
+            lvItem.Status = statusMessage.action;
+            lvItem.Message = statusMessage.description;
             // set background color, based on status action
-            messageLog?.Items.Add(lvItem);
-            messageLog?.StartBringIntoView();
-        });
+            collection.Add(lvItem);
+            
+            
+		});
     }
     
     private void ColorizeStatus((StatusMessage action, string description) values, ListViewItem item)
@@ -204,7 +212,7 @@ public sealed partial class StatusDialog : Page
             default: break;
         }
     }
-    private ListView GetList(StatusMessage action) => action switch
+    private DataGrid GetList(StatusMessage action) => action switch
     {
         StatusMessage.PROCESSING    => StatusList,
         StatusMessage.SUCCESS       => StatusList,
@@ -216,6 +224,33 @@ public sealed partial class StatusDialog : Page
         StatusMessage.ERROR         => ErrorList,
         _                           => InfoList,
     };
+    private void GetDataGrid(StatusMessage action, out ObservableCollection<BasicStatusMessage> collection, out DataGrid? dataGrid)
+    {
+        switch (action)
+        {
+            case StatusMessage.PROCESSING:
+            case StatusMessage.SUCCESS:
+                collection = OStatus;
+                dataGrid = StatusList;
+                break;
+            case StatusMessage.SKIP:
+            case StatusMessage.FOUND:
+            case StatusMessage.INFO:
+            case StatusMessage.OTHER:
+                collection = OInfo;
+                dataGrid = InfoList;
+                break;
+            case StatusMessage.WARNING:
+            case StatusMessage.ERROR:
+                collection = OError;
+                dataGrid = ErrorList;
+                break;
+            default:
+                collection = OInfo;
+                dataGrid = InfoList;
+                break;
+        }
+    }
     private void CmdCancelClick()
     {
         Canceled = true;

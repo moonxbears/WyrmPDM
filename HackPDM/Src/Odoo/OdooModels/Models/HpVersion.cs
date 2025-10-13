@@ -345,7 +345,7 @@ public class HpVersion : HpBaseModel<HpVersion>
     }
     public static HpVersion[] GetFromPaths(params string[] fullPaths)
     {
-        var paths = Utils.FastSlice(fullPaths, HackDefaults.PwaPathAbsolute.Length+1, "root\\").ToArrayList();
+        var paths = Help.FastSlice(fullPaths, HackDefaults.PwaPathAbsolute.Length+1, "root\\").ToArrayList();
 
         ArrayList searchParams = new() 
         {
@@ -356,7 +356,7 @@ public class HpVersion : HpBaseModel<HpVersion>
     }
     public static HpVersion[] GetFromPaths(string[] excludedFields = null, string[] includedFields = null, params string[] fullPaths)
     {
-        var paths = Utils.FastSlice(fullPaths, HackDefaults.PwaPathAbsolute.Length + 1, "root\\").ToArrayList();
+        var paths = Help.FastSlice(fullPaths, HackDefaults.PwaPathAbsolute.Length + 1, "root\\").ToArrayList();
 
         ArrayList searchParams = new()
         {

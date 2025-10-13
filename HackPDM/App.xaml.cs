@@ -1,5 +1,6 @@
 ﻿using System.IO;
 
+using HackPDM.Helper;
 using HackPDM.Src.ClientUtils.Types;
 
 using Microsoft.UI.Xaml;
@@ -44,7 +45,6 @@ public partial class HackApp : Application
     {
         string tempPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), StorageBox.APP_NAME);
         if (!Directory.Exists(tempPath)) Directory.CreateDirectory(tempPath);
-
-        //Notifier.FileCheckLoop(); // start file check loop in background
-    }
+		//Notifier.FileCheckLoop(); // start file check loop in background
+	}
 }

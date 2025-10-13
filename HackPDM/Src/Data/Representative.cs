@@ -192,7 +192,6 @@ public class BasicStatusMessage : IRowData
 {
 	public StatusMessage Status { get; set; } = StatusMessage.OTHER;
 	public string? Message { get; set; }
-	public ListViewItem? Item { get; set; }
 }
 public partial class ItemData
 {

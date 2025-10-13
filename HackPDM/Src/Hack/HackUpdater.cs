@@ -5,10 +5,11 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 
-using HackPDM.Forms.Helper;
-using HackPDM.Odoo;
+using MessageBox = System.Windows.MessageBox;
+using MessageBoxButton = System.Windows.MessageBoxButton;
+using DialogResult = System.Windows.MessageBoxResult;
 
-using static HackPDM.Forms.Helper.MessageBox;
+using HackPDM.Odoo;
 
 namespace HackPDM.Hack;
 
@@ -34,7 +35,7 @@ internal class HackUpdater
 		if ( MessageBox.Show( $"Latest version: {version.Major}.{version.Minor}.{version.Build}.{version.Revision} doesn't match odoo version: {_odooClientVersion}\n" +
 		                      $"Would you like to download the latest version?",
 			    "Versions",
-			    MessageBoxType.YesNoCancel ) == DialogResult.Yes )
+			    MessageBoxButton.YesNoCancel ) == DialogResult.Yes )
 		{
 			UpdaterProcess( );
 		}

@@ -7,16 +7,19 @@ using System.Reflection;
 using System.Text;
 using HackPDM.Data;
 using HackPDM.Extensions.General;
-using HackPDM.Forms.Helper;
 using HackPDM.Odoo.OdooModels;
 using HackPDM.Src.ClientUtils.Types;
 
+using MessageBox = System.Windows.Forms.MessageBox;
+using DialogResult = System.Windows.Forms.DialogResult;
+using MessageBoxButtons = System.Windows.Forms.MessageBoxButtons;
+using MessageBoxIcon = System.Windows.Forms.MessageBoxIcon;
+
 using Microsoft.UI.Xaml.Controls;
-using static HackPDM.Forms.Helper.MessageBox;
 
 namespace HackPDM.ClientUtils;
 
-public static class Utils
+public static class Help
 {
     /// <summary>
     /// Returns an absolute or relative path for the parent of the passed argument
@@ -38,7 +41,7 @@ public static class Utils
             {
                 MessageBox.Show("Path is a null reference.  Could not find its parent.",
                     "Path Error",
-                    type: MessageBoxType.Ok,
+                    buttons: MessageBoxButtons.OK,
                     icon: MessageBoxIcon.Error);
                 return ("");
             }
@@ -46,7 +49,7 @@ public static class Utils
             {
                 MessageBox.Show("Path is an empty string.  Could not find its parent.",
                     "Path Error",
-                    type: MessageBoxType.Ok,
+                    buttons: MessageBoxButtons.OK,
                     icon: MessageBoxIcon.Error);
                 return ("");
             }
@@ -54,7 +57,7 @@ public static class Utils
             {
                 MessageBox.Show("The parent directory for path \"" + path + "\" could not be found.",
                     "Path Error",
-                    type: MessageBoxType.Ok,
+                    buttons: MessageBoxButtons.OK,
                     icon: MessageBoxIcon.Error);
                 return ("");
             }
@@ -62,7 +65,7 @@ public static class Utils
             {
                 MessageBox.Show("Could not find the parent directory for \"" + path + "\".",
                     "Path Error",
-                    type: MessageBoxType.Ok,
+                    buttons: MessageBoxButtons.OK,
                     icon: MessageBoxIcon.Error);
                 return ("");
             }
@@ -93,7 +96,7 @@ public static class Utils
         {
             MessageBox.Show("Error getting Base Name from \"" + path + "\".",
                 "Path Error",
-                type: MessageBoxType.Ok,
+                buttons: MessageBoxButtons.OK,
                 icon: MessageBoxIcon.Error);
             return ("");
         }
@@ -116,7 +119,7 @@ public static class Utils
         {
             MessageBox.Show("Error finding local files.",
                 "File Discovery Error",
-                type: MessageBoxType.Ok,
+                buttons: MessageBoxButtons.OK,
                 icon: MessageBoxIcon.Error);
         }
     }
@@ -365,6 +368,18 @@ public static class Utils
                 _ => null,
             }
         );
+	public static void If(bool condition, Action @true, Action @false)
+	{
+		if (condition) @true(); else @false();
+	}
+	public static T If<T>(bool condition, Func<T> @true, Func<T> @false)
+	{
+		return condition ? @true() : @false();
+	}
+	public static Lazy<T> LazyIf<T>(bool condition, Func<T> @true, Func<T> @false)
+	{
+		return new Lazy<T>(() => condition ? @true() : @false());
+	}
 }
 
 public class Kwargs<T>(T obj)
@@ -685,5 +700,5 @@ public static class HashConverter
             _ => null,
         };
     }
-        
+       
 }

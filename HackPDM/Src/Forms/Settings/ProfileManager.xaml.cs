@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
 using HackPDM.Data;
-using HackPDM.Forms.Helper;
 using HackPDM.Forms.Odoo;
 using HackPDM.Hack;
 using HackPDM.Helper;
@@ -14,6 +13,7 @@ using Microsoft.UI.Xaml.Controls;
 
 using HackFileManager = HackPDM.Forms.Hack.HackFileManager;
 using HackSettings = HackPDM.Properties.Settings;
+using MessageBox = System.Windows.Forms.MessageBox;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.

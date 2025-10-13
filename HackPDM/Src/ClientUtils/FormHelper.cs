@@ -6,6 +6,9 @@ using System.Text;
 using System.Threading.Tasks;
 
 using Microsoft.UI.Dispatching;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 
 namespace HackPDM.ClientUtils;
 
@@ -43,4 +46,19 @@ internal static class FormHelper
             dispatcher.TryEnqueue(()=>function());
         }
     }
+	static ScrollViewer? GetScrollViewer(DependencyObject parent)
+	{
+		for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+		{
+			var child = VisualTreeHelper.GetChild(parent, i);
+			if (child is ScrollViewer sv)
+				return sv;
+
+			var result = GetScrollViewer(child);
+			if (result != null)
+				return result;
+		}
+		return null;
+	}
+
 }

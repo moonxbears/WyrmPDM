@@ -10,13 +10,14 @@ using HackPDM.ClientUtils;
 using HackPDM.Extensions.General;
 using HackPDM.Extensions.Controls;
 using HackPDM.Forms.Hack;
-using HackPDM.Forms.Helper;
 using HackPDM.Odoo.OdooModels.Models;
 using HackPDM.Src.ClientUtils.Types;
 
 using Microsoft.UI.Xaml.Controls;
 
 using StatusDialog = HackPDM.Forms.Settings.StatusDialog;
+
+using MessageBox = System.Windows.Forms.MessageBox;
 using HackPDM.Forms.Settings;
 namespace HackPDM.Odoo.Methods;
 
@@ -37,7 +38,7 @@ internal static class Latest
 
 		versions = GetLatestVersions(entryIDs, ["preview_image", "entry_id", "node_id", "file_modify_stamp", "attachment_id", "file_contents"]);
 
-		IEnumerable<List<HpVersion>> versionBatches = Utils.BatchList(versions, OdooDefaults.DownloadBatchSize);
+		IEnumerable<List<HpVersion>> versionBatches = Help.BatchList(versions, OdooDefaults.DownloadBatchSize);
 
 		sd.MaxCount = versions.Length;
 		sd.SkipCounter = 0;

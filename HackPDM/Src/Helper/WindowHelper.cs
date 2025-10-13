@@ -22,35 +22,53 @@ public static partial class WindowHelper
         MoveWindow(hwnd, 100, 100, width, height, true);
     }
 
-    public static Window CreateWindowPage(Type pageType)
+    public static Window CreateWindowPage(Type pageType, bool activated = true)
     {
         var window = new MainWindow();
         var rootFrame = new Frame();
-        window.Activate();
+        if (activated) window.Activate();
         window.Content = rootFrame;
-        rootFrame.Navigate(pageType);
+		string name = pageType.Name;
+		if (StorageBox.PresetWindowConfig.TryGetValue(name, out WindowConfig? value))
+		{
+			SetWindowConfig(window, value);
+		}
+		rootFrame.Navigate(pageType);
         return window;
     }
-    public static Window CreateWindowPage<T>() where T : Page
+    public static Window CreateWindowPage<T>(bool activated = true) where T : Page
     {
-        var window = new MainWindow();
+        CreateWindowAndPage<T>(out _, out var window, activated);
+        return window;
+    }
+	public static void CreateWindowAndPage<T>(out T page, out Window window, bool activated = true) 
+        where T : Page 
+        => CreateWindowAndPageInternal(out page, out window, activated);
+    public static void CreateWindowAndPage<TPage, TWindow>(out TPage page, out TWindow window, bool activated = true) 
+        where TPage : Page
+        where TWindow : Window, new()
+		=> CreateWindowAndPageInternal(out page, out window, activated);
+	private static void CreateWindowAndPageInternal<TPage, TWindow>(out TPage page, out TWindow window, bool activated = true)
+        where TPage : Page
+        where TWindow : Window, new()
+    {
+        window = new TWindow();
         var rootFrame = new Frame();
-        window.Activate();
+        if (activated) window.Activate();
         window.Content = rootFrame;
-        string name = typeof(T).Name;
+        string name = typeof(TPage).Name;
         if (StorageBox.PresetWindowConfig.TryGetValue(name, out WindowConfig? value))
         {
             SetWindowConfig(window, value);
         }
-        rootFrame.Navigate(typeof(T));
-        Page? page = rootFrame.Content as Page;
+        rootFrame.Navigate(typeof(TPage));
+        page = rootFrame.Content as TPage;
         if (page != null)
         {
             InstanceManager.RegisterWindow(page, window);
         }
-        return window;
-    }
-    public static Window CreateWindowPage<T>(WindowConfig winConfig) where T : Page
+	}
+	public static Window CreateWindowPage<T>(WindowConfig winConfig) where T : Page
     {
         Window win = CreateWindowPage<T>();
         SetWindowConfig(win, winConfig);
