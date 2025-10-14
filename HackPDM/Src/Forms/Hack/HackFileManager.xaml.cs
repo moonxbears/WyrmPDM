@@ -34,6 +34,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
+using Microsoft.WindowsAppSDK.Runtime;
 
 using Windows.Storage.Streams;
 
@@ -97,6 +98,11 @@ public sealed partial class HackFileManager : Page
 	// if EntryPollingMs is set to less than or equal to 0 then it will not poll for changes
 	public TreeViewNode? LastSelectedNode { get; set; } = null;
 	public string? LastSelectedNodePath { get; set; } = null;
+	public string[]? LastSelectedNodePaths 
+	{ 
+		get; 
+		set; 
+	}
 	public int EntryPollingMs { get; set; } = 5000;
 
 	internal bool IsTreeLoaded { get; set; } = false;
@@ -127,6 +133,7 @@ public sealed partial class HackFileManager : Page
 	{
 		InitializeComponent();
 		HackDispatcherQueue = DispatcherQueue.GetForCurrentThread();
+		// DesignTheme();
 		AssignCollections();
 		InitializeEvents();
 		// this.SetFormTheme(StorageBox.MyTheme ?? ThemePreset.DefaultTheme);
@@ -148,10 +155,28 @@ public sealed partial class HackFileManager : Page
 		this.Loaded += (_, _) => Task.Run(HackFileManager_Load);
 	}
 
+	private void DesignTheme()
+	{
+		if (HackApp.Current.RequestedTheme == ApplicationTheme.Dark)
+		{
+			OdooEntryList.AlternatingRowBackground = StorageBox.BrushDarkGray;
+			OdooEntryList.AlternatingRowForeground = StorageBox.BrushWhite;
+			//this.SetFormTheme(ThemePreset.DarkTheme);
+		}
+		else
+		{
+			OdooEntryList.AlternatingRowBackground = StorageBox.BrushLightGray;
+			OdooEntryList.AlternatingRowForeground = StorageBox.BrushBlack;
+			//this.SetFormTheme(ThemePreset.LightTheme);
+		}
+	}
+
 	private void AssignCollections()
 	{
 		OdooDirectoryTree.ItemsSource = ONodes;
+
 		OdooEntryList.ItemsSource = OEntries;
+
 		OdooHistory.ItemsSource = OHistories;
 		OdooParents.ItemsSource = OParents;
 		OdooChildren.ItemsSource = OChildren;
@@ -581,18 +606,19 @@ public sealed partial class HackFileManager : Page
 		return (treeNodeName, dat);
 	}
 	public void RefreshTree()
-		=> SafeInvoker(OdooDirectoryTree, ()=> OdooDirectoryTree.UpdateLayout());
-	public void RestartTree()
-		=> CreateTreeViewBackground();
+		=> SafeInvoker(OdooDirectoryTree, OdooDirectoryTree.UpdateLayout);
+	public async Task RestartTree()
+		=> await CreateTreeViewBackground();
 	public void RestartEntries()
 	{
 		SafeInvoker(OdooDirectoryTree, async () => await TreeSelectItem(LastSelectedNode));
 		SafeInvoker(OdooEntryList, async () =>
 		{
 			await AsyncHelper.WaitUntil(() => IsListLoaded);
-			if (OdooEntryList.SelectedItems.Count > 0)
+			if (OdooEntryList.SelectedItems is not null and { Count: > 0 } items)
 			{
-				(OdooEntryList.SelectedItems[0] as ListViewItem)?.StartBringIntoView();
+				var entry = items[0] as EntryRow;
+				if (entry is not null) OdooEntryList.ScrollIntoView(entry, OdooEntryList.Columns.First()); 
 			}
 		});
 	}
@@ -678,9 +704,10 @@ public sealed partial class HackFileManager : Page
 		string status = "";
 		string? fullName = table["fullname"] as string;
 		HackFile hack = null;
-		if (!string.IsNullOrWhiteSpace(fullName)) hack = hackFileMap[fullName].Result; 
+		if (!string.IsNullOrWhiteSpace(fullName)) hack = hackFileMap[fullName].Result;
 
 		//string latest = EmptyPlaceholder;
+		item.LatestId = table["latest"] as int?;
 		string datePlace = table["latest_date"] is not string latest ? EMPTY_PLACEHOLDER : latest;
 
 		item.RemoteDate = DateTime.TryParse(datePlace, out DateTime remoteDate) && remoteDate != default ? remoteDate : null;
@@ -908,9 +935,11 @@ public sealed partial class HackFileManager : Page
 				strKey = "default";
 			}
 		}
-
-		item.Icon = Assets.GetImage(strKey) as BitmapImage;
-
+		try
+		{
+			item.Icon = Assets.GetImage(strKey) as BitmapImage;
+		}
+		catch { Debug.WriteLine("Can't load icon image"); }
 
 		item.Checkout = null;
 		HpCategory? nameCategory = OdooDefaults.ExtToCat.TryGetValue($".{type}", out var cat) ? cat : null;
@@ -924,102 +953,124 @@ public sealed partial class HackFileManager : Page
 	#endregion
 
 	#region List Item Selection
-	private async Task ProcessEntrySelectionAsync(EntryRow? entry, CancellationToken token)
+	private async Task<HpVersion[]?> ProcessHistorySelectAsync(EntryRow? entry, CancellationToken token, bool listVersions = true)
 	{
-		HpVersion[] versions = [];
-		List<HpVersionProperty[]> versionProperties = [];
-		(HpVersion[], HpVersion[]) versionsRelation = ([], []);
+		HpVersion[]? versions = null;
+		if (entry is null) return null;
+		if (entry.Id != null)
+		{
+			versions = GetVersionsForEntry(entry.Id ?? 0, ["preview_image", "file_contents"], insertedFields: ["create_uid"]);
+		}
+		if (!listVersions) return versions;
 
+		token.ThrowIfCancellationRequested();
+		await SafeInvokerAsync(OdooVersionInfoList, () => PopulateHistory(versions ?? []));
+		return versions;
+	}
+	private async Task<List<HpVersionProperty[]?>?> ProcessPropertiesSelectAsync(EntryRow? entry, CancellationToken token, bool listProperties = true)
+	{
+		if (entry is null) return null;
+		if (entry.Id == null) return null;
+		
+		HpVersion[] versions = GetVersionsForEntry(entry.Id ?? 0, ["preview_image", "file_contents"], insertedFields: ["create_uid"]);
+		token.ThrowIfCancellationRequested();
+		return await ProcessPropertiesSelectInternalAsync(versions, token, listProperties);
+	}
+	private async Task<List<HpVersionProperty[]?>> ProcessPropertiesSelectInternalAsync(HpVersion[]? versions, CancellationToken token, bool listProperties = true)
+	{
+		List<HpVersionProperty[]>? versionProperties = null;
+		if (versions != null && versions.Length > 0)
+		{
+			versionProperties = HpVersion.GetAllVersionProperties(versions.ToArrayListIDs());
+		}
+		if (!listProperties || (versionProperties is null or { Count: < 1 })) return versionProperties;
+		token.ThrowIfCancellationRequested();
+		await SafeInvokerAsync(OdooProperties, () => PopulateProperties(versionProperties ?? []));
+		return versionProperties;
+	}
+	
+	private async Task<HpVersion[]?> ProcessParentSelectAsync(EntryRow? entry, CancellationToken token, bool listParents = true)
+	{
+		HpVersion[]? parentVersions = null;
+		int? versionId;
+		
+		switch (entry)
+		{
+			case null: return null;
+
+			case { LatestId: not (null or 0) }:
+			{
+				versionId = entry!.LatestId;
+				break;
+			}
+			case { Id: not (null or 0) }:
+			{
+				versionId = await HpEntry.GetFieldValueAsync<int>(entry.Id ?? 0, "latest_version_id");
+				break;
+			}
+				
+			default: return null;
+		}
+
+		
+		if (versionId != null)
+		{
+			parentVersions =
+				await HpVersionRelationship.GetRelatedRecordsBySearchAsync<HpVersion>([new ArrayList()
+					{
+						"child_id", "=", versionId
+					}], "parent_id",
+					excludedFields: ["preview_image", "node_id", "entry_id", "file_modify_stamp", "checksum", "file_contents"]
+				);
+		}
+		if (!listParents || (parentVersions is null or { Length: < 1 })) return parentVersions;
+		token.ThrowIfCancellationRequested();
+		await SafeInvokerAsync(OdooParents, () => PopulateParent(parentVersions ?? []));
+		return parentVersions;
+	}
+	private async Task<HpVersion[]?> ProcessChildSelectAsync(EntryRow? entry, CancellationToken token, bool listChildren = true)
+	{
+		HpVersion[]? childVersions = null;
+		if (entry is null) return null;
+		if (entry.Id == null) return null;
+		
+		int versionId = HpEntry.GetLatestID(entry.Id ?? 0);
+		if (versionId == 0) return null;
+		
+		childVersions =
+			HpVersionRelationship.GetRelatedRecordsBySearch<HpVersion>([new ArrayList()
+				{
+					"parent_id", "=", versionId
+				}], "child_id",
+				excludedFields: ["preview_image", "node_id", "entry_id", "file_modify_stamp", "checksum", "file_contents"]
+			);
+		
+		if (!listChildren || (childVersions is null or { Length: < 1 })) return childVersions;
+		token.ThrowIfCancellationRequested();
+		await SafeInvokerAsync(OdooChildren, () => PopulateChildren(childVersions ?? []));
+		return childVersions;
+	}
+	private async Task ProcessEntrySelectionAsync(EntryRow? entry, CancellationToken token, bool listLatestVersionInfo = false)
+	{
 		if (entry is null) return;
 
+		var versions = await ProcessHistorySelectAsync(entry, token, listVersions: true);
+		if (versions is null or { Length: < 1 }) return;
 
-		Task historyAndProperties = Task.Run(() =>
-			{
-				// get history list
-				versions = GetVersionsForEntry(entry.Id ?? 0, ["preview_image", "file_contents"], insertedFields: ["create_uid"]);
-			})
-			.ContinueWith(task1 =>
-			{
-				if (versions != null && versions.Length > 0)
-				{
-					versionProperties = HpVersion.GetAllVersionProperties(versions.ToArrayListIDs());
-				}
-			});
-
-		int? versionId = (int?)HpEntry.GetFieldValue(entry.Id ?? 0, "latest_version_id");
-		Task parentTask = Task.Run(() =>
-		{
-			if (versionId != null)
-			{
-				//versionRels = GetRelFromVersions([versionID]);
-				//versionsRelation = GetVersionsFromRelationship(versionRels);
-				versionsRelation.Item1 =
-					HpVersionRelationship.GetRelatedRecordsBySearch<HpVersion>([new ArrayList()
-						{
-							"child_id", "=", versionId
-						}], "parent_id",
-						excludedFields: ["preview_image", "node_id", "entry_id", "file_modify_stamp", "checksum", "file_contents"]
-					);
-			}
-		});
-		Task childTask = Task.Run(() =>
-		{
-			if (versionId != null)
-			{
-				versionsRelation.Item2 =
-					HpVersionRelationship.GetRelatedRecordsBySearch<HpVersion>([new ArrayList()
-						{
-							"parent_id", "=", versionId
-						}], "child_id",
-						excludedFields: ["preview_image", "node_id", "entry_id", "file_modify_stamp", "checksum", "file_contents"]
-					);
-			}
-		});
-
-		await Task.WhenAll(historyAndProperties, parentTask, childTask);
 		token.ThrowIfCancellationRequested();
-		object lockObject = new();
-		lock (lockObject)
-		{
-            
-			//UpdateTabPageText(HistoryTab, $"History ({versions?.Length ?? 0})");
-			//UpdateTabPageText(ParentTab, $"Where Used ({versionsRelation.Item1?.Length ?? 0})");
-			//UpdateTabPageText(ChildTab, $"Dependents ({versionsRelation.Item2?.Length ?? 0})");
 
-			PopulateHistory(in versions);
-			PopulateProperties(in versionProperties);
-			if (versionsRelation.Item1 != null && versionsRelation.Item1.Length > 0)
+		HpVersion latest = null;
+		foreach (HpVersion version in versions)
+		{
+			if (latest == null || version.file_modify_stamp > latest.file_modify_stamp)
 			{
-				// Populating Where Used
-				// HpVersion.SortReverseById(versionsRelation.Item1);
-				PopulateParent(in versionsRelation.Item1);
+				latest = version;
 			}
-			if (versionsRelation.Item2 != null && versionsRelation.Item2.Length > 0)
-			{
-				// Populating Dependency
-				// HpVersion.SortReverseById(versionsRelation.Item2);
-				PopulateChildren(in versionsRelation.Item2);
-			}
-			if (versions?.Length == 1)
-			{
-				PopulateVersionInfo(versions[0]);
-			}
-			else if (versions?.Length > 1)
-			{
-				HpVersion latest = null;
-				foreach (HpVersion version in versions)
-				{
-					if (latest == null || version.file_modify_stamp > latest.file_modify_stamp)
-					{
-						latest = version;
-					}
-				}
-				if (latest != null)
-				{
-					PopulateVersionInfo(latest);
-					PreviewImage(latest.Id);
-				}
-			}
+		}
+		if (latest != null)
+		{
+			if (listLatestVersionInfo) PopulateVersionInfo(latest);
+			PreviewImage(latest.Id);
 		}
 	}
 	private async void UpdateListAsync<T>(DataGrid list, T item)
@@ -1502,6 +1553,8 @@ public sealed partial class HackFileManager : Page
 	}
 	private async Task<bool> AsyncRunner(Func<Task> function, string statusHeader = "Status", CancellationTokenSource tokenSource = default)
 	{
+		if (tokenSource is null) tokenSource = new();
+
 		var task = Task.Run(function, tokenSource.Token);
 		bool blnWorkCanceled = await AsyncHelper.WaitUntil(() => Dialog.Canceled || task.IsCompleted || task.IsCanceled, 500);
 
@@ -1875,8 +1928,9 @@ public sealed partial class HackFileManager : Page
 	// item selection change events
 	private async void OdooEntryList_SelectionChanged(object sender, SelectionChangedEventArgs e)
 	{
-		if (OdooEntryList.SelectedItems.Count > 1)
+		if (OdooEntryList.SelectedItems.Count > 1 || e.AddedItems.Count == 0)
 			return;
+
 		_queuedEntryChange = (null, null);
 		if (_entryListChange is not null and { IsCompleted: false })
 		{
@@ -1918,7 +1972,7 @@ public sealed partial class HackFileManager : Page
 		PreviewImageSelection((e.AddedItems.First() as ChildrenRow), NameConfig.ChildrenVersion.Name);
 	}
 	// change events
-	private async void CheckedChange_Event(object sender, RoutedEventArgs e)
+	private async void ShowInactive_Checked(object sender, RoutedEventArgs e)
 	{
 		IsActive = ShowInactive.IsChecked ?? false;
 		await TreeSelectItem(LastSelectedNode);
@@ -3151,7 +3205,6 @@ public sealed partial class HackFileManager : Page
 		HpEntry[] entries = HpEntry.GetRecordsByIds(null, searchFilters: [new ArrayList() { "deleted", "=", true }, new ArrayList() { "dir_id", "=", LastSelectedNode?.LinkedData.DirectoryId ?? 0 }], excludedFields: ["type_id", "cat_id", "checkout_node"]);
 		await AsyncRunner(() => Async_LogicalUnDelete(entries), "Logically UnDelete Files");
 	}
-
 
 	#endregion
 

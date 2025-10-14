@@ -305,9 +305,10 @@ public static class OdooClient
         => await CommandAsync<ArrayList>(model, "search_read", execParams, timeout); // read-only
     public static async Task<ArrayList> RelatedBrowseAsync(string model, ArrayList execParams, int? timeout = null)
         => await CommandAsync<ArrayList>(model, "related_browse", execParams, timeout); // read-only
-
-    // field functions
-    public static async Task<Hashtable> GetFieldsAsync(string model, ArrayList execParams, int? timeout = null)
+	public static async Task<ArrayList> RelatedSearchAsync(string model, ArrayList execParams, int? timeout = null)
+		=> await CommandAsync<ArrayList>(model, "related_search_browse", execParams, timeout); // read-only
+																					// field functions
+	public static async Task<Hashtable> GetFieldsAsync(string model, ArrayList execParams, int? timeout = null)
         => await CommandAsync<Hashtable>(model, "fields_get", execParams, timeout); //
     // "fields_view_get" is depreciated
     public static async Task<Hashtable> GetFieldViewsAsync(string model, ArrayList execParams, int? timeout = null)

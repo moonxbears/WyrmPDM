@@ -31,6 +31,7 @@ public class EntryRow : ItemData, IRowData
 	public DateTime?    LocalDate   { get; set; }
 	public DateTime?    RemoteDate  { get; set; }
 	public string?      FullName    { get; set; }
+	public int?			LatestId	{ get; set; }
 
 	public bool? IsLocal
 	{
@@ -42,6 +43,11 @@ public class EntryRow : ItemData, IRowData
 	}
 	public bool			IsOnlyLocal => (IsLocal ?? true) && !IsRemote;
 	public bool			IsRemote	{ get; set; }
+	public ObservableCollection<HistoryRow>? History { get; set; }
+	public ObservableCollection<VersionRow>? Versions { get; set; }
+	public ObservableCollection<PropertiesRow>? Properties { get; set; }
+	public ObservableCollection<ParentRow>? Parents { get; set; }
+	public ObservableCollection<ChildrenRow>? Children { get; set; }
 }
 public class HistoryRow : ItemData, IRowData
 {

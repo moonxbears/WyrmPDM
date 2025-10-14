@@ -4,14 +4,13 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
-using System.ComponentModel;
 using System.Reactive;
 using System.Reactive.Subjects;
 
 namespace HackPDM.Src.ClientUtils.Types
 {
-    public class ObservingCollection<T> : ObservableCollection<T>
-    {
+	public class ObservingCollection<T> : ObservableCollection<T>
+	{
         public event EventHandler<ItemChangedEventArgs<T>> ItemChanged;
 
         private readonly Subject<ItemChangedEventArgs<T>> _subject = new();
@@ -19,17 +18,17 @@ namespace HackPDM.Src.ClientUtils.Types
 
         private readonly List<IItemChangeListener<T>> _listeners = [];
 
-        public ObservingCollection() : base()
+        public ObservingCollection() : base() 
         {
-
+             
         }
 
 
         public void AddListener(IItemChangeListener<T> listener)
-            => _listeners.Add(listener);
+            => _listeners.Add(listener); 
         public void RemoveListener(IItemChangeListener<T> listener)
             => _listeners.Remove(listener);
-
+        
         protected override void InsertItem(int index, T item)
         {
             base.InsertItem(index, item);
@@ -46,12 +45,12 @@ namespace HackPDM.Src.ClientUtils.Types
             base.SetItem(index, item);
             RaiseItemChanged(item, ChangeType.Updated);
         }
-        protected override void MoveItem(int oldIndex, int newIndex)
-        {
-            base.MoveItem(oldIndex, newIndex);
+		protected override void MoveItem(int oldIndex, int newIndex)
+		{
+			base.MoveItem(oldIndex, newIndex);
             RaiseItemChanged(this[newIndex], ChangeType.Updated);
         }
-
+        
         private void RaiseItemChanged(T item, ChangeType change)
         {
             var args = new ItemChangedEventArgs<T>(item, change);
@@ -116,43 +115,8 @@ namespace HackPDM.Src.ClientUtils.Types
             Data = data;
         }
     }
-    public class ItemChangedEventArgs<T>(T item, ChangeType changeType) : GenericItemEventArg<T, ChangeType>(item, changeType) { }
-    public class ListItemSelectionEventArgs<T>(T item, bool isSelected) : GenericItemEventArg<T, bool>(item, isSelected) { }
-    public class Ev<T> : INotifyPropertyChanged, INotifyPropertyChanging, INotifyNull<T>
-    {
-        public event PropertyChangingEventHandler? PropertyChanging;
-        public event PropertyChangedEventHandler? PropertyChanged;
-		public event PropertyNullHandler<T>? BecomingNull;
-		public event PropertyNullHandler<T>? BecameNotNull;
-
-		public T Value
-        {
-            get
-            {
-                return field;
-            }
-            set
-            {
-                if (!EqualityComparer<T>.Default.Equals(field, value))
-                {
-                    if (value is null && field is not null)
-                        BecomingNull?.Invoke(this, new(false, recursiveDepth: 0));
-
-					PropertyChanging?.Invoke(this, new(nameof(Value)));
-                    field = value;
-					
-                    if (field is null)
-						BecameNotNull?.Invoke(this, new(true, recursiveDepth: 0));
-
-					PropertyChanged?.Invoke(this, new(nameof(Value)));
-                }
-            }
-        }
-        public Ev(T value) => Value = value;
-        public static implicit operator T(Ev<T> prop) => prop.Value;
-        public static implicit operator Ev<T>(T value) => new(value);
-        public override string ToString() => Value?.ToString() ?? "null";
-    }
+    public class ItemChangedEventArgs<T>(T item, ChangeType changeType) : GenericItemEventArg<T, ChangeType>(item, changeType) {}
+    public class ListItemSelectionEventArgs<T>(T item, bool isSelected) : GenericItemEventArg<T, bool>(item, isSelected) {}
     public enum ChangeType
     {
         Added,
@@ -164,41 +128,4 @@ namespace HackPDM.Src.ClientUtils.Types
         Focused,
         Hovered,
     }
-    public class PropertyNullEventArgs<T> : EventArgs
-    {
-        public virtual bool IsNull { get; }
-        public virtual int RecursiveFixCount { get; set; }
-		public virtual NullFixType NullFix { get; set; } = NullFixType.Pass;
-		public NullChangeType ChangeType { get; set; } = NullChangeType.AssignNull;
-		public PropertyNullEventArgs(bool isNull = false, NullChangeType nullChange = NullChangeType.AssignNull, NullFixType nullFix = NullFixType.Pass, int recursiveDepth = 0, Func<T>? func = null)
-        {
-            IsNull = isNull;
-            ChangeType = nullChange;
-			NullFix = nullFix;
-            RecursiveFixCount = recursiveDepth;
-            if (isNull && nullFix == NullFixType.Error && func is not null)
-            {
-                RecursiveFixCount++;
-                ChangeType = NullChangeType.ModifyWithFunction;
-			}
-		}
-    }
-    public delegate void PropertyNullHandler<T>(object? sender, PropertyNullEventArgs<T> e);
-    public interface INotifyNull<T>
-    {
-        public event PropertyNullHandler<T>? BecomingNull;
-        public event PropertyNullHandler<T>? BecameNotNull;
-    }
-    public enum NullChangeType
-    {
-        NoAssign,
-        ModifyWithFunction,
-		AssignNull
-    }
-    public enum NullFixType
-    {
-        Pass,
-        Error,
-        Success,
-	}
 }
