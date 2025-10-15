@@ -64,14 +64,19 @@ public class HpEntry : HpBaseModel<HpEntry>
     public static int GetLatestID(int id)
     {
         ArrayList list = OClient.Read(GetHpModel(), [id], ["latest_version_id"], 10000);
-        return list is not null and {Count: > 0 } ? list[0] is int latestId ? latestId : 0 : 0;
+        return list is not null and {Count: > 0 } ? ((list[0] as Hashtable)?["latest_version_id"] as ArrayList)?[0] is int latestId ? latestId : 0 : 0;
+	}
+	public static async Task<int> GetLatestIDAsync(int id)
+	{
+		ArrayList list = await OClient.ReadAsync(GetHpModel(), [id], ["latest_version_id"], 10000);
+		return list is not null and {Count: > 0 } ?  ((list[0] as Hashtable)?["latest_version_id"] as ArrayList)?[0] is int latestId ? latestId : 0 : 0;
 	}
 	public int GetLatestID()
     {
         if (HashedValues.TryGetValue("latest_version_id", out int latestId)) return latestId;
 		ArrayList list = OClient.Read(GetHpModel(), [this.Id], ["latest_version_id"], 10000);
 
-		return list is not null and {Count: > 0 } ? list[0] is int id ? id : 0 : 0;
+		return list is not null and {Count: > 0 } ? ((list[0] as Hashtable)?["latest_version_id"] as ArrayList)?[0] is int id ? id : 0 : 0;
 	}
 	public bool CanCheckOut() => (checkout_user is null or 0) && !deleted;
     public bool CanUnCheckOut() => (checkout_user is not null) && checkout_user == OdooDefaults.OdooId;

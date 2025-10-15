@@ -402,7 +402,7 @@ public abstract partial class HpBaseModel<T> : HpBaseModel where T : HpBaseModel
             // set record settings
             record.Id = (int)ht["id"];
             //record.HashedValues = ht;
-            if (record.HpModel == OdooDefaults.HP_VERSION && ht.TryGetValue("dir_id", out object value)) 
+            if (record.HpModel == OdooDefaults.HP_VERSION && ht.TryGetValue("dir_id", out ArrayList? value)) 
             {
                 record.HashedValues = new Hashtable
                 {

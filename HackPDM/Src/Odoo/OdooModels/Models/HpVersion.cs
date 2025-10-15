@@ -273,22 +273,21 @@ public class HpVersion : HpBaseModel<HpVersion>
         }
         return null;
     }
-    public static List<HpVersionProperty[]> GetAllVersionProperties(ArrayList ids)
-    {
-        const string versionPropField = "version_property_ids";
-
-        ArrayList list = OClient.Read(GetHpModel(), ids, [versionPropField]);
-
-        List<HpVersionProperty[]> versionProperties = [];
-
-        foreach(Hashtable ht in list)
-        {
-            ArrayList values = (ArrayList)ht[versionPropField];
-            versionProperties.Add(HpBaseModel<HpVersionProperty>.GetRecordsByIds(values));
-        }
-        return versionProperties;
-    }
-    public static bool HasChecksum(string checksum, params HpVersion[] versions)
+	public static async Task<List<HpVersionProperty[]>> GetAllVersionPropertiesAsync(ArrayList ids)
+	{
+		const string versionPropField = "version_property_ids";
+		ArrayList list = await OClient.ReadAsync(GetHpModel(), ids, [versionPropField]);
+		List<HpVersionProperty[]> versionProperties = [];
+		foreach (Hashtable ht in list)
+		{
+			ArrayList values = (ArrayList)ht[versionPropField];
+			versionProperties.Add(await HpBaseModel<HpVersionProperty>.GetRecordsByIdsAsync(values));
+		}
+		return versionProperties;
+	}
+	public static List<HpVersionProperty[]> GetAllVersionProperties(ArrayList ids) 
+		=> GetAllVersionPropertiesAsync(ids).GetAwaiter().GetResult();
+	public static bool HasChecksum(string checksum, params HpVersion[] versions)
     {
         foreach (HpVersion version in versions)
         {

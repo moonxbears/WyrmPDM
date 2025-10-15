@@ -78,8 +78,8 @@ public sealed partial class OdooSettings : Page
                     "HackPDM Odoo Credentials");
         
         
-        OdooDefaults.OdooUser = txtOdooUser.Text;
         OdooDefaults.OdooPass = txtOdooPass.Password;
+        OdooDefaults.OdooUser = txtOdooUser.Text;
         OdooDefaults.OdooUrl = sb.ToString();
         OdooDefaults.OdooId = 0;
     }

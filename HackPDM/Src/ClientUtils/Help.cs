@@ -465,7 +465,7 @@ public static class HashConverter
         {
             if (mType is MethodType.PropertyOnly or MethodType.PropertyAndField)
             {
-                PropertyInfo prop = type.GetProperty(entry.Key.ToString(), BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+                PropertyInfo? prop = type?.GetProperty(entry.Key?.ToString() ?? "", BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
                 if (prop != null && prop.CanWrite)
                 {
                     object value = ConvertValue(entry.Value, prop.PropertyType);
