@@ -7,12 +7,13 @@
     xmlns:data="using:Microsoft.UI.Xaml.Data"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:xaml="using:Microsoft.UI.Xaml"
+	xmlns:com="using:CommunityToolkit.WinUI.UI.Controls"
     mc:Ignorable="d">
     <Grid Margin="12">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto" />
-            <ColumnDefinition Width="*" />
-        </Grid.ColumnDefinitions>
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="Auto" />
+			<ColumnDefinition Width="*" />
+		</Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -45,7 +46,6 @@
             VerticalAlignment="Top"
             Click="OdooSetting"
             Content="Odoo Settings" />
-
         <!--  Odoo Login Button  -->
         <Button
             x:Name="OdooLoginBtn"
@@ -60,7 +60,7 @@
             Content="Odoo Login" />
 
         <!--  Status List View  -->
-        <ListView
+		<com:DataGrid
             x:Name="ProfileManStatusList"
             Grid.Row="0"
             Grid.RowSpan="4"
@@ -71,19 +71,11 @@
             HorizontalAlignment="Stretch"
             VerticalAlignment="Stretch"
             BorderThickness="1,1,1,1">
-            <!--  FIX: Remove ListView.View, use ListView.ItemTemplate for UWP/WinUI  -->
-            <ListView.ItemTemplate>
-                <xaml:DataTemplate>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="60" />
-                            <ColumnDefinition Width="313" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="{data:Binding Status}" />
-                        <TextBlock Grid.Column="1" Text="{data:Binding Message}" />
-                    </Grid>
-                </xaml:DataTemplate>
-            </ListView.ItemTemplate>
-        </ListView>
+			<!--  FIX: Remove ListView.View, use ListView.ItemTemplate for UWP/WinUI  -->
+			<com:DataGrid.Columns>
+				<!--<TextBlock Grid.Column="0" Text="{data:Binding Status}" />
+				<TextBlock Grid.Column="1" Text="{data:Binding Message}" /> -->
+			</com:DataGrid.Columns>
+		</com:DataGrid>
     </Grid>
 </Page>

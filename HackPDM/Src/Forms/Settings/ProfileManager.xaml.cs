@@ -10,6 +10,7 @@ using HackPDM.Src.ClientUtils.Types;
 
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using CommunityToolkit.WinUI.UI.Controls;
 
 using HackFileManager = HackPDM.Forms.Hack.HackFileManager;
 using HackSettings = HackPDM.Properties.Settings;
@@ -108,7 +109,7 @@ public sealed partial class ProfileManager : Page
                     listItem.Status = StatusMessage.ERROR;
                     listItem.Message = message;
 
-                    ProfileManStatusList.Items.Add(listItem);
+                    OStatus.Add(listItem);
                 }
                 return false;
             }
