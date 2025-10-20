@@ -3,10 +3,12 @@ using System.Collections.ObjectModel;
 
 using HackPDM.Data;
 using HackPDM.Forms.Odoo;
+using HackPDM.Forms.Hack;
 using HackPDM.Hack;
 using HackPDM.Helper;
 using HackPDM.Odoo;
 using HackPDM.Src.ClientUtils.Types;
+using System.Runtime.InteropServices.WindowsRuntime;
 
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;

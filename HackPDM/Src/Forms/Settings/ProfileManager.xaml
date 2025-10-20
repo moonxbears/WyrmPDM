@@ -1,19 +1,20 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <Page
     x:Class="HackPDM.Forms.Settings.ProfileManager"
-    xmlns="using:Microsoft.UI.Xaml.Controls"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:com="using:CommunityToolkit.WinUI.UI.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:data="using:Microsoft.UI.Xaml.Data"
+    xmlns:local="using:HackPDM.Forms.Hack"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:xaml="using:Microsoft.UI.Xaml"
-	xmlns:com="using:CommunityToolkit.WinUI.UI.Controls"
     mc:Ignorable="d">
     <Grid Margin="12">
-		<Grid.ColumnDefinitions>
-			<ColumnDefinition Width="Auto" />
-			<ColumnDefinition Width="*" />
-		</Grid.ColumnDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -60,7 +61,7 @@
             Content="Odoo Login" />
 
         <!--  Status List View  -->
-		<com:DataGrid
+        <com:DataGrid
             x:Name="ProfileManStatusList"
             Grid.Row="0"
             Grid.RowSpan="4"
@@ -71,11 +72,19 @@
             HorizontalAlignment="Stretch"
             VerticalAlignment="Stretch"
             BorderThickness="1,1,1,1">
-			<!--  FIX: Remove ListView.View, use ListView.ItemTemplate for UWP/WinUI  -->
-			<com:DataGrid.Columns>
-				<!--<TextBlock Grid.Column="0" Text="{data:Binding Status}" />
-				<TextBlock Grid.Column="1" Text="{data:Binding Message}" /> -->
-			</com:DataGrid.Columns>
-		</com:DataGrid>
+            <!--  FIX: Remove ListView.View, use ListView.ItemTemplate for UWP/WinUI  -->
+            <com:DataGrid.Columns>
+                <!--<TextBlock Grid.Column="0" Text="{data:Binding Status}" />
+				<TextBlock Grid.Column="1" Text="{data:Binding Message}" />-->
+                <com:DataGridTextColumn
+                    Width="120"
+                    Binding="{Binding Status}"
+                    Header="Action" />
+                <com:DataGridTextColumn
+                    Width="1158"
+                    Binding="{Binding Message}"
+                    Header="Description" />
+            </com:DataGrid.Columns>
+        </com:DataGrid>
     </Grid>
 </Page>

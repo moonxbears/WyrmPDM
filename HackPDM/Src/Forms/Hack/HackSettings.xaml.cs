@@ -22,53 +22,53 @@ namespace HackPDM.Forms.Hack;
 /// </summary>
 public sealed partial class HackSettings : Page
 {
-    Assembly assembly;
-    string documents;
+	Assembly assembly;
+	string documents;
 
-    public HackSettings()
-    {
-        assembly = Assembly.GetExecutingAssembly();
-        documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+	public HackSettings()
+	{
+		assembly = Assembly.GetExecutingAssembly();
+		documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
 
-        InitializeComponent();
-        GetInfoDefaults();
-    }
-    private void GetInfoDefaults()
-    {
-        FileInfo hackExe = new FileInfo(assembly.Location);
-        string? assemblyDir = hackExe.DirectoryName;
-        
-        if (StorageBox.PwaPathAbsolute is null or "") txtPwaInput.Text = Path.Combine(documents, StorageBox.APP_NAME, "pwa");
-        else txtPwaInput.Text = StorageBox.PwaPathAbsolute;
+		InitializeComponent();
+		GetInfoDefaults();
+	}
+	private void GetInfoDefaults()
+	{
+		FileInfo hackExe = new FileInfo(assembly.Location);
+		string? assemblyDir = hackExe.DirectoryName;
 
-        if (StorageBox.TemporaryPath is null or "") HackTempFolderPath.Text = Path.Combine(Path.GetTempPath(), StorageBox.APP_NAME);
-        else HackTempFolderPath.Text = StorageBox.TemporaryPath;
-    }
-    private void btnSubmit_Click(object sender, RoutedEventArgs e)
-    {
-        StringBuilder errors = new();
+		if (StorageBox.PwaPathAbsolute is null or "") txtPwaInput.Text = Path.Combine(documents, StorageBox.APP_NAME, "pwa");
+		else txtPwaInput.Text = StorageBox.PwaPathAbsolute;
 
-        if (!TryCreateDirectory(txtPwaInput.Text)) errors.AppendLine("invalid pwa directory path");
-        if (!TryCreateDirectory(HackTempFolderPath.Text)) errors.AppendLine("invalid temporary directory path");
+		if (StorageBox.TemporaryPath is null or "") HackTempFolderPath.Text = Path.Combine(Path.GetTempPath(), StorageBox.APP_NAME);
+		else HackTempFolderPath.Text = StorageBox.TemporaryPath;
+	}
+	private void btnSubmit_Click(object sender, RoutedEventArgs e)
+	{
+		StringBuilder errors = new();
 
-        if (errors.Length > 0)
-        {
-            errors.AppendLine("changes were not saved");
-            MessageBox.Show(errors.ToString());
-            return;
-        }
-        var dirInfo = new DirectoryInfo(txtPwaInput.Text);
-        StorageBox.PwaPathAbsolute = txtPwaInput.Text;
-        StorageBox.PwaPathRelative = dirInfo.Name;
-        StorageBox.TemporaryPath = HackTempFolderPath.Text;
-        this.Window?.Close();
-    }
+		if (!TryCreateDirectory(txtPwaInput.Text)) errors.AppendLine("invalid pwa directory path");
+		if (!TryCreateDirectory(HackTempFolderPath.Text)) errors.AppendLine("invalid temporary directory path");
 
-    private bool TryCreateDirectory(string path)
-    {
-        if (Directory.Exists(path)) return true;
+		if (errors.Length > 0)
+		{
+			errors.AppendLine("changes were not saved");
+			MessageBox.Show(errors.ToString());
+			return;
+		}
+		var dirInfo = new DirectoryInfo(txtPwaInput.Text);
+		StorageBox.PwaPathAbsolute = txtPwaInput.Text;
+		StorageBox.PwaPathRelative = dirInfo.Name;
+		StorageBox.TemporaryPath = HackTempFolderPath.Text;
+		this.Window?.Close();
+	}
 
-        try { Directory.CreateDirectory(path); return true; }
-        catch { return false; }
-    }
+	private bool TryCreateDirectory(string path)
+	{
+		if (Directory.Exists(path)) return true;
+
+		try { Directory.CreateDirectory(path); return true; }
+		catch { return false; }
+	}
 }

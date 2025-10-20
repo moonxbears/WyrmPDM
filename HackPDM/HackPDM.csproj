@@ -14,6 +14,20 @@
 	<WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
 	<DefineConstants Condition="!('$(WindowsTargetPlatformVersion)' &gt;= '10.0.10240.0')">WINDOWS_LEGACY</DefineConstants>
   </PropertyGroup>
+  <ItemGroup>
+    <None Remove="Src\Forms\Hack\HackFileManager.xaml" />
+    <None Remove="Src\Forms\Hack\HackSettings.xaml" />
+    <None Remove="Src\Forms\Settings\BlankPage1.xaml" />
+	<None Remove="Src\Forms\Helper\MessageBox.xaml" />
+    <None Remove="Src\Forms\Helper\MessageBoxWindow.xaml" />
+    <None Remove="Src\Forms\Odoo\OdooFileTypeManager.xaml" />
+    <None Remove="Src\Forms\Odoo\OdooSettings.xaml" />
+    <None Remove="Src\Forms\Settings\ProfileManager.xaml" />
+    <None Remove="Src\Forms\Settings\SearchOdoo.xaml" />
+    <None Remove="Src\Forms\Settings\StatusDialog.xaml" />
+    <None Remove="Src\Forms\Settings\StatusSettings.xaml" />
+	<None Remove="Src\Forms\Settings\ThemeSettings.xaml" />
+  </ItemGroup>
 
 
 
@@ -492,6 +506,45 @@
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
+    <Page Update="Src\Forms\Hack\HackSettings.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Update="Src\Forms\Hack\HackFileManager.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Update="Src\Forms\Settings\BlankPage1.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+	<Page Update="Src\Forms\Hack\HackFileManager.xaml">
+		<Generator>MSBuild:Compile</Generator>
+	</Page>
+	<Page Update="Src\Forms\Helper\MessageBox.xaml">
+		<Generator>MSBuild:Compile</Generator>
+	</Page>
+	<Page Update="Src\Forms\Helper\MessageBoxWindow.xaml">
+		<Generator>MSBuild:Compile</Generator>
+	</Page>
+	<Page Update="Src\Forms\Odoo\OdooFileTypeManager.xaml">
+		<Generator>MSBuild:Compile</Generator>
+	</Page>
+	<Page Update="Src\Forms\Odoo\OdooSettings.xaml">
+		<Generator>MSBuild:Compile</Generator>
+	</Page>
+	<Page Update="Src\Forms\Settings\ProfileManager.xaml">
+		<Generator>MSBuild:Compile</Generator>
+	</Page>
+	<Page Update="Src\Forms\Settings\SearchOdoo.xaml">
+		<Generator>MSBuild:Compile</Generator>
+	</Page>
+	<Page Update="Src\Forms\Settings\StatusDialog.xaml">
+		<Generator>MSBuild:Compile</Generator>
+	</Page>
+	<Page Update="Src\Forms\Settings\StatusSettings.xaml">
+		<Generator>MSBuild:Compile</Generator>
+	</Page>
+	<Page Update="Src\Forms\Settings\ThemeSettings.xaml">
+		<Generator>MSBuild:Compile</Generator>
+	</Page>
   </ItemGroup>
   <ItemGroup>
     <Page Update="Src\Forms\Settings\ThemeSettings.xaml">
@@ -525,16 +578,6 @@
   </ItemGroup>
   <ItemGroup>
     <Page Update="Src\Forms\Odoo\OdooFileTypeManager.xaml">
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-  </ItemGroup>
-  <ItemGroup>
-    <Page Update="Src\Forms\Hack\HackSettings.xaml">
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-  </ItemGroup>
-  <ItemGroup>
-    <Page Update="Src\Forms\Hack\HackFileManager.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
   </ItemGroup>
