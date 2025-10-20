@@ -65,7 +65,7 @@ public sealed partial class HackFileManager : Page
 	public ObservableCollection<PropertiesRow> OProperties { get; internal set; } = [];
 	public ObservableCollection<VersionRow> OVersions { get; internal set; }      = [];
 	public ObservableCollection<TreeData> ONodes { get; internal set; }           = [];
-
+	
 	public static NotifyIcon Notify { get; } = Notifier.Notify;
 	public static StatusDialog Dialog { get; set; }
 	public static ConcurrentQueue<(StatusMessage action, string description)> QueueAsyncStatus = new();
@@ -98,11 +98,7 @@ public sealed partial class HackFileManager : Page
 	// if EntryPollingMs is set to less than or equal to 0 then it will not poll for changes
 	public TreeViewNode? LastSelectedNode { get; set; } = null;
 	public string? LastSelectedNodePath { get; set; } = null;
-	public string[]? LastSelectedNodePaths 
-	{ 
-		get; 
-		set; 
-	}
+	public ObservableCollection<TreeData>? LastSelectedNodePaths { get; internal set; } = [];
 	public int EntryPollingMs { get; set; } = 5000;
 
 	internal bool IsTreeLoaded { get; set; } = false;
@@ -182,10 +178,14 @@ public sealed partial class HackFileManager : Page
 		OdooChildren.ItemsSource = OChildren;
 		OdooProperties.ItemsSource = OProperties;
 		OdooVersionInfoList.ItemsSource = OVersions;
+
+		OdooDirectoryBreadcrumb.ItemsSource = LastSelectedNodePaths;
 	}
 
 	private void InitializeEvents()
 	{
+		OdooDirectoryBreadcrumb.ItemClicked	+= OdooDirectoryBreadcrumb_ItemClicked;
+
 		OdooDirectoryTree.SelectionChanged += OdooDirectoryTree_SelectionChanged;
 
 		ONodes.CollectionChanged		+= CollectionChanged;
@@ -218,6 +218,23 @@ public sealed partial class HackFileManager : Page
 		ListFileDirectory.Click         += List_Click_OpenDirectory;
 		OdooHistory.SelectionChanged	+= OdooHistory_ItemSelectionChanged;
 		OdooRefreshDropdown.Click		+= AdditionalTools_Click_Refresh;
+	}
+
+	private void OdooDirectoryBreadcrumb_ItemClicked(BreadcrumbBar sender, BreadcrumbBarItemClickedEventArgs args)
+	{
+		var tData = args.Item as TreeData;
+		if (tData is null or { Node: null}) return;
+
+		LastSelectedNode = tData.Node;
+		OdooDirectoryTree.SelectedNode = tData.Node;
+		tData.EnsureVisible(OdooDirectoryTree);
+		LastSelectedNodePath = tData.Node?.LinkedData.FullPath;
+		LastSelectedNode?.UpdateBreadCrumbCollection(LastSelectedNodePaths);
+		
+		foreach (var child in tData.Node!.Children)
+		{
+			child.IsExpanded = false;
+		}
 	}
 
 	private async void Tree_Click_Undelete(object sender, RoutedEventArgs e)
@@ -697,8 +714,8 @@ public sealed partial class HackFileManager : Page
 		item.Size = Convert.ToInt64(table["size"]);
 
 
-		string? checkout = table["checkout"] as string;
-		item.Checkout = checkout is null or "False:False" ? null : OdooDefaults.IdToUser.TryGetValue(int.TryParse(checkout.Split(":")?[0], out int id) ? id : 0, out HpUser? user) ? user : null;
+		int? checkout = table["checkout"] as int?;
+		item.Checkout = checkout is null or 0 ? null : OdooDefaults.IdToUser.TryGetValue(checkout ?? 0, out HpUser? user) ? user : null;
 
 		// check if latest checksum
 		string status = "";
@@ -728,11 +745,11 @@ public sealed partial class HackFileManager : Page
 
 		if (table["deleted"] is bool deleted && !deleted)
 		{
-			if (checkout != EMPTY_PLACEHOLDER)
+			if (checkout != 0)
 			{
 				// cm = checked out to me
 				// co = checked out to other
-				status = checkout == $"{OdooDefaults.OdooUser}:{OdooDefaults.OdooId}" ? "cm" : "co";
+				status = checkout == OdooDefaults.OdooId ? "cm" : "co";
 			}
 			else
 			{
@@ -1913,8 +1930,9 @@ public sealed partial class HackFileManager : Page
 			// Store the currently selected node
 			if (args.AddedItems.Count > 0)
 			{
-				LastSelectedNode = (args.AddedItems.First() as TreeData).Node;
+				LastSelectedNode = (args.AddedItems.First() as TreeData)?.Node;
 				LastSelectedNodePath = LastSelectedNode?.LinkedData.FullPath;
+				LastSelectedNode?.UpdateBreadCrumbCollection(LastSelectedNodePaths);
 			}
 
 			_treeItemChange = TreeSelectItem(LastSelectedNode, _cTreeSource.Token);
@@ -1980,7 +1998,7 @@ public sealed partial class HackFileManager : Page
 	// tree open events
 	private void OdooCMSTree_Opening(object sender, CancelEventArgs e)
 	{
-		string pathway = LastSelectedNodePath.Length < 5 ? HackDefaults.PwaPathAbsolute : Path.Combine(HackDefaults.PwaPathAbsolute, LastSelectedNodePath[5..]);
+		string pathway = LastSelectedNodePath?.Length < 5 ? HackDefaults.PwaPathAbsolute : Path.Combine(HackDefaults.PwaPathAbsolute, LastSelectedNodePath[5..]);
 		if (Directory.Exists(pathway))
 		{
 			// TreeOpenDirectory.Enabled = true;
@@ -2028,7 +2046,7 @@ public sealed partial class HackFileManager : Page
 			List<string> paths = [];
 			EndNodePaths(LastSelectedNode, paths);
 
-			ArrayList splitPaths = LastSelectedNodePath.Split<ArrayList>("\\", StringSplitOptions.RemoveEmptyEntries);
+			ArrayList? splitPaths = LastSelectedNodePath?.Split<ArrayList>("\\", StringSplitOptions.RemoveEmptyEntries);
 			hpDirectory = (await HpDirectory.CreateNew(splitPaths)).Last();
 
 			foreach (string path in paths)
@@ -2060,7 +2078,7 @@ public sealed partial class HackFileManager : Page
 	}
 	private void Tree_Click_OpenDirectory(object sender, RoutedEventArgs e)
 	{
-		string pathway = LastSelectedNodePath.Length < 5 ? HackDefaults.PwaPathAbsolute : Path.Combine(HackDefaults.PwaPathAbsolute, LastSelectedNodePath[5..]);
+		string pathway = LastSelectedNodePath?.Length < 5 ? HackDefaults.PwaPathAbsolute : Path.Combine(HackDefaults.PwaPathAbsolute, LastSelectedNodePath[5..]);
 		if (Directory.Exists(pathway))
 		{
 			System.Diagnostics.Process.Start("explorer.exe", pathway);
@@ -2074,7 +2092,7 @@ public sealed partial class HackFileManager : Page
 		=> MessageBox.Show("Not Implemented Yet");
 	private void Tree_Click_LocalDelete(object sender, RoutedEventArgs e)
 	{
-		string pathway = LastSelectedNodePath.Length < 5 ? HackDefaults.PwaPathAbsolute : Path.Combine(HackDefaults.PwaPathAbsolute, LastSelectedNodePath[5..]);
+		string pathway = LastSelectedNodePath?.Length < 5 ? HackDefaults.PwaPathAbsolute : Path.Combine(HackDefaults.PwaPathAbsolute, LastSelectedNodePath[5..]);
 		DirectoryInfo directory = new(pathway);
 		if (directory.Exists)
 		{

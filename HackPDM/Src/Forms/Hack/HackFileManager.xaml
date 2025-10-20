@@ -21,61 +21,74 @@
             IsPaneOpen="True"
             PanePlacement="Left">
             <SplitView.Pane>
-                <StackPanel Orientation="Vertical">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
                     <BreadcrumbBar
-                        x:Name="OdooDirectoryBreadcrumb"
-                        Margin="0,0,0,10"
-                        VerticalAlignment="Top"
-                        BorderBrush="DimGray"
-                        BorderThickness="3"
-                        CornerRadius="10"
-                        ItemsSource="{x:Bind LastSelectedNodePath}"
-                        Visibility="Visible" />
-                    <TreeView
+                    x:Name="OdooDirectoryBreadcrumb"
+                    Margin="0,0,0,10"
+                    VerticalAlignment="Top"
+                    BorderBrush="DimGray"
+                    BorderThickness="3"
+                    CornerRadius="10"
+                    ItemsSource="{x:Bind LastSelectedNodePaths}"
+                    Visibility="Visible"
+                        Grid.Row="0">
+                        <BreadcrumbBar.ItemTemplate>
+                            <xaml:DataTemplate x:DataType="local:TreeData">
+                                <TextBlock Text="{x:Bind Name}"/>
+                            </xaml:DataTemplate>
+                        </BreadcrumbBar.ItemTemplate>
+                    </BreadcrumbBar>
+                    <ScrollViewer Grid.Row="1">
+                        <TreeView
                         x:Name="OdooDirectoryTree"
                         Margin="0,0,10,0"
-                        VerticalAlignment="Stretch"
+                        VerticalAlignment="Top"
                         BorderBrush="DimGray"
                         BorderThickness="3"
                         CanDrag="True"
                         CanDragItems="False"
                         CornerRadius="10"
                         Visibility="Visible">
-                        <TreeView.ContextFlyout>
-                            <MenuFlyout>
-                                <MenuFlyoutItem x:Name="TreeGetLatest" Text="Get Latest" />
-                                <MenuFlyoutSeparator />
-                                <MenuFlyoutItem x:Name="TreeCheckout" Text="Checkout" />
-                                <MenuFlyoutItem x:Name="TreeCommit" Text="Commit" />
-                                <MenuFlyoutItem x:Name="TreeUndoCheckout" Text="Undo Checkout" />
-                                <MenuFlyoutSeparator />
-                                <MenuFlyoutItem x:Name="TreeAnalyze" Text="Analyze" />
-                                <MenuFlyoutSeparator />
-                                <MenuFlyoutItem x:Name="TreeDelete" Text="Delete" />
-                                <MenuFlyoutItem x:Name="TreeLogicalDelete" Text="Logical Delete" />
-                                <MenuFlyoutItem x:Name="TreePermanentDelete" Text="Permanent Delete" />
-                                <MenuFlyoutItem x:Name="TreeUndelete" Text="UnDelete" />
-                                <MenuFlyoutItem x:Name="TreeLocalDelete" Text="Local Delete" />
-                                <MenuFlyoutSeparator />
-                                <MenuFlyoutItem x:Name="TreeOpenDirectory" Text="Open Directory" />
-                            </MenuFlyout>
-                        </TreeView.ContextFlyout>
-                        <TreeView.ItemTemplate>
-                            <xaml:DataTemplate x:DataType="local:TreeData">
-                                <TreeViewItem Loaded="TreeViewItem_Loaded" Unloaded="TreeViewItem_Unloaded">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Image
-                                            Width="16"
-                                            Height="16"
-                                            Margin="0,0,4,0"
-                                            Source="{x:Bind Icon}" />
-                                        <TextBlock Text="{x:Bind Name}" />
-                                    </StackPanel>
-                                </TreeViewItem>
-                            </xaml:DataTemplate>
-                        </TreeView.ItemTemplate>
-                    </TreeView>
-                </StackPanel>
+                            <TreeView.ContextFlyout>
+                                <MenuFlyout>
+                                    <MenuFlyoutItem x:Name="TreeGetLatest" Text="Get Latest" />
+                                    <MenuFlyoutSeparator />
+                                    <MenuFlyoutItem x:Name="TreeCheckout" Text="Checkout" />
+                                    <MenuFlyoutItem x:Name="TreeCommit" Text="Commit" />
+                                    <MenuFlyoutItem x:Name="TreeUndoCheckout" Text="Undo Checkout" />
+                                    <MenuFlyoutSeparator />
+                                    <MenuFlyoutItem x:Name="TreeAnalyze" Text="Analyze" />
+                                    <MenuFlyoutSeparator />
+                                    <MenuFlyoutItem x:Name="TreeDelete" Text="Delete" />
+                                    <MenuFlyoutItem x:Name="TreeLogicalDelete" Text="Logical Delete" />
+                                    <MenuFlyoutItem x:Name="TreePermanentDelete" Text="Permanent Delete" />
+                                    <MenuFlyoutItem x:Name="TreeUndelete" Text="UnDelete" />
+                                    <MenuFlyoutItem x:Name="TreeLocalDelete" Text="Local Delete" />
+                                    <MenuFlyoutSeparator />
+                                    <MenuFlyoutItem x:Name="TreeOpenDirectory" Text="Open Directory" />
+                                </MenuFlyout>
+                            </TreeView.ContextFlyout>
+                            <TreeView.ItemTemplate>
+                                <xaml:DataTemplate x:DataType="local:TreeData">
+                                    <TreeViewItem Loaded="TreeViewItem_Loaded" Unloaded="TreeViewItem_Unloaded">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Image
+                                                Width="16"
+                                                Height="16"
+                                                Margin="0,0,4,0"
+                                                Source="{x:Bind Icon}" />
+                                            <TextBlock Text="{x:Bind Name}" />
+                                        </StackPanel>
+                                    </TreeViewItem>
+                                </xaml:DataTemplate>
+                            </TreeView.ItemTemplate>
+                        </TreeView>
+                    </ScrollViewer>
+                </Grid>
             </SplitView.Pane>
             <Grid>
                 <Grid.ColumnDefinitions>

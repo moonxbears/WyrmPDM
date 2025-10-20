@@ -15,7 +15,23 @@ namespace HackPDM.Extensions.General;
 
 public static class ExtensionMethods
 {
-    public static T GetAssign<T>(this T obj, Func<T> func) where T : class
+	public static void RemoveFromIndex<T>(this IList<T> list, int index, bool isInclusive = false)
+	{
+		if (list == null || index < 0 || index >= list.Count)
+			return;
+
+		int start = isInclusive ? index : index + 1;
+		if (start >= list.Count)
+			return;
+
+		for (int i = list.Count - 1; i >= start; i--)
+		{
+			list.RemoveAt(i);
+		}
+	}
+
+
+	public static T GetAssign<T>(this T obj, Func<T> func) where T : class
     {
         obj ??= func();
         return obj;
@@ -206,6 +222,8 @@ public static class ExtensionMethods
     {
         return str.Split(["\\", "/"], StringSplitOptions.RemoveEmptyEntries);
 	}
+	public static ObservableCollection<string> SplitByPathObserve(this string str)
+		=> new (str.Split(["\\", "/"], StringSplitOptions.RemoveEmptyEntries));
     public static TArray Split<TArray>(this string str, string[]? delimiters = null, StringSplitOptions options = StringSplitOptions.RemoveEmptyEntries)
         where TArray : IList, new()
     {

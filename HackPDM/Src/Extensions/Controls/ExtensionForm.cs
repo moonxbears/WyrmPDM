@@ -14,6 +14,8 @@ using Control = Microsoft.UI.Xaml.Controls.Control;
 using HackPDM.Src.ClientUtils.Types;
 using CommunityToolkit.WinUI.UI.Controls;
 using System.Collections.ObjectModel;
+using CommunityToolkit.WinUI;
+using HackPDM.Extensions.General;
 //using System.Windows.Controls;
 
 namespace HackPDM.Extensions.Controls;
@@ -156,7 +158,34 @@ public static class ExtensionForm
 		ArgumentNullException.ThrowIfNull(node);
 		return node.Content as T;
 	}
+	public static void UpdateBreadCrumbCollection(this TreeViewNode? cNode, ObservableCollection<TreeData>? collection)
+	{
+		collection?.Clear();
+		if (cNode is null) return;
 
+		var currentNodePath = cNode?.GetNodePath()?.ToList();
+		if (currentNodePath == null) return;
+
+		foreach (var node in currentNodePath)
+		{
+			collection!.Add(node.LinkedData);
+		}
+	}
+	public static IEnumerable<TreeViewNode> GetNodePath(this TreeViewNode? node)
+		=> GetNodePathInternal(node).Reverse();
+	
+	
+	private static IEnumerable<TreeViewNode> GetNodePathInternal(this TreeViewNode? node)
+	{
+		if (node is not null and {Depth: >= 0})
+		{
+			while (node.Depth >= 0)
+			{
+				yield return node;
+				node = node.Parent!;
+			}
+		}
+	}
 	public static IEnumerable<Control> GetAllControls(this Control control)
 	{
 		ArgumentNullException.ThrowIfNull(control);
