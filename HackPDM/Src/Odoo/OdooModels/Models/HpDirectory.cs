@@ -14,7 +14,7 @@ using OClient = HackPDM.Odoo.OdooClient;
 
 namespace HackPDM.Odoo.OdooModels.Models;
 
-public class HpDirectory : HpBaseModel<HpDirectory>
+public partial class HpDirectory : HpBaseModel<HpDirectory>
 {
     internal readonly string[] UsualExcludedFields = [];
     public string name;
@@ -40,6 +40,9 @@ public class HpDirectory : HpBaseModel<HpDirectory>
         this.deleted = deleted;
         this.sandboxed = sandboxed;
     }
+}
+public partial class HpDirectory : HpBaseModel<HpDirectory>
+{
     public static (int, int) LastAvailableDirectory( ArrayList paths )
     {
         Hashtable last = OClient.Command<Hashtable>(GetHpModel(), "last_available_directory", [paths]);
@@ -142,8 +145,9 @@ public class HpDirectory : HpBaseModel<HpDirectory>
             ?  OClient.Command<ArrayList>( GetHpModel(), "get_all_entry_ids", [ directoryId, withDeleted, withSubEntries ], 10000 ) 
             :   null;
     }
-    public static string ConvertToWindowsPath(string pathway, bool withAbsolutePath)
+    public static string? ConvertToWindowsPath(string? pathway, bool withAbsolutePath)
     {
+	    if (pathway is null) return null;
         string[] pathwaySegmented = pathway.Split([" / "], StringSplitOptions.RemoveEmptyEntries);
         if (pathwaySegmented[0] == "root" || pathwaySegmented[0] == HackDefaults.PwaPathRelative)
         {

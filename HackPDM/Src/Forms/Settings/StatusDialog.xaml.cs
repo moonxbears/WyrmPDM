@@ -13,6 +13,7 @@ using HackPDM.Extensions.Controls;
 using HackPDM.Forms.Hack;
 using HackPDM.Helper;
 using HackPDM.Src.ClientUtils.Types;
+using HackPDM.Src.Helper.Xaml;
 
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -171,7 +172,7 @@ public sealed partial class StatusDialog : Page
                         }
                     }
                 }
-                var lvItem = HackFileManager.EmptyListItem<BasicStatusMessage>(messageLog);
+                var lvItem = GridHelp.EmptyListItem<BasicStatusMessage>(messageLog);
 				lvItem.Status = action;
 				lvItem.Message = description;
 				//ColorizeStatus(item, lvItem);
@@ -189,7 +190,7 @@ public sealed partial class StatusDialog : Page
         {
             // we are executing in the UI thread
             GetDataGrid(statusMessage.action, out var collection, out var messageLog);
-            var lvItem = HackFileManager.EmptyListItem<BasicStatusMessage>(messageLog);
+            var lvItem = GridHelp.EmptyListItem<BasicStatusMessage>(messageLog);
             lvItem.Status = statusMessage.action;
             lvItem.Message = statusMessage.description;
             // set background color, based on status action

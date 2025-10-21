@@ -2,9 +2,11 @@ using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -28,6 +30,7 @@ using HackPDM.Odoo.OdooModels;
 using HackPDM.Odoo.OdooModels.Models;
 using HackPDM.Properties;
 using HackPDM.Src.ClientUtils.Types;
+using HackPDM.Src.Helper.Xaml;
 
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
@@ -55,6 +58,20 @@ namespace HackPDM.Forms.Hack;
 /// <summary>
 /// An empty page that can be used on its own or navigated to within a Frame.
 /// </summary>
+
+internal record HackLists
+{
+	internal required DataGrid Entry { get; init; }
+	internal required DataGrid History { get; init; }
+	internal required DataGrid Parents { get; init; }
+	internal required DataGrid Children { get; init; }
+	internal required DataGrid Properties { get; init; }
+	internal required DataGrid Versions { get; init; }
+	internal ImmutableArray<DataGrid> AllLists
+		=> [ Entry, History, Parents, Children, Properties, Versions ];
+	internal ImmutableArray<DataGrid> SubLists
+		=> [ History, Parents, Children, Properties, Versions ];
+}
 public sealed partial class HackFileManager : Page
 {
 	#region Declarations
@@ -63,8 +80,8 @@ public sealed partial class HackFileManager : Page
 	public ObservableCollection<ParentRow> OParents { get; internal set; } = [];
 	public ObservableCollection<ChildrenRow> OChildren { get; internal set; } = [];
 	public ObservableCollection<PropertiesRow> OProperties { get; internal set; } = [];
-	public ObservableCollection<VersionRow> OVersions { get; internal set; }      = [];
-	public ObservableCollection<TreeData> ONodes { get; internal set; }           = [];
+	public ObservableCollection<VersionRow> OVersions { get; internal set; } = [];
+	public ObservableCollection<TreeData> ONodes { get; internal set; } = [];
 
 	public static NotifyIcon Notify { get; } = Notifier.Notify;
 	public static StatusDialog Dialog { get; set; }
@@ -90,33 +107,30 @@ public sealed partial class HackFileManager : Page
 	private static CancellationTokenSource _cTreeSource = new();
 
 	private static ImageSource? _previewImage = null;
-	private static bool IsActive { get; set; } = false;
-	private static int _processCounter;
-	private static int _totalProcessed;
-	private static int _maxCount;
+	internal bool IsActive { get; set; } = false;
+	internal static int _processCounter;
+	internal static int _totalProcessed;
+	internal static int _maxCount;
 
-	// if EntryPollingMs is set to less than or equal to 0 then it will not poll for changes
+	private TreeHelp _treeHelper { get; init; }
+	private GridHelp _gridHelper { get; init; }
+	internal HackLists _hackLists { get; init; }
 	public TreeViewNode? LastSelectedNode { get; set; } = null;
 	public string? LastSelectedNodePath { get; set; } = null;
-	public string[]? LastSelectedNodePaths 
-	{ 
-		get; 
-		set; 
-	}
+	public ObservableCollection<TreeData>? LastSelectedNodePaths { get; set; } = [];
+	// if EntryPollingMs is set to less than or equal to 0 then it will not poll for changes
 	public int EntryPollingMs { get; set; } = 5000;
 
 	internal bool IsTreeLoaded { get; set; } = false;
 	internal bool IsListLoaded { get; set; } = false;
 
-	private HpDirectory _root;
-	private static bool _isClosing = false;
-	private string _swKey;
-	private delegate void BackgroundMethodDel(object sender, DoWorkEventArgs e);
-	private delegate void BackgroundCompleteDel(object sender, RunWorkerCompletedEventArgs e);
-
-	public const string EMPTY_PLACEHOLDER = "-";
+	internal HpDirectory _root;
+	internal static bool _isClosing = false;
+	internal string _swKey;
+	internal delegate void BackgroundMethodDel(object sender, DoWorkEventArgs e);
+	internal delegate void BackgroundCompleteDel(object sender, RunWorkerCompletedEventArgs e);
 	internal static DispatcherQueue HackDispatcherQueue;
-	public TabViewItem? LowerTabIndex
+	internal TabViewItem? LowerTabIndex
 	{
 		get => VersionTabs.SelectedItem as TabViewItem;
 		set => VersionTabs.SelectedItem = value;
@@ -125,24 +139,29 @@ public sealed partial class HackFileManager : Page
 	// temp
 	//public ListView OdooEntryList = new();
 	#endregion
-
-	#region TEST_VARIABLES
-#if DEBUG
-	Stopwatch _stopwatch;
-#endif
-	#endregion
-
 	#region Initializers
 	static HackFileManager() { }
 	public HackFileManager()
 	{
 		InitializeComponent();
+		_treeHelper = new TreeHelp(this);
+		_gridHelper = new GridHelp(this);
+		_hackLists = new()
+		{
+			Entry = OdooEntryList,
+			History = OdooHistory,
+			Parents = OdooParents,
+			Children = OdooChildren,
+			Properties = OdooProperties,
+			Versions = OdooVersionInfoList
+		};
+
 		HackDispatcherQueue = DispatcherQueue.GetForCurrentThread();
 		// DesignTheme();
 		AssignCollections();
 		InitializeEvents();
 		// this.SetFormTheme(StorageBox.MyTheme ?? ThemePreset.DefaultTheme);
-		ResetListViews();
+		GridHelp.ResetListViews(_hackLists.AllLists);
 		OdooDirectoryTree.LostFocus += (s, e) =>
 		{
 			if (OdooDirectoryTree.SelectedNode is null) return;
@@ -175,7 +194,6 @@ public sealed partial class HackFileManager : Page
 			//this.SetFormTheme(ThemePreset.LightTheme);
 		}
 	}
-
 	private void AssignCollections()
 	{
 		OdooDirectoryTree.ItemsSource = ONodes;
@@ -190,10 +208,9 @@ public sealed partial class HackFileManager : Page
 
 		OdooDirectoryBreadcrumb.ItemsSource = LastSelectedNodePaths;
 	}
-
 	private void InitializeEvents()
 	{
-		OdooDirectoryBreadcrumb.ItemClicked	+= OdooDirectoryBreadcrumb_ItemClicked;
+		OdooDirectoryBreadcrumb.ItemClicked += OdooDirectoryBreadcrumb_ItemClicked;
 
 		OdooDirectoryTree.SelectionChanged += OdooDirectoryTree_SelectionChanged;
 
@@ -206,6 +223,7 @@ public sealed partial class HackFileManager : Page
 		OVersions.CollectionChanged += CollectionChanged;
 
 		OdooEntryList.SelectionChanged += OdooEntryList_SelectionChanged;
+		OdooEntryList.Sorting += List_ColumnClick;
 		TreeAnalyze.Click += (sender, args) => { };
 		TreeCheckout.Click += Tree_Click_Checkout;
 		TreeCommit.Click += Tree_Click_Commit;
@@ -227,8 +245,28 @@ public sealed partial class HackFileManager : Page
 		ListFileDirectory.Click += List_Click_OpenDirectory;
 		OdooHistory.SelectionChanged += OdooHistory_ItemSelectionChanged;
 		OdooRefreshDropdown.Click += AdditionalTools_Click_Refresh;
+		OdooParents.SelectionChanged += OdooParents_ItemSelectionChanged;
+		OdooChildren.SelectionChanged += OdooChildren_ItemSelectionChanged;
 	}
-
+	private async Task HackFileManager_Load()
+	{
+		await Task.Delay(500);
+		await _treeHelper.CreateTreeViewBackground(OdooDirectoryTree);
+	}
+	internal TreeView GetOdooDirectoryTree()
+		=> OdooDirectoryTree;
+	internal DataGrid GetOdooEntryList()
+			=> OdooEntryList;
+	internal void RestartEntries() => _treeHelper.RestartEntries(OdooDirectoryTree, OdooEntryList);
+	#endregion
+	#region TEST_VARIABLES
+#if DEBUG
+	internal Stopwatch _stopwatch;
+#endif
+	#endregion
+}
+public sealed partial class HackFileManager : Page
+{
 	private void OdooDirectoryBreadcrumb_ItemClicked(BreadcrumbBar sender, BreadcrumbBarItemClickedEventArgs args)
 	{
 		var tData = args.Item as TreeData;
@@ -245,1115 +283,15 @@ public sealed partial class HackFileManager : Page
 			child.IsExpanded = false;
 		}
 	}
-
 	private async void Tree_Click_Undelete(object sender, RoutedEventArgs e)
 	{
 		await UnDeleteInternal();
 	}
-
 	private void CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
 	{
 		// TASK: implement
 	}
-
-	private async Task HackFileManager_Load()
-	{
-		await Task.Delay(500);
-		await CreateTreeViewBackground();
-	}
-
-	private void FormLoaded(object sender, EventArgs e)
-	{
-	}
-	private async Task CreateTreeViewBackground()
-	{
-		await LoadOdooDirectoryTree();
-		// BackgroundWorker worker = new()
-		// {
-		// 	WorkerSupportsCancellation = true
-		// };
-		// //worker.DoWork += new DoWorkEventHandler(LoadOdooDirectoryTree);
-		// //worker.RunWorkerAsync();
-		//
-		// bool blnWorkCanceled = false;
-		// if (blnWorkCanceled) worker.CancelAsync();
-	}
-	private async Task LoadOdooDirectoryTree()
-	{
-		IsTreeLoaded = false;
-
-		try
-		{
-			await SafeInvokerAsync(OdooDirectoryTree, async void () =>
-			{
-				try
-				{
-					await CreateTreeHash(_root);
-					// Debug.WriteLine("");
-					// foreach (EntryRow row in OdooDirectoryTree.ItemsSource as ObservableCollection<EntryRow>)
-					// {
-					// 	Debug.WriteLine(row.Name);
-					// }
-					// Debug.WriteLine("");
-					CreateLocalTree(OdooDirectoryTree);
-
-					if (LastSelectedNode != null)
-					{
-						LastSelectedNode = OdooDirectoryTree.FindTreeNode(LastSelectedNodePath)?.Node;
-					}
-
-					var tData = OdooDirectoryTree.RootNodes;
-					foreach (var n in tData)
-					{
-						n.LinkedData.SortTree();
-					}
-
-					LastSelectedNode?.LinkedData.EnsureVisible(OdooDirectoryTree);
-				}
-				catch (Exception e)
-				{
-					Debug.Fail(e.Message);
-				}
-			});
-			IsTreeLoaded = true;
-		}
-		catch (Exception exception)
-		{
-			Debug.WriteLine(exception);
-		}
-
-
-
-		//SafeInvoke(OdooEntryImage, () =>
-		//{
-		//	//OdooEntryImage.Image = null;
-		//});
-	}
-	private Dictionary<string, object> ConvertSubDirectories(Hashtable ht)
-	{
-		Dictionary<string, object> keyValues = new()
-		{
-			["id"] = ht["id"],
-			["name"] = ht["name"],
-		};
-
-
-		Hashtable directories = (Hashtable)ht["directories"];
-
-		Dictionary<string, IDictionary> children = [];
-		foreach (DictionaryEntry value in directories)
-		{
-			if (value.Value is Hashtable childDirectory)
-			{
-				children.Add((string)value.Key, ConvertSubDirectories(childDirectory));
-			}
-		}
-		keyValues["directories"] = children;
-		return keyValues;
-	}
-	private void InitListViewInternal(DataGrid grid, ListDetail rows)
-	{
-		var collect = grid.ItemsSource as IList;
-		collect?.Clear();
-		//grid.Columns.Clear();
-		//SafeInvoker(grid, () => { });
-	}
-	private void InitListViewInternal(ListView list, ListDetail rows)
-		=> InitListView(list, rows);
-	internal static void InitListView(ItemsControl control, ListDetail? rows)
-		=> SafeInvoker(control, () =>
-		{
-			try
-			{
-				if (control.ItemsSource is IList collect)
-				{
-					collect?.Clear();
-				}
-			}
-			catch
-			{
-			}
-		});
-	internal static void InitGridView(ItemsControl control) => InitListView(control, null);
-	//internal static void InitListViewPercentage(ListView list, ListDetail rows)
-	//{
-	//	SafeInvokeGen(list, rows, (row) =>
-	//	{
-	//		list.ItemsSource = null;
-	//		List<ColumnHeader> offsets = [];
-	//		int unUsedPercentage = 100;
-	//		foreach (ColumnInfo item in row.SortColumnOrder)
-	//		{
-	//			if (item.Width == 0)
-	//			{
-	//				offsets.Add(list.Columns.Add(item.Name, item.Name));
-	//			}
-	//			else
-	//			{
-	//				int use = (int)(list.Size.Width * (item.Width / 100f));
-	//				list.Columns.Add(item.Name, item.Name, use);
-	//				unUsedPercentage -= item.Width;
-	//			}
-	//		}
-	//		int totalItems = offsets.Count;
-	//		int distNum = unUsedPercentage / totalItems;
-	//		foreach (var column in offsets)
-	//		{
-	//			if (distNum <= unUsedPercentage)
-	//			{
-	//				column.Width = (int)(list.Size.Width * (distNum / 100f));
-	//				unUsedPercentage -= distNum;
-	//			}
-	//			else
-	//			{
-	//				column.Width = (int)(list.Size.Width * (unUsedPercentage / 100f)); ;
-	//				unUsedPercentage = 0;
-	//			}
-	//		}
-	//		list.ListViewItemSorter = row.SortRowOrder.Sort;
-	//	});
-	//}
-	internal static T EmptyListItemInternal<T>(ListView list) where T : new()
-		=> EmptyListItem<T>(list);
-	internal static T EmptyListItemInternal<T>(DataGrid grid) where T : new()
-		=> EmptyListItem<T>(grid);
-	internal static T EmptyGridTable<T>(ItemsControl grid) where T : new()
-		=> EmptyListItem<T>(grid);
-	internal static T EmptyListItem<T>(ItemsControl list) where T : new()
-	{
-		T entry = new();
-		SafeInvoker(list, () =>
-		{
-			if (list.ItemsSource is ObservableCollection<T> entries)
-			{
-				entries.Add(entry);
-				list.ItemsSource = entries;
-			}
-			else
-			{
-				list.ItemsSource = new ObservableCollection<T>() { entry };
-			}
-		});
-		return entry;
-	}
-	internal static T EmptyListItem<T>(DataGrid grid) where T : new()
-	{
-		T entry = new();
-
-		if (grid.ItemsSource is ObservableCollection<T> entries)
-		{
-			entries.Add(entry);
-			grid.ItemsSource = entries;
-		}
-		else
-		{
-			grid.ItemsSource = new ObservableCollection<T>() { entry };
-		}
-		return entry;
-	}
-	private void ResetSubListViews()
-	{
-		InitListViewInternal(OdooHistory, ColumnMap.HistoryRows);
-		InitListViewInternal(OdooParents, ColumnMap.ParentRows);
-		InitListViewInternal(OdooChildren, ColumnMap.ChildrenRows);
-		InitListViewInternal(OdooProperties, ColumnMap.PropertiesRows);
-		InitListViewInternal(OdooVersionInfoList, ColumnMap.VersionInfoRows);
-	}
-	private void ResetListViews()
-	{
-		InitListViewInternal(OdooEntryList, ColumnMap.RowWidths);
-		InitListViewInternal(OdooHistory, ColumnMap.HistoryRows);
-		InitListViewInternal(OdooParents, ColumnMap.ParentRows);
-		InitListViewInternal(OdooChildren, ColumnMap.ChildrenRows);
-		InitListViewInternal(OdooProperties, ColumnMap.PropertiesRows);
-		InitListViewInternal(OdooVersionInfoList, ColumnMap.VersionInfoRows);
-	}
-	private void ClearEntryLists()
-	{
-		//OdooHistory.Clear();
-		(OdooHistory.ItemsSource as IList)?.Clear();
-		//OdooParents.Clear();
-		(OdooParents.ItemsSource as IList)?.Clear();
-		//OdooChildren.Clear();
-		(OdooChildren.ItemsSource as IList)?.Clear();
-		//OdooProperties.Clear();
-		(OdooProperties.ItemsSource as IList)?.Clear();
-	}
-	public void RefreshEntries()
-	{
-		SafeInvoker(OdooEntryList, OdooEntryList.UpdateLayout);
-	}
-	internal TreeView GetOdooDirectoryTree()
-		=> OdooDirectoryTree;
-	internal DataGrid GetOdooEntryList()
-		=> OdooEntryList;
-	#endregion
-
-	#region TreeView functions
-	// tree view directories
-	private async Task<(Hashtable entries, Dictionary<string, Task<HackFile>> hackmap)> GetHackAndEntry(int? directoryId)
-	{
-		if (directoryId is null) return (null, null);
-		Hashtable entries = await Task.Run(() => HpDirectory.GetEntries(directoryId, IsActive));
-		Dictionary<string, Task<HackFile>> hackFileMap = await GetFileMap(entries);
-		return (entries, hackFileMap);
-	}
-	private async Task TreeSelectItem(TreeViewNode node, CancellationToken token = default)
-	{
-		IsListLoaded = false;
-		await AsyncHelper.WaitUntil(() => IsTreeLoaded, 100, -1, token);
-		node.LinkedData.EnsureVisible(OdooDirectoryTree);
-		InitListViewInternal(OdooEntryList, ColumnMap.RowWidths);
-
-		try
-		{
-			TreeData? tData = node?.Content as TreeData;
-			if (tData is not null)
-			{
-				if (tData?.DirectoryId is null or 0)
-				{
-					// add file entries to folder
-					AddLocalEntries(node);
-					return;
-				}
-
-				token.ThrowIfCancellationRequested();
-				(Hashtable entries, Dictionary<string, Task<HackFile>> hackmap) = await GetHackAndEntry(tData.DirectoryId);
-				token.ThrowIfCancellationRequested();
-				AddRemoteEntries(entries, hackmap);
-				ListView items = new();
-
-				AddLocalEntries(LastSelectedNode, hackmap);
-
-				OEntries.Sort((EntryRow x, EntryRow y) => string.Compare(x.Name, y.Name));
-			}
-			IsListLoaded = true;
-		}
-		catch { }
-	}
-	private async Task<bool> TreeItemsChangedPolling(int timeout = -1, CancellationToken token = default)
-	{
-		while (!token.IsCancellationRequested && EntryPollingMs > 0)
-		{
-			bool isLoaded = await AsyncHelper.WaitUntil(() => IsTreeLoaded && IsListLoaded, 1000, -1, token);
-
-			if (!isLoaded || LastSelectedNode is null) continue;
-
-			await Task.Delay(EntryPollingMs, token);
-		}
-		return false;
-	}
-	private async Task CreateTreeHash(HpDirectory directory)
-	{
-		await AddDirectoriesToTree(directory.GetSubdirectories(false));
-	}
-	private void CreateLocalTree(in TreeView treeView)
-	{
-		Dictionary<string, TreeViewNode> treeDict = Help.ConvertTreeToDictionary(treeView);
-		IEnumerable<string> pathways = Directory.EnumerateDirectories(HackDefaults.PwaPathAbsolute, "*", SearchOption.AllDirectories);
-		pathways = Help.FastSlice(pathways, HackDefaults.PwaPathAbsolute.Length, prependText: "root");
-
-		foreach (string pathway in pathways)
-		{
-			string[] paths = pathway.Split('\\');
-			(int, TreeViewNode?) validIndexNode = Help.LastValidTreeIndex(in pathway, in paths, treeDict);
-			// the last valid index does not go to the end meaning it didn't find the
-			// remaining paths
-			if (validIndexNode.Item1 != paths.Length - 1)
-			{
-				AddLocalDirectories(validIndexNode.Item2, paths.AsSpan(validIndexNode.Item1 + 1), treeDict);
-			}
-		}
-	}
-	private void AddLocalDirectories(TreeViewNode node, Span<string> pathway, Dictionary<string, TreeViewNode> treeDict)
-	{
-		string[] paths = [.. pathway];
-		SafeInvoker(OdooDirectoryTree, () =>
-		{
-			for (int i = 0; i < paths.Length; i++)
-			{
-				var parentData = node?.Content as TreeData;
-				TreeViewNode tNode = new();
-				var newNode = tNode.LinkedData;
-				newNode.Name = paths[i];
-				newNode.Icon = Assets.GetImage("simple-folder-icon_32.gif") as BitmapImage;
-				newNode.DirectoryId = 0;
-
-				node.Children.Add(tNode);
-				treeDict.TryAdd(newNode?.FullPath ?? "", tNode);
-				//treeDict.Add(parentData?.FullPath ?? "", node);
-			}
-		});
-
-	}
-	private async Task AddDirectoriesToTree(Hashtable entries)
-	{
-		await SafeInvokerAsync(OdooDirectoryTree, () =>
-		{
-			OdooDirectoryTree.RootNodes.Clear();
-			var child = RecurseAddNodesAsync(entries);
-			child.Wait();
-			if (child.Result.Item1 is null) return;
-			OdooDirectoryTree.RootNodes.Add(child.Result.Item1);
-		});
-	}
-	private static async Task<(TreeViewNode?, TreeData)> RecurseAddNodesAsync(Hashtable node, int depth = 0)
-	{
-		// add container node (directory name)
-
-		// refresh to show active changes
-		// add children
-		TreeViewNode treeNodeName = new();
-		if (node["directories"] is Hashtable { Count: > 0 } directory)
-		{
-			foreach (DictionaryEntry pair in directory)
-			{
-				if (pair.Value is not Hashtable childDirectory) continue;
-				var child = await RecurseAddNodesAsync(childDirectory, depth + 1);
-				if (child.Item1 is not null) treeNodeName.Children.Add(child.Item1);
-			}
-		}
-		var dat = treeNodeName.LinkedData;
-		dat.Name = node["name"] as string;
-		dat.DirectoryId = node["id"] as int?;
-		// if treeNode == null then it will be the root node
-		string? fullPath;
-		if (dat.FullPath is null)
-			fullPath = dat?.Name;
-		else
-			fullPath = dat?.FullPath;
-		string path = HackDefaults.DefaultPath(fullPath ?? "root", true);
-
-		if (!Directory.Exists(path))
-		{
-			dat.Icon = Assets.GetImage("folder-icon_remoteonly_32") as BitmapImage;
-		}
-
-		return (treeNodeName, dat);
-	}
-	public void RefreshTree()
-		=> SafeInvoker(OdooDirectoryTree, OdooDirectoryTree.UpdateLayout);
-	public async Task RestartTree()
-		=> await CreateTreeViewBackground();
-	public void RestartEntries()
-	{
-		SafeInvoker(OdooDirectoryTree, async () => await TreeSelectItem(LastSelectedNode));
-		SafeInvoker(OdooEntryList, async () =>
-		{
-			await AsyncHelper.WaitUntil(() => IsListLoaded);
-			if (OdooEntryList.SelectedItems is not null and { Count: > 0 } items)
-			{
-				var entry = items[0] as EntryRow;
-				if (entry is not null) OdooEntryList.ScrollIntoView(entry, OdooEntryList.Columns.First());
-			}
-		});
-	}
-	#endregion
-
-	#region Tree Item Selection
-	private void FindUpdatedEntries(TreeViewNode node, Hashtable entries, Dictionary<string, Task<HackFile>> hackFileMap)
-	{
-		// things to check for:
-		// 1. if the entry is in the entries hashtable
-		// 2. if the entry is in the hackFileMap
-		// 3. if the entry is not in the entries hashtable but is in the hackFileMap
-		// 4. if the entry is not in the hackFileMap but is in the entries hashtable
-		// 5. if the entry is not in either the entries hashtable or the hackFileMap
-		// 6. if the entry is in both the entries hashtable and the hackFileMap but has been modified locally
-		// 7. if the entry is in both the entries hashtable and the hackFileMap but has been modified remotely
-
-		HackFile[] files = GetHackNonEntries(node, hackFileMap);
-		ObservableCollection<EntryRow> items = OdooEntryList.ItemsSource as ObservableCollection<EntryRow>;
-		if (items is null) return;
-
-		foreach (EntryRow item in items)
-		{
-			// this means that the item is not in the entries hashtable
-			if (item.Id is null or 0)
-			{
-			}
-			else
-			{
-				//Hashtable entry = entries.TakeWhere(e => e.Value is Hashtable ht && (ht["id"] as int?) == item.ID);
-			}
-		}
-
-	}
-	private HackFile[]? GetHackNonEntries(TreeViewNode node, Dictionary<string, Task<HackFile>> hackFileMap)
-	{
-		string path = HackDefaults.DefaultPath((node.Content as TreeData)?.FullPath, true);
-		if (!Directory.Exists(path)) return null;
-
-		HackFile[] files;
-
-		bool hasEntries = hackFileMap != null;
-		if (hasEntries) files = FileOperations.FilesInDirectory(path, hackFileMap); //, out Dictionary<string, Hashtable> conflictPaths);
-		else files = FileOperations.FilesInDirectory(path);
-		return files;
-	}
-	private async void AddRemoteEntries(Hashtable entries, Dictionary<string, Task<HackFile>> hackFileMap)
-	{
-#if DEBUG
-		_stopwatch = Stopwatch.StartNew();
-#endif
-		foreach (DictionaryEntry pair in entries)
-		{
-			await AddRemoteEntry(pair, hackFileMap);
-		}
-#if DEBUG
-		_stopwatch.Stop();
-		Console.WriteLine($"remote entries time: {_stopwatch.Elapsed}");
-#endif
-	}
-	private async Task AddRemoteEntry(DictionaryEntry pair, Dictionary<string, Task<HackFile>> hackFileMap)
-	{
-		if (pair.Value is not Hashtable table) return;
-
-		//ListViewItem item = EmptyListItemInternal(OdooEntryList);
-		EntryRow item = new();
-		item.Id = table["id"] as int?;
-
-		//item.SubItems.Add(((int)table["id"]).ToString());
-		item.Name = pair.Key.ToString();
-
-		object ttype = table["type"];
-		item.Type = ttype is string ttypeString ? ttypeString : EMPTY_PLACEHOLDER;
-
-		//double size = (double)( Convert.ToDouble(table["size"]) * HackDefaults.ByteSizeMultiplier );
-		item.Size = Convert.ToInt64(table["size"]);
-
-
-		int? checkout = table["checkout"] as int?;
-		item.Checkout = checkout is null or 0 ? null : OdooDefaults.IdToUser.TryGetValue(checkout ?? 0, out HpUser? user) ? user : null;
-
-		// check if latest checksum
-		string status = "";
-		string? fullName = table["fullname"] as string;
-		HackFile hack = null;
-		if (!string.IsNullOrWhiteSpace(fullName)) hack = hackFileMap[fullName].Result;
-
-		//string latest = EmptyPlaceholder;
-		item.LatestId = table["latest"] as int?;
-		string datePlace = table["latest_date"] is not string latest ? EMPTY_PLACEHOLDER : latest;
-
-		item.RemoteDate = DateTime.TryParse(datePlace, out DateTime remoteDate) && remoteDate != default ? remoteDate : null;
-		// 2006-12-15 01:43:49.623
-
-		item.LocalDate = hack?.ModifiedDate.Year is null or 1 ? null : hack?.ModifiedDate;
-
-		// remote only
-		// local only
-		// new remote version
-		// checked out to me
-		// checked out to other
-		// ignore filter
-		// no remote file type
-		// local modification
-		// deleted
-		// destroyed
-
-		if (table["deleted"] is bool deleted && !deleted)
-		{
-			if (checkout != 0)
-			{
-				// cm = checked out to me
-				// co = checked out to other
-				status = checkout == OdooDefaults.OdooId ? "cm" : "co";
-			}
-			else
-			{
-				switch (table["latest_checksum"])
-				{
-					case bool:
-						{
-							status = "lo";
-							break;
-						}
-					case string latestChecksum:
-						{
-							if (hack?.Checksum == null) status = "ro";
-							else if (hack.Checksum == latestChecksum) status = "ok";
-							else
-							{
-								// either the local version is newer or the remote version is newer
-								// because the checksums don't match
-								status = remoteDate > hack.ModifiedDate ? "nv" : "lm";
-							}
-							break;
-						}
-					default: status = "lo"; break;
-				}
-			}
-		}
-		else
-		{
-			status = "dt";
-		}
-
-
-		// get or add image key
-
-		string strKey = status != "ok" ? $"{item.Type}.{status}" : item.Type;
-		BitmapImage? image = Assets.GetImage(strKey) as BitmapImage;
-
-		if (image is null)
-		{
-			// image key not present in ilListIcons
-			BitmapImage? imgExt = Assets.GetImage(item.Type) as BitmapImage;
-
-			if (imgExt == null)
-			{
-				if (OdooDefaults.ExtToType.TryGetValue($".{item.Type}", out var hpType))
-				{
-					// get remote image
-					imgExt = new();
-					using var stream = new InMemoryRandomAccessStream();
-					using var writer = new DataWriter(stream);
-					try
-					{
-						byte[] imgBytes = FileOperations.ConvertFromBase64(hpType.icon);
-						writer.WriteBytes(imgBytes);
-						await writer.StoreAsync();
-						await writer.FlushAsync();
-						writer.DetachStream();
-
-						stream.Seek(0);
-						await imgExt.SetSourceAsync(stream);
-					}
-					catch
-					{
-					}
-				}
-
-				if (imgExt == null)
-				{
-					imgExt = Assets.GetImage("default") as BitmapImage;
-				}
-				//else
-				//{
-				//	Assets.SetImage(item.Type, imgExt);
-				//}
-			}
-
-			// get status image
-
-			if (status == "ok")
-			{
-				if (imgExt is null) strKey = "default";
-			}
-			else
-			{
-				BitmapImage? imgStatus = Assets.GetImage(status) as BitmapImage;
-
-				// combine images
-				if (imgExt is not null && imgStatus is not null)
-				{
-					Assets.SetImage(strKey, (await ImageUtils.OverlayBitmapImagesAsync(imgExt, imgStatus)));
-				}
-				else
-				{
-					strKey = "default";
-				}
-			}
-		}
-		item.Icon = Assets.GetImage(strKey) as BitmapImage;
-
-		item.Status = Enum.Parse<FileStatus>(status, true);
-		string category = table["category"] is string cat ? cat : EMPTY_PLACEHOLDER;
-		item.Category = OdooDefaults.HpCategories.Where(c => c.name.Equals(category)).First();
-
-		item.FullName = fullName;
-
-		SafeInvoker(OdooEntryList, () => OdooEntryList.ItemAdd(item));
-	}
-	private async void AddLocalEntries(TreeViewNode node, Dictionary<string, Task<HackFile>> hackFileMap = null)
-	{
-#if DEBUG
-		_stopwatch = Stopwatch.StartNew();
-#endif
-
-		HackFile[] files = GetHackNonEntries(node, hackFileMap);
-
-		if (files is null) return;
-		foreach (HackFile file in files)
-		{
-			await AddLocalEntry(node, file);
-		}
-
-#if DEBUG
-		_stopwatch.Stop();
-		Console.WriteLine($"local entries time: {_stopwatch.Elapsed}");
-#endif
-	}
-	private async Task AddLocalEntry(TreeViewNode node, HackFile file)
-	{
-		if (file is null) return;
-		string type = file.TypeExt.ToLower();
-		string status = "lo";
-
-		if (OdooDefaults.RestrictTypes & !OdooDefaults.ExtToType.TryGetValue(type, out var hpType))
-		{
-			status = "ft";
-		}
-		if (OdooDefaults.RestrictTypes & OdooDefaults.ExtToFilter.TryGetValue(type, out var filterType))
-		{
-			status = "if";
-		}
-
-		type = type[1..];
-
-		EntryRow item = new();
-		item.Id = null;
-		item.Name = file.Name;
-
-
-		item.Type = type;
-
-		//double size =  (double)( file.FileSize * HackDefaults.ByteSizeMultiplier );
-		item.Size = file.FileSize;
-
-		item.LocalDate = file.ModifiedDate;
-		item.RemoteDate = null;
-		item.Status = FileStatus.Lo;
-
-
-		// get or add image key
-		string strKey = $"{type}.{status}";
-		BitmapImage? image = Assets.GetImage(strKey) as BitmapImage;
-
-		if (image == null)
-		{
-			// image key not present in ilListIcons
-			BitmapImage? imgExt = Assets.GetImage(item.Type) as BitmapImage;
-			if (imgExt == null)
-			{
-				// get remote image
-				imgExt = new();
-				using var stream = new InMemoryRandomAccessStream();
-				using var writer = new DataWriter(stream);
-				try
-				{
-					byte[] imgBytes = FileOperations.ConvertFromBase64(hpType?.icon ?? "");
-					writer.WriteBytes(imgBytes);
-					await writer.StoreAsync();
-					await writer.FlushAsync();
-					writer.DetachStream();
-
-					stream.Seek(0);
-					await imgExt.SetSourceAsync(stream);
-				}
-				catch
-				{
-				}
-
-			}
-
-			// get status image
-			BitmapImage? imgStatus = Assets.GetImage(status) as BitmapImage;
-
-			// combine images
-			if (imgExt is not null && imgStatus is not null)
-			{
-				Assets.SetImage(strKey, (await ImageUtils.OverlayBitmapImagesAsync(imgExt, imgStatus)));
-			}
-			else
-			{
-				strKey = "default";
-			}
-		}
-		try
-		{
-			item.Icon = Assets.GetImage(strKey) as BitmapImage;
-		}
-		catch { Debug.WriteLine("Can't load icon image"); }
-
-		item.Checkout = null;
-		HpCategory? nameCategory = OdooDefaults.ExtToCat.TryGetValue($".{type}", out var cat) ? cat : null;
-		item.Category = nameCategory;
-		item.FullName = file.FullPath;
-
-		//OdooEntryList.Items.Add(item);
-		UpdateListAsync(OdooEntryList, item);
-	}
-
-	#endregion
-
-	#region List Item Selection
-	private async Task<HpVersion[]?> ProcessHistorySelectAsync(EntryRow? entry, CancellationToken token, bool listVersions = true)
-	{
-		HpVersion[]? versions = null;
-		if (entry is null) return null;
-		if (entry.Id != null)
-		{
-			versions = await GetVersionsForEntryAsync(entry.Id ?? 0, ["preview_image", "file_contents"], insertedFields: ["create_uid"]);
-		}
-		if (!listVersions) return versions;
-
-		token.ThrowIfCancellationRequested();
-		await SafeInvokerAsync(OdooVersionInfoList, () => PopulateHistory(versions ?? []));
-		return versions;
-	}
-	private async Task<List<HpVersionProperty[]?>?> ProcessPropertiesSelectAsync(EntryRow? entry, CancellationToken token, bool listProperties = true)
-	{
-		if (entry is null) return null;
-		if (entry.Id == null) return null;
-
-		HpVersion[]? versions = await GetVersionsForEntryAsync(entry.Id ?? 0, ["preview_image", "file_contents"], insertedFields: ["create_uid"]);
-		token.ThrowIfCancellationRequested();
-		return await ProcessPropertiesSelectInternalAsync(versions, token, listProperties);
-	}
-	private async Task<List<HpVersionProperty[]?>> ProcessPropertiesSelectInternalAsync(HpVersion[]? versions, CancellationToken token, bool listProperties = true)
-	{
-		List<HpVersionProperty[]>? versionProperties = null;
-		if (versions != null && versions.Length > 0)
-		{
-			versionProperties = await HpVersion.GetAllVersionPropertiesAsync(versions.ToArrayListIDs());
-		}
-		if (!listProperties || (versionProperties is null or { Count: < 1 })) return versionProperties;
-		token.ThrowIfCancellationRequested();
-		await SafeInvokerAsync(OdooProperties, () => PopulateProperties(versionProperties ?? []));
-		return versionProperties;
-	}
-	private async Task<HpVersion[]?> ProcessParentSelectAsync(EntryRow? entry, CancellationToken token, bool listParents = true)
-	{
-		HpVersion[]? parentVersions = null;
-		int? versionId;
-
-		switch (entry)
-		{
-			case null: return null;
-
-			case { LatestId: not (null or 0) }:
-				{
-					versionId = entry!.LatestId;
-					break;
-				}
-			case { Id: not (null or 0) }:
-				{
-					versionId = await HpEntry.GetFieldValueAsync<int>(entry.Id ?? 0, "latest_version_id");
-					break;
-				}
-
-			default: return null;
-		}
-
-
-		if (versionId != null)
-		{
-			parentVersions =
-				await HpVersionRelationship.GetRelatedRecordsBySearchAsync<HpVersion>([new ArrayList()
-					{
-						"child_id", "=", versionId
-					}], "parent_id",
-					excludedFields: ["preview_image", "node_id", "entry_id", "file_modify_stamp", "checksum", "file_contents"],
-					insertFields: ["directory_complete_name"]
-				);
-		}
-		if (!listParents || (parentVersions is null or { Length: < 1 })) return parentVersions;
-		token.ThrowIfCancellationRequested();
-		await SafeInvokerAsync(OdooParents, () => PopulateParent(parentVersions ?? []));
-		return parentVersions;
-	}
-	private async Task<HpVersion[]?> ProcessChildSelectAsync(EntryRow? entry, CancellationToken token, bool listChildren = true)
-	{
-		HpVersion[]? childVersions = null;
-		if (entry is null) return null;
-		if (entry.Id == null) return null;
-
-		int versionId = await HpEntry.GetLatestIDAsync(entry.Id ?? 0);
-		if (versionId == 0) return null;
-
-		childVersions =
-			await HpVersionRelationship.GetRelatedRecordsBySearchAsync<HpVersion>([new ArrayList()
-				{
-					"parent_id", "=", versionId
-				}], "child_id",
-				excludedFields: ["preview_image", "node_id", "entry_id", "file_modify_stamp", "checksum", "file_contents"],
-				insertFields: ["directory_complete_name"]
-			);
-
-		if (!listChildren || (childVersions is null or { Length: < 1 })) return childVersions;
-		token.ThrowIfCancellationRequested();
-		await SafeInvokerAsync(OdooChildren, () => PopulateChildren(childVersions ?? []));
-		return childVersions;
-	}
-	private async Task<HpVersion?> ProcessInfoSelectAsync(EntryRow? entry, CancellationToken token, bool listVersionInfo = true)
-	{
-		HpVersion? versionInfo = null;
-		if (entry is null) return null;
-		if (entry.Id == null) return null;
-
-		versionInfo = entry?.LatestId is null 
-			? (await HpEntry.GetRelatedRecordByIdsAsync<HpVersion>(
-				[entry?.Id ?? 0], 
-				"latest_version_id", 
-				excludedFields: ["preview_image", "file_contents"]))?.First() 
-			: HpVersion.GetRecordById(entry!.LatestId ?? 0, ["preview_image", "file_contents"]);
-
-		if (!listVersionInfo || versionInfo is null) return versionInfo;
-		token.ThrowIfCancellationRequested();
-		await SafeInvokerAsync(OdooVersionInfoList, () => PopulateVersionInfo(versionInfo));
-		return versionInfo;
-	}
-	private async Task ProcessEntrySelectionAsync(EntryRow? entry, CancellationToken token, bool listLatestVersionInfo = false)
-	{
-		if (entry is null) return;
-
-		switch(LowerTabIndex?.Name)
-		{
-			case nameof(HistoryTab):
-				await ProcessHistorySelectAsync(entry, token);
-				break;
-			case nameof(ParentTab):
-				await ProcessParentSelectAsync(entry, token);
-				break;
-			case nameof(ChildTab):
-				await ProcessChildSelectAsync(entry, token);
-				break;
-			case nameof(PropertiesTab):
-				await ProcessPropertiesSelectAsync(entry, token);
-				break;
-			case nameof(InfoTab):
-				await ProcessInfoSelectAsync(entry, token);
-				break;
-		}
-
-		token.ThrowIfCancellationRequested();
-
-		if (entry.LatestId is int id)
-		{
-			PreviewImage(id);
-		}
-	}
-	private async void UpdateListAsync<T>(DataGrid list, T item)
-	{
-		await Task.Yield();
-		SafeInvoker(list, () => list.ItemAdd(item));
-	}
-	private HpVersion[]? GetVersionsForEntry(int entryId, string[] excludedFields = null, string[] insertedFields = null)
-		=> GetVersionsForEntryAsync(entryId, excludedFields, insertedFields).GetAwaiter().GetResult();
-	private async Task<HpVersion[]?> GetVersionsForEntryAsync(int entryId, string[] excludedFields = null, string[] insertedFields = null)
-	{
-		HpVersion[] versions = [];
-		ArrayList ids = [entryId];
-		ArrayList al = await OClient.ReadAsync(HpEntry.GetHpModel(), ids, ["version_ids"], 10000);
-		if (al != null && al.Count > 0)
-		{
-			Hashtable ht = (Hashtable)al[0];
-			ArrayList result = (ArrayList)ht["version_ids"];
-			excludedFields ??= ["preview_image", "file_contents"];
-			versions = await HpVersion.GetRecordsByIdsAsync(result, excludedFields: excludedFields, insertFields: insertedFields);
-		}
-		return versions;
-	}
-
-	private static async Task<Dictionary<string, Task<HackFile>>> GetFileMap(Hashtable entries)
-	{
-		// need to check local files
-		List<Task<HackFile>> hackTasks = new(entries.Count);
-		Dictionary<string, Task<HackFile>> hackFileMap = new(entries.Count);
-
-		foreach (DictionaryEntry pair in entries)
-		{
-			Hashtable ht = (Hashtable)pair.Value;
-			string filepath = (string)((Hashtable)pair.Value)["fullname"];
-
-			Task<HackFile> hackTask = HackBaseFile
-				.GetHackFileAsync<HackFile>(HpDirectory
-					.ConvertToWindowsPath(filepath, true));
-
-			hackFileMap.Add(filepath, hackTask);
-			hackTasks.Add(hackTask);
-		}
-		await Task.WhenAll(hackTasks);
-		//Task.WaitAll(hackTasks.ToArray());
-		return hackFileMap;
-	}
-
-	private void PopulateProperties(in List<HpVersionProperty[]> allProperties)
-	{
-		//"Version", 50
-		//"Configuration", 100
-		//"Property", 140
-		//"Value", 400
-		//"Type", 140
-		object lockObject = new();
-		lock (lockObject)
-		{
-
-			if (allProperties == null) return;
-			SafeInvokeGen(OdooProperties, allProperties, (allp) =>
-			{
-				InitListViewInternal(OdooProperties, ColumnMap.PropertiesRows);
-				foreach (HpVersionProperty[] versionProperties in allp)
-				{
-					if (versionProperties == null || versionProperties.Length == 0) continue;
-
-					foreach (HpVersionProperty versionProp in versionProperties)
-					{
-						if (versionProp == null || versionProp.Id == 0) continue;
-
-						var item = EmptyListItemInternal<PropertiesRow>(OdooProperties);
-
-						item.Version = versionProp.version_id;
-						item.Configuration = versionProp.sw_config_name;
-						item.Name = versionProp.prop_name;
-						item.Property = versionProp.prop_id;
-
-						item.Type = versionProp.GetValueType();
-						item.ValueData = item.Type switch
-						{
-							HpVersionProperty.PropertyType.Yesno => versionProp.yesno_value,
-							HpVersionProperty.PropertyType.Number => versionProp.number_value,
-							HpVersionProperty.PropertyType.Text => versionProp.text_value,
-							HpVersionProperty.PropertyType.Date => versionProp.date_value,
-							_ => null,
-						};
-
-						OdooProperties.ItemAdd(item);
-					}
-				}
-			});
-		}
-	}
-	private void PopulateChildren(in HpVersion[] versions)
-	{
-		// "Version", 50
-		// "Name", 600
-		object lockObject = new();
-		lock (lockObject)
-		{
-
-			if (versions == null) return;
-			SafeInvokeGen(OdooChildren, versions, (v) =>
-			{
-				InitListViewInternal(OdooChildren, ColumnMap.ChildrenRows);
-				foreach (HpVersion version in v)
-				{
-					var item = EmptyListItemInternal<ChildrenRow>(OdooChildren);
-					item.Version = version.Id;
-					item.Name = version.name;
-					item.BasePath = Path.Combine(/*HackDefaults.PWAPathAbsolute,*/ version.WinPathway);
-					OdooChildren.ItemAdd(item);
-				}
-			});
-		}
-	}
-	private void PopulateParent(in HpVersion[] versions)
-	{
-		// "Version", 50
-		// "Name", 600
-		object lockObject = new();
-		lock (lockObject)
-		{
-
-			if (versions == null) return;
-			SafeInvokeGen(OdooParents, versions, (v) =>
-			{
-				InitListViewInternal(OdooParents, ColumnMap.ParentRows);
-				foreach (HpVersion version in v)
-				{
-					var item = EmptyListItemInternal<ParentRow>(OdooParents);
-					item.Version = version.Id;
-					item.Name = version.name;
-					item.BasePath = version.WinPathway;
-
-					OdooParents.ItemAdd(item);
-				}
-			});
-		}
-	}
-	private void PopulateHistory(in HpVersion[] versions)
-	{
-		// "Version", 50
-		// "ModUser", 140
-		// "ModDate", 140
-		// "Size", 75
-		// "RelDate", 75
-		object lockObject = new();
-		lock (lockObject)
-		{
-
-			if (versions == null) return;
-			SafeInvokeGen(OdooHistory, versions, (v) =>
-			{
-				InitListViewInternal(OdooHistory, ColumnMap.HistoryRows);
-				foreach (HpVersion version in v)
-				{
-					var item = EmptyListItemInternal<HistoryRow>(OdooHistory);
-
-					item.Version = version.Id;
-					int? moduser = null;
-					if (version.HashedValues.TryGetValue("create_uid", out object obj))
-					{
-						if (obj is ArrayList al && al is not null)
-						{
-							moduser = al[0] as int?;
-						}
-					}
-					if (moduser is not null) item.ModUser = OdooDefaults.IdToUser.TryGetValue(moduser ?? 0, out var user) ? user : null;
-					item.ModDate = version.file_modify_stamp;
-					item.Size = version.file_size;
-					item.RelDate = null;
-
-					OdooHistory.ItemAdd(item);
-				}
-			});
-		}
-	}
-	private void PopulateVersionInfo(HpVersion version)
-	{
-		// int CheckoutColumnIndex = OdooEntryList.Columns["Checkout"].Index;
-		// item.SubItems [ CheckoutColumnIndex ].Text == ""
-		object lockObject = new();
-		lock (lockObject)
-		{
-
-
-			if (version == null) return;
-			SafeInvokeGen(OdooVersionInfoList, version, (v) =>
-			{
-				InitListViewInternal(OdooVersionInfoList, ColumnMap.VersionInfoRows);
-				var item = EmptyListItemInternal<VersionRow>(OdooVersionInfoList);
-
-				item.Id = version.Id;
-				item.Name = version.name;
-				item.Checksum = version.checksum;
-				item.FileSize = version.file_size;
-				item.DirectoryId = version.dir_id;
-				item.NodeId = version.node_id;
-				item.EntryId = version.entry_id;
-				item.AttachmentId = version.attachment_id;
-				item.ModifyDate = version.file_modify_stamp;
-				string? path = version.HashedValues != null && version.HashedValues.ContainsKey("dir_id")
-					? ((version.HashedValues["dir_id"] as ArrayList)?[1].ToString())
-					: "Not Found";
-				item.OdooCompletePath = path;
-
-				OdooVersionInfoList.ItemAdd(item);
-			});
-		}
-	}
-	private void PreviewImage(HpVersion version)
-	{
-		if (version.preview_image is null or "") return;
-
-		byte[] previewImageBytes = Convert.FromBase64String(version.preview_image);
-		MemoryStream ms = new(previewImageBytes)
-		{
-			Position = 0
-		};
-		OdooEntryImage.Source = Assets.GetBitmapFromBytes(previewImageBytes);
-	}
-	private void PreviewImage(int? hpVersionId)
-	{
-		const string previewImage = "preview_image";
-		if (hpVersionId is null || hpVersionId == 0) return;
-
-		HpVersion version = HpVersion.GetRecordsByIds([hpVersionId], includedFields: [previewImage]).FirstOrDefault();
-		PreviewImage(version);
-	}
-	#endregion
+	
 
 	#region Background Worker functions
 	private async Task Async_GetLatest((ArrayList, CancellationToken) arguements)
@@ -1389,7 +327,7 @@ public sealed partial class HackFileManager : Page
 
 
 		MessageBox.Show($"Completed!");
-		RestartEntries();
+		_treeHelper.RestartEntries(OdooDirectoryTree, OdooEntryList);
 	}
 	private async Task Async_Commit(ValueTuple<HpEntry[], List<HackFile>> arguments)
 	{
@@ -1460,7 +398,7 @@ public sealed partial class HackFileManager : Page
 		Dialog.SetProgressBar(_maxCount, _maxCount);
 
 		MessageBox.Show($"Completed!");
-		RestartEntries();
+		_treeHelper.RestartEntries(OdooDirectoryTree, OdooEntryList);
 	}
 	private async Task Async_CheckOut(HpEntry[] entries)
 	{
@@ -1489,7 +427,7 @@ public sealed partial class HackFileManager : Page
 
 		Dialog.SetProgressBar(_maxCount, _maxCount);
 		MessageBox.Show($"Completed!");
-		RestartEntries();
+		_treeHelper.RestartEntries(OdooDirectoryTree, OdooEntryList);
 	}
 	private async Task Async_UnCheckOut(HpEntry[] entries)
 	{
@@ -1518,7 +456,7 @@ public sealed partial class HackFileManager : Page
 
 		Dialog.SetProgressBar(_maxCount, _maxCount);
 		MessageBox.Show($"Completed!");
-		RestartEntries();
+		_treeHelper.RestartEntries(OdooDirectoryTree, OdooEntryList);
 	}
 	private async Task Async_PermDelete(HpEntry[] entries)
 	{
@@ -1544,7 +482,7 @@ public sealed partial class HackFileManager : Page
 		}
 
 		MessageBox.Show($"Completed!");
-		RestartEntries();
+		_treeHelper.RestartEntries(OdooDirectoryTree, OdooEntryList);
 	}
 	private async Task Async_LogicalDelete(HpEntry[] entries)
 	{
@@ -1560,7 +498,7 @@ public sealed partial class HackFileManager : Page
 		}
 
 		MessageBox.Show($"Completed!");
-		RestartEntries();
+		_treeHelper.RestartEntries(OdooDirectoryTree, OdooEntryList);
 	}
 	private async Task Async_LogicalUnDelete(HpEntry[] entries)
 	{
@@ -1576,7 +514,7 @@ public sealed partial class HackFileManager : Page
 
 		Dialog.SetProgressBar(5, 5);
 		MessageBox.Show($"Completed!");
-		RestartEntries();
+		_treeHelper.RestartEntries(OdooDirectoryTree, OdooEntryList);
 	}
 	private async Task Async_ListItemChange(EntryRow item, CancellationToken token)
 	{
@@ -1586,51 +524,37 @@ public sealed partial class HackFileManager : Page
 		}
 		catch (Exception) { }
 	}
-
-	private bool WorkerRunner(Action<object, DoWorkEventArgs> function, string statusHeader = "Status", object arguments = null, CancellationTokenSource tokenSource = default)
+	internal async Task ProcessEntrySelectionAsync(EntryRow? entry, CancellationToken token, bool listLatestVersionInfo = false)
 	{
-		BackgroundWorker worker = new()
-		{
-			WorkerSupportsCancellation = true
-		};
-		worker.DoWork += new DoWorkEventHandler(function);
-		worker.RunWorkerAsync(arguments);
+		if (entry is null) return;
 
-		bool blnWorkCanceled = Dialog.ShowStatusDialog(statusHeader);
-		if (blnWorkCanceled)
+		switch (LowerTabIndex?.Name)
 		{
-			tokenSource.Cancel();
-			worker.CancelAsync();
-			return false;
+			case StorageBox.HISTORY_TAB:
+				await _gridHelper.ProcessHistorySelectAsync(OdooHistory, entry, token);
+				break;
+			case StorageBox.PARENT_TAB:
+				await _gridHelper.ProcessParentSelectAsync(OdooParents, entry, token);
+				break;
+			case StorageBox.CHILD_TAB:
+				await _gridHelper.ProcessChildSelectAsync(OdooChildren, entry, token);
+				break;
+			case StorageBox.PROPERTIES_TAB:
+				await _gridHelper.ProcessPropertiesSelectAsync(OdooProperties, entry, token);
+				break;
+			case StorageBox.INFO_TAB:
+				await _gridHelper.ProcessInfoSelectAsync(OdooVersionInfoList, entry, token);
+				break;
 		}
-		return true;
-	}
-	private async Task<bool> AsyncRunner(Func<Task> function, string statusHeader = "Status", CancellationTokenSource tokenSource = default)
-	{
-		if (tokenSource is null) tokenSource = new();
 
-		var task = Task.Run(function, tokenSource.Token);
-		bool blnWorkCanceled = await AsyncHelper.WaitUntil(() => Dialog.Canceled || task.IsCompleted || task.IsCanceled, 500);
+		token.ThrowIfCancellationRequested();
 
-		if (blnWorkCanceled)
+		if (entry.LatestId is int id)
 		{
-			if (Dialog.Canceled || task.IsCanceled)
-			{
-				tokenSource.Cancel();
-				try
-				{
-					await task; // Await to observe cancellation
-				}
-				catch (OperationCanceledException)
-				{
-					// handles cancellation feedback
-				}
-				return false;
-			}
+			await _gridHelper.PreviewImage(id);
 		}
-		await task;
-		return true;
 	}
+	
 	#endregion
 
 	#region CheckOut Functions
@@ -1676,12 +600,12 @@ public sealed partial class HackFileManager : Page
 		if (entries == null || entries.Count < 1) return null;
 
 		string[] excludedFields = ["preview_image", "attachment_id", "file_modify_stamp", "file_size", "node_id", "file_contents"];
-		ConcurrentBag<Task<HpEntry>> tasks = [];
+		ConcurrentBag<Task<HpEntry?>> tasks = [];
 		object lockObject = new();
 
 		while (entries.TryTake(out HpEntry entry))
 		{
-			Task<HpEntry> entryTask = Task.Run(() =>
+			Task<HpEntry?> entryTask = Task.Run(async () =>
 			{
 				// true means that this entry is checked out
 				if (entry.checkout_user != OdooDefaults.OdooId)
@@ -1704,7 +628,7 @@ public sealed partial class HackFileManager : Page
 					return null;
 				}
 				// can eventually just change this to get the list of id's available instead
-				HpVersion[] entryVersions = GetVersionsForEntry(entry.Id, excludedFields);
+				HpVersion[] entryVersions = await _gridHelper.GetVersionsForEntryAsync(entry.Id, excludedFields);
 
 				if (entryVersions is null || entryVersions.Length == 0) return null;
 				// check if any of the versions checksums are local
@@ -1740,11 +664,8 @@ public sealed partial class HackFileManager : Page
 		}
 		await Task.WhenAll(tasks);
 		return tasks.SkipSelect(
-			taskPredicate =>
-			{
-				return taskPredicate.Result == null;
-			},
-			taskSelect => taskSelect.Result).ToConcurrentBag();
+			taskPredicate => taskPredicate.Result == null,
+			taskSelect => taskSelect.Result).ToConcurrentBag()!;
 	}
 	private async Task<ConcurrentSet<HackFile>> FilterCommitHackFiles(ConcurrentSet<HackFile> hackFiles)
 	{
@@ -1944,7 +865,7 @@ public sealed partial class HackFileManager : Page
 		}
 
 		ArrayList entryIDs = directory.GetDirectoryEntryIDs(withSubdirectories, ShowInactive.IsChecked ?? false);
-		GetLatestInternal(entryIDs);
+		await GetLatestInternal(entryIDs);
 	}
 	#endregion
 
@@ -1972,8 +893,13 @@ public sealed partial class HackFileManager : Page
 				LastSelectedNode?.UpdateBreadCrumbCollection(LastSelectedNodePaths);
 			}
 
-			_treeItemChange = TreeSelectItem(LastSelectedNode, _cTreeSource.Token);
-			await _treeItemChange;
+			IsListLoaded = false;
+			if (LastSelectedNode is not null)
+			{
+				_treeItemChange = _treeHelper.TreeSelectItem(OdooDirectoryTree, LastSelectedNode, OdooEntryList, _cTreeSource.Token);
+				await _treeItemChange;
+			}
+
 			if (_queuedTreeChange.sender != null && _queuedTreeChange.args != null)
 			{
 				OdooDirectoryTree_SelectionChanged(sender, args);
@@ -1992,7 +918,7 @@ public sealed partial class HackFileManager : Page
 			_queuedEntryChange = (sender, e);
 			return;
 		}
-		ClearEntryLists();
+		GridHelp.ResetListViews(_hackLists.SubLists);
 		if (OdooEntryList.SelectedItems.Count == 0)
 			return;
 
@@ -2014,7 +940,7 @@ public sealed partial class HackFileManager : Page
 	private void OdooHistory_ItemSelectionChanged(object sender, SelectionChangedEventArgs e)
 	{
 		if (e.AddedItems.Count == 0) return;
-		PreviewImageSelection((e.AddedItems.First() as EntryRow), NameConfig.HistoryVersion.Name);
+		PreviewImageSelection((e.AddedItems.First() as HistoryRow), NameConfig.HistoryVersion.Name);
 	}
 	private void OdooParents_ItemSelectionChanged(object sender, SelectionChangedEventArgs e)
 	{
@@ -2030,7 +956,7 @@ public sealed partial class HackFileManager : Page
 	private async void ShowInactive_Checked(object sender, RoutedEventArgs e)
 	{
 		IsActive = ShowInactive.IsChecked ?? false;
-		await TreeSelectItem(LastSelectedNode);
+		if (LastSelectedNode is not null) await _treeHelper.TreeSelectItem(OdooDirectoryTree, LastSelectedNode!, OdooEntryList);
 	}
 	// tree open events
 	private void OdooCMSTree_Opening(object sender, CancelEventArgs e)
@@ -2048,19 +974,96 @@ public sealed partial class HackFileManager : Page
 		}
 	}
 	// click events
-	private void List_ColumnClick(object sender)
+	private void List_ColumnClick(object? sender, DataGridColumnEventArgs e)
 	{
-		// ColumnInfo col = ColumnMap.RowWidths.SortRowOrder;
-		// if (col.Sort is null) return;
-
-		// col.Sort.IsAscending ^= true;
-		// ColumnMap.RowWidths.SetActiveColumn(col);
-
-
-		// ColumnInfo newCol = ColumnMap.RowWidths.SortColumnOrder[e.Column];
-		// ColumnMap.RowWidths.SetActiveColumn(newCol);
-		// ColumnMap.RowWidths.SortRowOrder = newCol;
-		OEntries.Sort<EntryRow>((s, o) => string.CompareOrdinal(s.Name, o.Name));
+		var grid = sender as DataGrid;
+		var column = e.Column;
+		foreach (var col in grid?.Columns ?? [])
+		{
+			if (e.Column == col) continue;
+			col.SortDirection = null;
+		}
+		var modelField = column.ClipboardContentBinding.Path.Path;
+		bool isDesc = false;
+		(column.SortDirection, isDesc) = column.SortDirection is not null && column.SortDirection == DataGridSortDirection.Ascending
+			? (DataGridSortDirection.Descending, true)
+			: (DataGridSortDirection.Ascending, false);
+		
+		switch (modelField)
+		{
+			case null: return;
+			case nameof(EntryRow.Name):
+			{
+				OEntries.Sort((s, o) 
+					=> string.Compare(s.Name, o.Name, CultureInfo.InvariantCulture, CompareOptions.IgnoreCase), isDesc);
+				break;
+			}
+			case nameof(EntryRow.Id):
+			{
+				OEntries.Sort((s, o) 
+					=> s.Id.Compare(o.Id), isDesc);
+				break;
+			}
+			case nameof(EntryRow.Checkout):
+			{
+				OEntries.Sort((s, o) 
+					=> string.Compare(s.Checkout?.name, o.Checkout?.name, CultureInfo.InvariantCulture, CompareOptions.IgnoreCase), isDesc);
+				break;	
+			}
+			case nameof(EntryRow.Size):
+			{
+				OEntries.Sort((s, o) 
+					=> Nullable.Compare(s.Size, o.Size), isDesc);
+				break;	
+			}
+			case nameof(EntryRow.Type):
+			{
+				OEntries.Sort((s, o) 
+					=> string.Compare(s.Type, o.Type, CultureInfo.InvariantCulture, CompareOptions.IgnoreCase), isDesc);
+				break;	
+			}
+			case nameof(EntryRow.Status):
+			{
+				OEntries.Sort((s, o) 
+					=> string.Compare(Enum.GetName(s.Status), Enum.GetName(o.Status), CultureInfo.InvariantCulture, CompareOptions.IgnoreCase), isDesc);
+				break;	
+			}
+			case nameof(EntryRow.LatestId):
+			{
+				OEntries.Sort((s, o) 
+					=>  Nullable.Compare(s.LatestId, o.LatestId), isDesc);
+				break;	
+			}
+			case nameof(EntryRow.RemoteDate):
+			{
+				OEntries.Sort((s, o) 
+					=> Nullable.Compare(s.RemoteDate , o.RemoteDate), isDesc);
+				break;	
+			}
+			case nameof(EntryRow.LocalDate):
+			{
+				OEntries.Sort((s, o) 
+					=> Nullable.Compare(s.LocalDate, o.LocalDate), isDesc);
+				break;	
+			}
+			case nameof(EntryRow.Category):
+			{
+				OEntries.Sort((s, o) 
+					=> string.Compare(s.Category?.name, o.Category?.name, CultureInfo.InvariantCulture, CompareOptions.IgnoreCase), isDesc);
+				break;	
+			}
+			case nameof(EntryRow.FullName):
+			{
+				OEntries.Sort((s, o) 
+					=> string.Compare(s.FullName, o.FullName, CultureInfo.InvariantCulture, CompareOptions.IgnoreCase), isDesc);
+				break;	
+			}
+			default: return;
+		}
+		
+		// e.Column.SortDirection = e.Column.SortDirection == DataGridSortDirection.Ascending 
+		// 	? DataGridSortDirection.Descending
+		// 	: DataGridSortDirection.Ascending;
 	}
 
 	//
@@ -2175,7 +1178,7 @@ public sealed partial class HackFileManager : Page
 			}
 		}
 
-		GetLatestInternal(entryIDs);
+		await GetLatestInternal(entryIDs);
 	}
 	private async void List_Click_Commit(object sender, RoutedEventArgs e)
 	{
@@ -2404,7 +1407,7 @@ public sealed partial class HackFileManager : Page
 		{
 			files.ForEach(f => f.Delete());
 		}
-		RestartEntries();
+		_treeHelper.RestartEntries(OdooDirectoryTree, OdooEntryList);
 	}
 	private async void List_Click_LogicalDelete(object sender, RoutedEventArgs e)
 	{
@@ -2450,15 +1453,14 @@ public sealed partial class HackFileManager : Page
 			return;
 		}
 
-		await AsyncRunner(() => Async_PermDelete(entries), "Permanently Delete Files");
+		await AsyncHelper.AsyncRunner(() => Async_PermDelete(entries), "Permanently Delete Files");
 #endif
 	}
 	//
 	private void AdditionalTools_Click_Refresh(object sender, RoutedEventArgs e)
 	{
 		OdooEntryImage.Source = _previewImage;
-		RestartTree();
-		RestartEntries();
+		_treeHelper.RestartEntries(OdooDirectoryTree, OdooEntryList);
 	}
 	private void AdditionalTools_Click_Search(object sender, RoutedEventArgs e)
 	{
@@ -2738,43 +1740,6 @@ public sealed partial class HackFileManager : Page
 		HackDispatcherQueue.TryEnqueue(() => page.Header = text);
 	}
 
-	internal static void SafeInvokeGen<T>(Control control, T data, Action<T> action)
-	{
-		HackDispatcherQueue.TryEnqueue(() => action.Invoke(data));
-	}
-
-	internal static void SafeInvoker(Control control, Action action)
-	{
-		HackDispatcherQueue.TryEnqueue(() =>
-		{
-			try
-			{
-				action.Invoke();
-			}
-			catch (Exception ex)
-			{
-				Debug.Fail(ex.Message, ex.StackTrace);
-			}
-		});
-	}
-	internal static Task SafeInvokerAsync(Control control, Action action)
-	{
-		var tcs = new TaskCompletionSource<bool>();
-
-		HackDispatcherQueue.TryEnqueue(() =>
-		{
-			try
-			{
-				action();
-				tcs.SetResult(true);
-			}
-			catch (Exception ex)
-			{
-				tcs.SetException(ex);
-			}
-		});
-		return tcs.Task;
-	}
 	private void OpenLocalFile(string path)
 	{
 		FileOperations.OpenFile(path);
@@ -2790,14 +1755,14 @@ public sealed partial class HackFileManager : Page
 		version.DownloadFile(Path.GetTempPath());
 		FileOperations.OpenFile(Path.Combine(version.WinPathway, version.name));
 	}
-	private void PreviewImageSelection(object? item, string nameConfigId)
+	private async void PreviewImageSelection<T>(T? item, string nameConfigId)
 	{
 		switch (item)
 		{
 			case null: break;
-			case EntryRow er: if (er.Id is not null) PreviewImage(er.Id); break;
-			case ChildrenRow cr: PreviewImage(cr.Version); break;
-			case ParentRow pr: PreviewImage(pr.Version); break;
+			case EntryRow er: if (er.Id is not null) await _gridHelper.PreviewImage(er.Id); break;
+			case ChildrenRow cr: await _gridHelper.PreviewImage(cr.Version); break;
+			case ParentRow pr: await _gridHelper.PreviewImage(pr.Version); break;
 			default: break;
 		}
 	}
@@ -2939,7 +1904,7 @@ public sealed partial class HackFileManager : Page
 				version.DownloadFile(fileTo.DirectoryName);
 			}
 		}
-		RestartEntries();
+		_treeHelper.RestartEntries(OdooDirectoryTree, OdooEntryList);
 	}
 	private HpVersion? GetVersionFromHistory()
 	{
@@ -3168,7 +2133,7 @@ public sealed partial class HackFileManager : Page
 		return deletedIrAttachments && deletedVersions;
 	}
 	//
-	private async void GetLatestInternal(ArrayList entryIDs)
+	private async Task GetLatestInternal(ArrayList entryIDs)
 	{
 		Dialog.AddStatusLine(StatusMessage.INFO, "Finding Entry Dependencies...");
 		HpEntry[] entries = await HpEntry.GetRecordsByIdsAsync(entryIDs, includedFields: ["latest_version_id"]);
@@ -3180,11 +2145,11 @@ public sealed partial class HackFileManager : Page
 		newIds = newIds.ToHashSet<int>().ToArrayList();
 		CancellationTokenSource tokenSource = new();
 		(ArrayList, CancellationToken) arguments = (newIds, tokenSource.Token);
-		await AsyncRunner(() => Async_GetLatest(arguments), "Get Latest", tokenSource);
+		await AsyncHelper.AsyncRunner(() => Async_GetLatest(arguments), "Get Latest", tokenSource);
 	}
 	private async Task CommitInternal(ArrayList entryIDs, IEnumerable<HackFile> hackFiles)
 	{
-		HpEntry[] entries = HpEntry.GetRecordsByIds(entryIDs, includedFields: ["latest_version_id"]);
+		HpEntry[] entries = await HpEntry.GetRecordsByIdsAsync(entryIDs, includedFields: ["latest_version_id"]);
 
 		object arguments = null;
 		HpEntry[] allEntries = null;
@@ -3194,40 +2159,40 @@ public sealed partial class HackFileManager : Page
 			ArrayList newIds = await GetEntryList([.. entries.Select(e => e.latest_version_id)]);
 			newIds.AddRange(entryIDs);
 			newIds = newIds.ToHashSet<int>().ToArrayList();
-			allEntries = HpEntry.GetRecordsByIds(newIds, excludedFields: ["type_id", "cat_id", "checkout_node"], insertFields: ["directory_complete_name"]);
+			allEntries = await HpEntry.GetRecordsByIdsAsync(newIds, excludedFields: ["type_id", "cat_id", "checkout_node"], insertFields: ["directory_complete_name"]);
 		}
 
-		await AsyncRunner(() => Async_Commit((allEntries, hackFiles.ToList())), "Commit Files");
+		await AsyncHelper.AsyncRunner(() => Async_Commit((allEntries, hackFiles.ToList())), "Commit Files");
 	}
 	private async Task CheckoutInternal(ArrayList entryIDs)
 	{
-		HpEntry[] entriesTemp = HpEntry.GetRecordsByIds(entryIDs, includedFields: ["latest_version_id"]);
+		HpEntry[] entriesTemp = await HpEntry.GetRecordsByIdsAsync(entryIDs, includedFields: ["latest_version_id"]);
 
 		ArrayList newIds = await GetEntryList([.. entriesTemp.Select(e => e.latest_version_id)]);
 
 		newIds.AddRange(entryIDs);
 		newIds = newIds.ToHashSet<int>().ToArrayList();
 
-		HpEntry[] entries = HpEntry.GetRecordsByIds(newIds, excludedFields: ["type_id", "cat_id"]);
+		HpEntry[] entries = await HpEntry.GetRecordsByIdsAsync(newIds, excludedFields: ["type_id", "cat_id"]);
 
 		if (entries is null || entries.Length < 1) return;
 		WindowHelper.CreateWindowAndPage<StatusDialog>(out var Dialog, out _);
 		HackFileManager.Dialog = Dialog;
 
 		entries = [.. FilterCheckoutEntries(entries)];
-		await AsyncRunner(() => Async_CheckOut(entries), "Checkout Files");
+		await AsyncHelper.AsyncRunner(() => Async_CheckOut(entries), "Checkout Files");
 	}
 	private async Task UnCheckoutInternal(ArrayList entryIDs)
 	{
 		if (entryIDs is null or { Count: < 1 }) return;
 
-		HpEntry[] entriesTemp = HpEntry.GetRecordsByIds(entryIDs, includedFields: ["latest_version_id"]);
+		HpEntry[] entriesTemp = await HpEntry.GetRecordsByIdsAsync(entryIDs, includedFields: ["latest_version_id"]);
 		ArrayList newIds = await GetEntryList([.. entriesTemp.Select(e => e.latest_version_id)]);
 
 		newIds.AddRange(entryIDs);
 		newIds = newIds.ToHashSet<int>().ToArrayList();
 
-		HpEntry[] entries = HpEntry.GetRecordsByIds(newIds, excludedFields: ["type_id", "cat_id", "checkout_node"]);
+		HpEntry[] entries = await HpEntry.GetRecordsByIdsAsync(newIds, excludedFields: ["type_id", "cat_id", "checkout_node"]);
 
 		if (entries is null || entries.Length < 1)
 			return;
@@ -3237,7 +2202,7 @@ public sealed partial class HackFileManager : Page
 		// filter out entries that are already checked out
 		entries = [.. FilterUnCheckoutEntries(entries)];
 
-		await AsyncRunner(() => Async_UnCheckOut(entries), "UnCheckout Files");
+		await AsyncHelper.AsyncRunner(() => Async_UnCheckOut(entries), "UnCheckout Files");
 	}
 	private async Task LogicalDeleteInternal(ArrayList entryIDs)
 	{
@@ -3248,17 +2213,17 @@ public sealed partial class HackFileManager : Page
 		newIds.AddRange(entryIDs);
 		newIds = newIds.ToHashSet<int>().ToArrayList();
 
-		HpEntry[] entries = HpEntry.GetRecordsByIds(newIds, excludedFields: ["type_id", "cat_id", "checkout_node"]);
+		HpEntry[] entries = await HpEntry.GetRecordsByIdsAsync(newIds, excludedFields: ["type_id", "cat_id", "checkout_node"]);
 
-		await AsyncRunner(() => Async_LogicalDelete(entries), "Logically Delete Files");
+		await AsyncHelper.AsyncRunner(() => Async_LogicalDelete(entries), "Logically Delete Files");
 	}
 	private async Task UnDeleteInternal(bool withSubdirectories = false)
 	{
 		WindowHelper.CreateWindowAndPage<StatusDialog>(out var Dialog, out _);
 		HackFileManager.Dialog = Dialog;
 
-		HpEntry[] entries = HpEntry.GetRecordsByIds(null, searchFilters: [new ArrayList() { "deleted", "=", true }, new ArrayList() { "dir_id", "=", LastSelectedNode?.LinkedData.DirectoryId ?? 0 }], excludedFields: ["type_id", "cat_id", "checkout_node"]);
-		await AsyncRunner(() => Async_LogicalUnDelete(entries), "Logically UnDelete Files");
+		HpEntry[] entries = await HpEntry.GetRecordsByIdsAsync(null, searchFilters: [new ArrayList() { "deleted", "=", true }, new ArrayList() { "dir_id", "=", LastSelectedNode?.LinkedData.DirectoryId ?? 0 }], excludedFields: ["type_id", "cat_id", "checkout_node"]);
+		await AsyncHelper.AsyncRunner(() => Async_LogicalUnDelete(entries), "Logically UnDelete Files");
 	}
 
 	#endregion

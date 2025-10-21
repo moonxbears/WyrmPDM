@@ -7,38 +7,40 @@ using OClient = HackPDM.Odoo.OdooClient;
 
 namespace HackPDM.Odoo.OdooModels.Models;
 
-public class IrAttachment : HpBaseModel<IrAttachment>
+public partial class IrAttachment : HpBaseModel<IrAttachment>
 {
-    public string name;
-    public int res_id;
-    public int file_size;
-    public string res_model;
-    public string checksum;
-    public string mimetype;
-    public string type;
-
-    private string _fileContentsBase64;
-    public IrAttachment() { }
-    public IrAttachment(
-        string name,
-        int resId = 0,
-        int fileSize = 0,
-        string resModel = null,
-        string checksum = null,
-        string mimetype = null,
-        string type = "binary",
-        string fileContentsBase64 = null)
-    {
-        this.name = name;
-        this.res_id = resId;
-        this.file_size = fileSize;
-        this.res_model = resModel;
-        this.checksum = checksum;
-        this.mimetype = mimetype;
-        this.type = type;
-        this._fileContentsBase64 = fileContentsBase64;
-    }
-
+	public string name;
+        public int res_id;
+        public int file_size;
+        public string res_model;
+        public string checksum;
+        public string mimetype;
+        public string type;
+    
+        private string _fileContentsBase64;
+        public IrAttachment() { }
+        public IrAttachment(
+            string name,
+            int resId = 0,
+            int fileSize = 0,
+            string resModel = null,
+            string checksum = null,
+            string mimetype = null,
+            string type = "binary",
+            string fileContentsBase64 = null)
+        {
+            this.name = name;
+            this.res_id = resId;
+            this.file_size = fileSize;
+            this.res_model = resModel;
+            this.checksum = checksum;
+            this.mimetype = mimetype;
+            this.type = type;
+            this._fileContentsBase64 = fileContentsBase64;
+        }
+}
+public partial class IrAttachment : HpBaseModel<IrAttachment>
+{
     public string DownloadContents()
     {
         const string datas = "datas";

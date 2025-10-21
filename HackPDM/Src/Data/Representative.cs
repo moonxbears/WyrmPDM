@@ -19,8 +19,10 @@ using Microsoft.UI.Xaml.Media;
 
 namespace HackPDM.Data;
 
-public class EntryRow : ItemData, IRowData
+#region VIEWS
+public partial class EntryRow : ItemData, IRowData
 {
+	// (MVVM) VIEW
 	public BitmapImage? Icon        { get; set; } = Assets.GetImage("file-icon_32") as BitmapImage;
 	public int?          Id         { get; set; }
 	public string?      Type        { get; set; }
@@ -33,16 +35,10 @@ public class EntryRow : ItemData, IRowData
 	public string?      FullName    { get; set; }
 	public int?			LatestId	{ get; set; }
 
-	public bool? IsLocal
-	{
-		get
-		{
-			return Id is null or 0;
-		}
-		set => field = value;
-	}
-	public bool			IsOnlyLocal => (IsLocal ?? true) && !IsRemote;
+	public partial bool? IsLocal { get; set; }
+	public partial bool	 IsOnlyLocal { get; }
 	public bool			IsRemote	{ get; set; }
+
 	public ObservableCollection<HistoryRow>? History { get; set; }
 	public ObservableCollection<VersionRow>? Versions { get; set; }
 	public ObservableCollection<PropertiesRow>? Properties { get; set; }
@@ -51,6 +47,7 @@ public class EntryRow : ItemData, IRowData
 }
 public class HistoryRow : ItemData, IRowData
 {
+	// (MVVM) VIEW
 	public int          Version     { get; set; }
 	public HpUser?      ModUser     { get; set; }
 	public DateTime?    ModDate     { get; set; }
@@ -60,18 +57,21 @@ public class HistoryRow : ItemData, IRowData
 }
 public class ParentRow : ItemData, IRowData
 {
+	// (MVVM) VIEW
 	public int          Version     { get; set; }
 	public string?      BasePath    { get; set; }
 	public ParentRow() {}
 }
 public class ChildrenRow : ItemData, IRowData
 {
+	// (MVVM) VIEW
 	public int          Version     { get; set; }
 	public string?      BasePath    { get; set; }
 	public ChildrenRow() {}
 }
 public class PropertiesRow : ItemData, IRowData
 {
+	// (MVVM) VIEW
 	public int          Version     { get; set; }
 	public int?         Property    { get; set; }
 	public string?      Configuration{  get; set; }
@@ -81,6 +81,7 @@ public class PropertiesRow : ItemData, IRowData
 }
 public class VersionRow : ItemData, IRowData
 {
+	// (MVVM) VIEW
 	public int Id { get; set; }
 	public long? FileSize { get; set; }
 	public int? DirectoryId { get; set; }
@@ -93,16 +94,19 @@ public class VersionRow : ItemData, IRowData
 }
 public class SearchRow : ItemData, IRowData
 {
+	// (MVVM) VIEW
 	public int Id { get; set; }
 	public string? Directory { get; set; }
 }
 public class SearchPropRow : ItemData, IRowData
 {
+	// (MVVM) VIEW
 	public string? Comparer { get; set; }
 	public string? Value { get; set; }
 }
 public class FileTypeRow : ItemData, IRowData
 {
+	// (MVVM) VIEW
 	public string? Extension { get; set; }
 	public string? Category { get; set; }
 	public string? RegEx { get; set; }
@@ -110,6 +114,7 @@ public class FileTypeRow : ItemData, IRowData
 }
 public class FileTypeEntryFilterRow : ItemData, IRowData
 {
+	// (MVVM) VIEW
 	public int Id { get; set; }
 	public string? Proto { get; set; }
 	public string? RegEx { get; set; }
@@ -117,12 +122,14 @@ public class FileTypeEntryFilterRow : ItemData, IRowData
 }
 public class FileTypeLocRow : ItemData, IRowData
 {
+	// (MVVM) VIEW
 	public string? Extension { get; set; }
 	public string? Status { get; set; }
 	public string? Example { get; set; }
 }
 public class FileTypeLocDatRow : ItemData, IRowData
 {
+	// (MVVM) VIEW
 	public string? Extension { get; set; }
 	public string? RegEx { get; set; }
 	public string? Category { get; set; }
@@ -132,7 +139,29 @@ public class FileTypeLocDatRow : ItemData, IRowData
 }
 public partial class TreeData : IEnumerable<TreeData>
 {
-	public string? Name 
+	// (MVVM) VIEW
+	public partial string? Name { get; set; }
+	public partial string? FullPath { get; }
+	public partial TreeData? Parent { get; }
+	public object? Tag { get; set; }
+	public int? DirectoryId { get; set; }
+	public BitmapImage? Icon { get; set; } = Assets.GetImage("simple-folder-icon_32") as BitmapImage;
+	public TreeView? ParentTree { get; internal set; }
+	public TreeViewNode? Node { get; internal set; }
+	public partial TreeViewItem? VisualContainer { get; }
+	public partial IEnumerable<TreeData>? Children { get; }
+	public partial bool IsLinked { get; }
+	public partial bool HasChildren { get; }
+	public partial int Depth { get; }
+	public partial bool IsExpanded { get; set; }
+}
+#endregion
+
+#region VIEWMODELS
+public partial class TreeData : IEnumerable<TreeData>
+{
+	// (MVVM) ViewModel
+	public partial string? Name 
 	{
 		get
 		{
@@ -140,21 +169,14 @@ public partial class TreeData : IEnumerable<TreeData>
 		} 
 		set; 
 	}
-	public string? FullPath => Parent is null ? Depth < 0 ? null : Name : $"{Parent?.FullPath}\\{Name}";
-	
-	public TreeData? Parent => Node?.Depth <= 0 ? null : Node?.Parent?.LinkedData;
-	
-	public object? Tag { get; set; }
-	public int? DirectoryId { get; set; }
-	public BitmapImage? Icon { get; set; } = Assets.GetImage("simple-folder-icon_32") as BitmapImage;
-	public TreeView? ParentTree { get; internal set; }
-	public TreeViewNode? Node { get; internal set; }
-	public TreeViewItem? VisualContainer => ParentTree?.ContainerFromNode(Node) as TreeViewItem;
-	public IEnumerable<TreeData>? Children => Node?.Children.Select(n => n.LinkedData);
-	public bool IsLinked => Node is not null;
-	public bool HasChildren => Node?.HasChildren ?? false;
-	public int Depth => Node?.Depth ?? -1;
-	public bool IsExpanded
+	public partial string? FullPath => Parent is null ? Depth < 0 ? null : Name : $"{Parent?.FullPath}\\{Name}";
+	public partial TreeData? Parent => Node?.Depth <= 0 ? null : Node?.Parent?.LinkedData;
+	public partial TreeViewItem? VisualContainer => ParentTree?.ContainerFromNode(Node) as TreeViewItem;
+	public partial IEnumerable<TreeData>? Children => Node?.Children.Select(n => n.LinkedData);
+	public partial bool IsLinked => Node is not null;
+	public partial bool HasChildren => Node?.HasChildren ?? false;
+	public partial int Depth => Node?.Depth ?? -1;
+	public partial bool IsExpanded
 	{
 		get => Node?.IsExpanded ?? false;
 		set => Node?.IsExpanded = value;
@@ -193,16 +215,32 @@ public partial class TreeData : IEnumerable<TreeData>
 		}
 	}
 }
+public partial class EntryRow : ItemData, IRowData
+{
+	// (MVVM) ViewModel
+	public partial bool? IsLocal
+	{
+		get
+		{
+			return Id is null or 0;
+		}
+		set => field = value;
+	}
+	public partial bool	IsOnlyLocal => (IsLocal ?? true) && !IsRemote;
+	
+}
+#endregion
 
 public class BasicStatusMessage : IRowData
 {
+	// // (MVVM) VIEW
 	public StatusMessage Status { get; set; } = StatusMessage.OTHER;
 	public string? Message { get; set; }
 }
 public partial class ItemData
 {
 	public virtual ListViewItem? Item { get; set; }
-	public virtual string Name { get; set; } = "";
+	public virtual string? Name { get; set; } = "";
 	public virtual string? Text
 	{
 		get => field ??= Name;
@@ -215,3 +253,10 @@ public partial class ItemData
 		set => Item?.IsSelected = value;
 	}
 }
+public class Wrap<T>(T value) where T : struct
+{
+	T Value = value;
+	public static implicit operator T(Wrap<T> wrap) => wrap.Value;
+	public static implicit operator Wrap<T>(T value) => new Wrap<T>(value);
+}
+

@@ -73,6 +73,11 @@ public static class StorageBox
 	public const int HACK_FILE_MANAGER_HEIGHT = 720;
 	public const string HACK_FILE_MANAGER_TITLE = "Hack File Manager - HackPDM";
 	public const string EMPTY_PLACEHOLDER = "-";
+	public const string HISTORY_TAB = "HistoryTab";
+	public const string PARENT_TAB = "ParentTab";
+	public const string CHILD_TAB = "ChildTab";
+	public const string PROPERTIES_TAB = "PropertiesTab";
+	public const string INFO_TAB = "InfoTab";
 	#endregion
 	#region OdooDefaults
 	public const string DEFAULT_ODOO_CREDENTIALS = "HackPDM-OdooUser";

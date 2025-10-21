@@ -13,7 +13,7 @@ using HackPDM.Hack;
 
 namespace HackPDM.Odoo.OdooModels.Models;
 
-public class HpVersionRelationship : HpBaseModel<HpVersionRelationship>
+public partial class HpVersionRelationship : HpBaseModel<HpVersionRelationship>
 {
     public int parent_id;
     public int child_id;
@@ -26,6 +26,9 @@ public class HpVersionRelationship : HpBaseModel<HpVersionRelationship>
         this.parent_id = parentId;
         this.child_id = childId;
     }
+}
+public partial class HpVersionRelationship : HpBaseModel<HpVersionRelationship>
+{
     public async static void Create(params HpVersion[] versions)
     {
         //ArrayList ids = versions.Select(v => v.ID).ToArrayList();

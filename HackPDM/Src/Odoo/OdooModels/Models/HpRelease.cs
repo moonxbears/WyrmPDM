@@ -5,7 +5,7 @@ using System;
 
 namespace HackPDM.Odoo.OdooModels.Models;
 
-public class HpRelease : HpBaseModel<HpRelease>
+public partial class HpRelease : HpBaseModel<HpRelease>
 {
     public string release_note;
     public DateTime? release_stamp;
@@ -22,3 +22,5 @@ public class HpRelease : HpBaseModel<HpRelease>
         this.release_stamp = releaseStamp;
     }
 }
+public partial class HpRelease : HpBaseModel<HpRelease>
+{}

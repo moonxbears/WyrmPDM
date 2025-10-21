@@ -3,7 +3,7 @@
 // ReSharper disable InconsistentNaming
 namespace HackPDM.Odoo.OdooModels.Models;
 
-public class HpReleaseVersionRel : HpBaseModel<HpReleaseVersionRel>
+public partial class HpReleaseVersionRel : HpBaseModel<HpReleaseVersionRel>
 {
     public int release_id;
     public int release_version;
@@ -19,4 +19,8 @@ public class HpReleaseVersionRel : HpBaseModel<HpReleaseVersionRel>
         this.release_version = releaseVersion;
         this.release_user = releaseUser;
     }
+}
+public partial class HpReleaseVersionRel : HpBaseModel<HpReleaseVersionRel>
+{
+	
 }

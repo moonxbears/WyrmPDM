@@ -3,7 +3,7 @@
 // ReSharper disable InconsistentNaming
 namespace HackPDM.Odoo.OdooModels.Models;
 
-public class HpCategoryProperty : HpBaseModel<HpCategoryProperty>
+public partial class HpCategoryProperty : HpBaseModel<HpCategoryProperty>
 {
     public int cat_id;
     public int prop_id;
@@ -16,4 +16,7 @@ public class HpCategoryProperty : HpBaseModel<HpCategoryProperty>
         this.cat_id = catId;
         this.prop_id = propId;
     }
+}
+public partial class HpCategoryProperty : HpBaseModel<HpCategoryProperty>
+{
 }

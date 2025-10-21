@@ -44,8 +44,9 @@ public abstract class HackBaseFile
             
         return ht;
     }
-    public async static Task<HackFile> GetHackFileAsync<T>(string fullFilePath) where T : HackFile, new()
+    public async static Task<HackFile> GetHackFileAsync<T>(string? fullFilePath) where T : HackFile, new()
     {
+		if (string.IsNullOrEmpty(fullFilePath)) return null;
         HackFile hackFile = DefaultType<HackFile>();
 
         try

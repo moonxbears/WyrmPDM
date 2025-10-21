@@ -8,16 +8,19 @@ using OClient = HackPDM.Odoo.OdooClient;
 
 namespace HackPDM.Odoo.OdooModels.Models;
 
-public class HpNode : HpBaseModel<HpNode>
+public partial class HpNode : HpBaseModel<HpNode>
 {
-    public string name;
-
-    public HpNode() { }
-    public HpNode(
-        string name)
-    {
-        this.name = name;
-    }
+	public string name;
+    
+        public HpNode() { }
+        public HpNode(
+            string name)
+        {
+            this.name = name;
+        }
+}
+public partial class HpNode : HpBaseModel<HpNode>
+{
     internal void UpdateNodeLatestVersions(int[] versionIds)
     {
         OClient.Command<ArrayList>(GetHpModel(), "update_node_latest_versions", [versionIds.ToArrayList()], 1000000);

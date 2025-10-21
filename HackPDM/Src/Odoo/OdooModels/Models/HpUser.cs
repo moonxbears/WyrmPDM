@@ -8,7 +8,7 @@
 
 namespace HackPDM.Odoo.OdooModels.Models;
 
-public class HpUser : HpBaseModel<HpUser>
+public partial class HpUser : HpBaseModel<HpUser>
 {
 	public string name;
 	public string login;
@@ -38,6 +38,10 @@ public class HpUser : HpBaseModel<HpUser>
 		this.company_id= companyId;
 		this.active= active;
 	}
+	
+}
+public partial class HpUser : HpBaseModel<HpUser> 
+{
 	public override string ToString()
 	{
 		return name;

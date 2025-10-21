@@ -196,5 +196,4 @@ internal class AsyncHelper
         AsyncHelper helper = await wait.InitializeAsync(true);
         return !helper._wasCancelled && helper._timedOut;
     }
-
 }

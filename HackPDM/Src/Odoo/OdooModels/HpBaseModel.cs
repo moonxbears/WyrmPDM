@@ -13,11 +13,12 @@ using OClient = HackPDM.Odoo.OdooClient;
 
 namespace HackPDM.Odoo.OdooModels;
 
-public abstract class HpBaseModel
+public abstract partial class HpBaseModel
 {
-    internal static string[] UsualExcludedFields { get; set; } = [];
+	// (MVVM) VIEW
+	internal static string[] UsualExcludedFields { get; set; } = [];
     internal static string[] UsualIncludedFields { get; set; } = [];
-
+    
     protected static readonly Dictionary<Type, string> HpModelDictionary = new()
     {
         {typeof(HpNode), OdooDefaults.HP_NODE},
@@ -67,6 +68,10 @@ public abstract class HpBaseModel
     public Hashtable HashedValues { get; internal set; } = [];
     public string[] ExcludedFields { get; internal set; }
     public string[] InsertFields { get; internal set; }
+}
+public abstract partial class HpBaseModel
+{
+	// (MVVM) VIEWMODEL
     public virtual int Create() => Create(false);
     public virtual int Create(bool withEmpty = false)
     {

@@ -3,7 +3,7 @@
 // ReSharper disable InconsistentNaming
 namespace HackPDM.Odoo.OdooModels.Models;
 
-public class HpProperty : HpBaseModel<HpProperty>
+public partial class HpProperty : HpBaseModel<HpProperty>
 {
     public string name;
     public string prop_type;
@@ -19,6 +19,9 @@ public class HpProperty : HpBaseModel<HpProperty>
         this.prop_type = propType;
         this.active = active;
     }
+}
+public partial class HpProperty : HpBaseModel<HpProperty>
+{
     public override string ToString()
     {
         return name;

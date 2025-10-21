@@ -3,7 +3,6 @@ using System.Collections.ObjectModel;
 
 using HackPDM.Data;
 using HackPDM.Forms.Odoo;
-using HackPDM.Forms.Hack;
 using HackPDM.Hack;
 using HackPDM.Helper;
 using HackPDM.Odoo;
@@ -17,6 +16,7 @@ using CommunityToolkit.WinUI.UI.Controls;
 using HackFileManager = HackPDM.Forms.Hack.HackFileManager;
 using HackSettings = HackPDM.Properties.Settings;
 using MessageBox = System.Windows.Forms.MessageBox;
+using HackPDM.Src.Helper.Xaml;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -106,7 +106,7 @@ public sealed partial class ProfileManager : Page
             {
                 foreach (string message in errors)
                 {
-                    var listItem = HackFileManager.EmptyListItem<BasicStatusMessage>(ProfileManStatusList);
+                    var listItem = GridHelp.EmptyListItem<BasicStatusMessage>(ProfileManStatusList);
 
                     listItem.Status = StatusMessage.ERROR;
                     listItem.Message = message;

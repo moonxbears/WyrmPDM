@@ -13,35 +13,38 @@ using HackPDM.Hack;
 
 namespace HackPDM.Odoo.OdooModels.Models;
 
-public class HpVersionProperty : HpBaseModel<HpVersionProperty>
+public partial class HpVersionProperty : HpBaseModel<HpVersionProperty>
 {
-    public string sw_config_name;
-    public string text_value;
-    public float number_value;
-    public bool yesno_value;
-    public string date_value;
-    public int version_id;
-    public int prop_id;
-    public string prop_name;
-
-    public HpVersionProperty() { }
-    public HpVersionProperty(
-        string swConfigName = null,
-        string textValue = null,
-        float numberValue = default,
-        bool yesnoValue = default,
-        string dateValue = null,
-        int versionId = 0,
-        int propId = 0)
-    {
-        this.sw_config_name = swConfigName;
-        this.text_value = textValue;
-        this.number_value = numberValue;
-        this.yesno_value = yesnoValue;
-        this.date_value = dateValue;
-        this.version_id = versionId;
-        this.prop_id = propId;
-    }
+	public string sw_config_name;
+        public string text_value;
+        public float number_value;
+        public bool yesno_value;
+        public string date_value;
+        public int version_id;
+        public int prop_id;
+        public string prop_name;
+    
+        public HpVersionProperty() { }
+        public HpVersionProperty(
+            string swConfigName = null,
+            string textValue = null,
+            float numberValue = default,
+            bool yesnoValue = default,
+            string dateValue = null,
+            int versionId = 0,
+            int propId = 0)
+        {
+            this.sw_config_name = swConfigName;
+            this.text_value = textValue;
+            this.number_value = numberValue;
+            this.yesno_value = yesnoValue;
+            this.date_value = dateValue;
+            this.version_id = versionId;
+            this.prop_id = propId;
+        }
+}
+public partial class HpVersionProperty : HpBaseModel<HpVersionProperty>
+{
     public PropertyType GetValueType()
     {
         if (text_value != null && text_value != "" && text_value != "False") return PropertyType.Text;

@@ -15,44 +15,47 @@ using OClient = HackPDM.Odoo.OdooClient;
 
 namespace HackPDM.Odoo.OdooModels.Models;
 
-public class HpEntry : HpBaseModel<HpEntry>
+public partial class HpEntry : HpBaseModel<HpEntry>
 {
-    public string name;
-    public string checkout_date;
-    public bool deleted;
-    public int latest_version_id;
-    public int dir_id;
-    public int type_id;
-    public int cat_id;
-    public int? checkout_user;
-    public int? checkout_node;
-    internal bool IsLatest { get; set; } = false;
-
-    public HpEntry() {  }
-    public HpEntry(
-        string name,
-        string checkoutDate = null,
-        bool active = true,
-        int latestVersionId = 0,
-        int dirId = 0,
-        int typeId = 0,
-        int catId = 0,
-        int checkoutUser = 0,
-        int checkoutNode = 0)
-    {
-        this.name = name;
-        this.deleted = !active;
-        this.latest_version_id = latestVersionId;
-        this.dir_id = dirId;
-        this.type_id = typeId;
-        this.cat_id = catId;
-        this.checkout_node = checkoutNode;
-
-        if (checkoutUser == 0) this.checkout_user = OdooDefaults.OdooId;
-        else this.checkout_user = checkoutUser;
-        if (checkoutDate == null) this.checkout_date = OdooDefaults.OdooDateFormat(DateTime.Now);
-        else this.checkout_date = checkoutDate;
-    }
+	public string name;
+        public string checkout_date;
+        public bool deleted;
+        public int latest_version_id;
+        public int dir_id;
+        public int type_id;
+        public int cat_id;
+        public int? checkout_user;
+        public int? checkout_node;
+        internal bool IsLatest { get; set; } = false;
+    
+        public HpEntry() {  }
+        public HpEntry(
+            string name,
+            string checkoutDate = null,
+            bool active = true,
+            int latestVersionId = 0,
+            int dirId = 0,
+            int typeId = 0,
+            int catId = 0,
+            int checkoutUser = 0,
+            int checkoutNode = 0)
+        {
+            this.name = name;
+            this.deleted = !active;
+            this.latest_version_id = latestVersionId;
+            this.dir_id = dirId;
+            this.type_id = typeId;
+            this.cat_id = catId;
+            this.checkout_node = checkoutNode;
+    
+            if (checkoutUser == 0) this.checkout_user = OdooDefaults.OdooId;
+            else this.checkout_user = checkoutUser;
+            if (checkoutDate == null) this.checkout_date = OdooDefaults.OdooDateFormat(DateTime.Now);
+            else this.checkout_date = checkoutDate;
+        }
+}
+public partial class HpEntry : HpBaseModel<HpEntry>
+{
     public static ArrayList GetLatestIDs(ArrayList ids)
     {
         const string latest = "latest_version_id";

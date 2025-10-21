@@ -8,7 +8,7 @@
 
 namespace HackPDM.Odoo.OdooModels.Models;
 
-public class HpSetting : HpBaseModel<HpSetting>
+public partial class HpSetting : HpBaseModel<HpSetting>
 {
 	public string name;
 	public string description;
@@ -42,3 +42,4 @@ public class HpSetting : HpBaseModel<HpSetting>
 		this.date_value = dateValue;
 	}
 }
+public partial class HpSetting : HpBaseModel<HpSetting> {}

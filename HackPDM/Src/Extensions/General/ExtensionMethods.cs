@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
 using System.IO;
@@ -15,6 +16,7 @@ namespace HackPDM.Extensions.General;
 
 public static class ExtensionMethods
 {
+	public static int Compare(this int? a, int? b) => Nullable.Compare(a, b);
 	public static void RemoveFromIndex<T>(this IList<T> list, int index, bool isInclusive = false)
 	{
 		if (list == null || index < 0 || index >= list.Count)
@@ -333,43 +335,31 @@ public static class ExtensionMethods
     }
 	private static void SortInternal<T>(this ObservableCollection<T> oc, Comparison<T> comparer, bool reverse = false)
 	{
-		// Step 1: Capture original items with their indices
-		var indexed = oc
-			.Select((item, index) => (item, index))
-			.ToList();
-
-		// Step 2: Sort the indexed list using the comparer
-		indexed.Sort((a, b) =>
+		// Step 1: Create a sorted snapshot
+		var sorted = oc.ToList();
+		sorted.Sort((a, b) =>
 		{
-			int compare = comparer(a.item, b.item);
-			return reverse ? -compare : compare;
+			int result = comparer(a, b);
+			return reverse ? -result : result;
 		});
 
-		// Step 3: Create a map from item to its new position
-		var newPositions = new Dictionary<T, int>(oc.Count);
-		for (int i = 0; i < indexed.Count; i++)
-			newPositions[indexed[i].item] = i;
-
-		// Step 4: Reorder the collection with minimal moves
-		for (int i = 0; i < oc.Count; i++)
+		// Step 2: Reorder the original collection to match the sorted snapshot
+		for (int i = 0; i < sorted.Count; i++)
 		{
-			var item = oc[i];
-			var targetIndex = newPositions[item];
-
-			if (targetIndex != i)
+			var item = sorted[i];
+			int currentIndex = oc.IndexOf(item);
+			if (currentIndex != i)
 			{
-				oc.Move(i, targetIndex);
-
-				// After move, update map to reflect new positions
-				newPositions[oc[i]] = i;
-				newPositions[oc[targetIndex]] = targetIndex;
+				oc.Move(currentIndex, i);
 			}
 		}
+
+		Debug.WriteLine("Finished Sorting");
 	}
 
 	extension<T>(ObservableCollection<T> oc)
     {
-        public void Sort(Comparison<T> comparer) => oc.SortInternal(comparer, false);
+        public void Sort(Comparison<T> comparer, bool reverse = false) => oc.SortInternal(comparer, reverse);
 		public void ReverseSort(Comparison<T> comparer) => oc.SortInternal(comparer, true);
 	}
 }

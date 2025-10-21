@@ -9,7 +9,7 @@ using HackPDM.Extensions.General;
 
 namespace HackPDM.Odoo.OdooModels.Models;
 
-public class HpType : HpBaseModel<HpType>
+public partial class HpType : HpBaseModel<HpType>
 {
 	public string description;
 	public string file_ext;
@@ -54,3 +54,4 @@ public class HpType : HpBaseModel<HpType>
 		this.icon = icon?.ToBase64String();
 	}
 }
+public partial class HpType : HpBaseModel<HpType> {}
