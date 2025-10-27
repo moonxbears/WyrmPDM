@@ -35,6 +35,7 @@ using HackPDM.Src.Helper.Xaml;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.WindowsAppSDK.Runtime;
@@ -159,7 +160,7 @@ public sealed partial class HackFileManager : Page
 			Properties = OdooProperties,
 			Versions = OdooVersionInfoList
 		};
-
+		// SizeColumn.Binding.Converter = new FileSizeConverter();
 		HackDispatcherQueue = DispatcherQueue.GetForCurrentThread();
 		// DesignTheme();
 		AssignCollections();
@@ -226,32 +227,70 @@ public sealed partial class HackFileManager : Page
 		// OProperties.CollectionChanged	+= CollectionChanged;
 		// OVersions.CollectionChanged		+= CollectionChanged;
 
-		OdooEntryList.SelectionChanged += OdooEntryList_SelectionChanged;
-		OdooEntryList.Sorting += List_ColumnClick;
-		TreeAnalyze.Click += (sender, args) => { };
-		TreeCheckout.Click += Tree_Click_Checkout;
-		TreeCommit.Click += Tree_Click_Commit;
-		TreeDelete.Click += Tree_Click_LogicalDelete;
-		TreeGetLatest.Click += Tree_Click_GetLatest;
-		TreeLocalDelete.Click += Tree_Click_LocalDelete;
-		TreePermanentDelete.Click += Tree_Click_PermanentDelete;
-		TreeOpenDirectory.Click += Tree_Click_OpenDirectory;
-		TreeUndelete.Click += Tree_Click_Undelete;
-		TreeUndoCheckout.Click += Tree_Click_UndoCheckout;
-		TreeLogicalDelete.Click += Tree_Click_LogicalDelete;
-		ListCheckout.Click += List_Click_Checkout;
-		ListCommit.Click += List_Click_Commit;
-		ListDelete.Click += List_Click_LogicalDelete;
-		ListGetLatest.Click += List_Click_GetLatest;
-		ListLocal.Click += List_Click_OpenLatestLocal;
-		ListUndoCheckout.Click += List_Click_UndoCheckout;
-		ListPreview.Click += List_Click_OpenLatestRemote;
-		ListFileDirectory.Click += List_Click_OpenDirectory;
-		OdooHistory.SelectionChanged += OdooHistory_ItemSelectionChanged;
-		OdooRefreshDropdown.Click += AdditionalTools_Click_Refresh;
-		OdooParents.SelectionChanged += OdooParents_ItemSelectionChanged;
-		OdooChildren.SelectionChanged += OdooChildren_ItemSelectionChanged;
+		OdooEntryList.SelectionChanged	+= OdooEntryList_SelectionChanged;
+		OdooEntryList.Sorting			+= List_ColumnClick;
+
+		// tree events
+		TreeAnalyze.Click				+= (sender, args) => { };
+		TreeCheckout.Click				+= Tree_Click_Checkout;
+		TreeCommit.Click				+= Tree_Click_Commit;
+		TreeDownload.DoubleTapped		+= Tree_Click_GetLatest;
+		TreeDownloadAll.Click			+= Tree_Click_GetLatestAll;
+		TreeDownloadTop.Click			+= Tree_Click_GetLatestTop;
+		TreeOpenDirectory.Click			+= Tree_Click_OpenDirectory;
+		TreeUndoCheckout.Click			+= Tree_Click_UndoCheckout;
+		TreeLogicalDelete.DoubleTapped	+= Tree_Click_LogicalDelete;
+		TreeLocalDelete.Click			+= Tree_Click_LocalDelete;
+		TreePermanentDelete.Click		+= Tree_Click_PermanentDelete;
+		TreeUndelete.DoubleTapped		+= Tree_Click_Restore;
+		TreeRestoreAll.Click			+= Tree_Click_RestoreAll;
+		TreeRestoreTop.Click			+= Tree_Click_RestoreTop;
+		
+		// entry datagrid events
+		ListCheckout.Click				+= List_Click_Checkout;
+		ListCommit.Click				+= List_Click_Commit;
+		ListDelete.DoubleTapped			+= ListDelete_DoubleClicked;
+		ListDeleteLocal.Click			+= List_Click_LocalDelete;
+		ListDeleteLogical.Click			+= List_Click_LogicalDelete;
+		ListDeletePermanent.Click		+= List_Click_PermanentDelete;
+		ListGetLatest.Click				+= List_Click_GetLatest;
+		ListLocal.Click					+= List_Click_OpenLatestLocal;
+		ListUndoCheckout.Click			+= List_Click_UndoCheckout;
+		ListPreview.Click				+= List_Click_OpenLatestRemote;
+		ListFileDirectory.Click			+= List_Click_OpenDirectory;
+		ListRestore.Click				+= List_Click_Restore;
+		ListOpen.DoubleTapped			+= List_Click_Open;
+		ListPreview.Click				+= List_Click_OpenLatestRemote;
+		ListLocal.Click					+= List_Click_OpenLatestLocal;
+		ListFileDirectory.Click			+= List_Click_OpenDirectory;
+
+		// additional toolbar
+		OdooRefreshDropdown.Click		+= AdditionalTools_Click_Refresh;
+		OdooSearchDropdown.Click		+= AdditionalTools_Click_Search;
+		OdooManageTypesDropdown.Click	+= AdditionalTools_Click_ManageTypes;
+
+		// tabbed datagrids
+		OdooHistory.SelectionChanged	+= OdooHistory_ItemSelectionChanged;
+		OdooHistory.DoubleTapped		+= History_DoubleClick;
+		OdooParents.SelectionChanged	+= OdooParents_ItemSelectionChanged;
+		OdooParents.DoubleTapped		+= OdooParents_DoubleClick;
+		OdooChildren.SelectionChanged	+= OdooChildren_ItemSelectionChanged;
+		OdooChildren.DoubleTapped		+= OdooChildren_DoubleClick;
+
+		// history datagrid
+		HistoryDownload.DoubleTapped	+= History_Click_Download;
+		HistoryDownloadTemp.Click		+= History_Click_TemporaryDownload;
+		HistoryDownloadOverwrite.Click	+= History_Click_OverwriteDownload;
+		HistoryOpen.DoubleTapped		+= History_Click_Open;
+		HistoryOpenTemp.Click			+= History_Click_TemporaryOpen;
+		HistoryOpenOverwrite.Click		+= History_Click_OverwriteOpen;
+		HistoryMove.DoubleTapped		+= History_Click_TemporaryMove;
+		HistoryMoveTemp.Click			+= History_Click_TemporaryMove;
+		HistoryMoveOverwrite.Click		+= History_Click_OverwriteMove;
 	}
+
+
+
 	private async Task HackFileManager_Load()
 	{
 		await Task.Delay(500);
@@ -291,8 +330,8 @@ public sealed partial class HackFileManager : Page
 	{
 		await UnDeleteInternal();
 	}
-	
-
+	private void ListDelete_DoubleClicked(object sender, DoubleTappedRoutedEventArgs e)
+		=> List_Click_LocalDelete(sender, e);
 	#region Background Worker functions
 	private async Task Async_GetLatest((ArrayList, CancellationToken) arguements)
 	{
@@ -1503,7 +1542,7 @@ public sealed partial class HackFileManager : Page
 	private void AdditionalTools_Click_ManageTypes(object sender, RoutedEventArgs e)
 		=> WindowHelper.CreateWindowPage(typeof(OdooFileTypeManager)).Title = "Manage Types";
 	//
-	private void History_Click_Download(object sender, RoutedEventArgs e)
+	private void History_Click_Download(object sender, DoubleTappedRoutedEventArgs e)
 	{
 		var version = GetVersionFromHistory();
 		FileInfo file = new(Path.Combine(version.WinPathway, version.name));
@@ -1536,7 +1575,7 @@ public sealed partial class HackFileManager : Page
 		=> DownloadHistory(true);
 	private void History_Click_OverwriteDownload(object sender, RoutedEventArgs e)
 		=> DownloadHistory(false);
-	private void History_Click_Open(object sender, RoutedEventArgs e)
+	private void History_Click_Open(object sender, DoubleTappedRoutedEventArgs e)
 	{
 
 	}
@@ -1548,7 +1587,7 @@ public sealed partial class HackFileManager : Page
 		=> LocalMoveEntry(false);
 	private void History_Click_TemporaryMove(object sender, RoutedEventArgs e)
 		=> LocalMoveEntry(true);
-	private async void History_DoubleClick(object sender, RoutedEventArgs e)
+	private async void History_DoubleClick(object sender, DoubleTappedRoutedEventArgs e)
 	{
 		if (OdooHistory.SelectedItems?[0] is not HistoryRow item) return;
 		if (item.Version is 0) return;
@@ -1578,7 +1617,7 @@ public sealed partial class HackFileManager : Page
 		ArrayList fIDs = failed.GetIDs();
 		MessageBox.Show($"failed to download version ids: {string.Join(", ", fIDs.ToArray<int>())}");
 	}
-	private async void OdooParents_DoubleClick(object sender, RoutedEventArgs e)
+	private async void OdooParents_DoubleClick(object sender, DoubleTappedRoutedEventArgs e)
 	{
 		if (OdooParents.SelectedItems?[0] is not ParentRow item) return;
 
@@ -1586,7 +1625,7 @@ public sealed partial class HackFileManager : Page
 		string fileName = item.Name;
 		await FindSearchSelectionAsync(pwaPath, fileName);
 	}
-	private async void OdooChildren_DoubleClick(object sender, RoutedEventArgs e)
+	private async void OdooChildren_DoubleClick(object sender, DoubleTappedRoutedEventArgs e)
 	{
 		var item = OdooChildren.SelectedItems?[0] as ChildrenRow;
 		if (item is null) return;

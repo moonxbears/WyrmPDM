@@ -6,12 +6,17 @@
     xmlns:com="using:CommunityToolkit.WinUI.UI.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:HackPDM.Data"
+    xmlns:help="using:HackPDM.ClientUtils"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:sys="using:System"
     xmlns:ui="using:CommunityToolkit.WinUI"
     xmlns:xaml="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     mc:Ignorable="d">
 
+    <Page.Resources>
+        <help:FileSizeConverter x:Key="FileSizeFormatter"/>
+    </Page.Resources>
+    
     <Grid Margin="12" CornerRadius="10">
         <!--  TreeView for Directories  -->
         <SplitView
@@ -55,19 +60,27 @@
                             Visibility="Visible">
                             <TreeView.ContextFlyout>
                                 <MenuFlyout>
-                                    <MenuFlyoutItem x:Name="TreeGetLatest" Text="Get Latest" />
+                                    <MenuFlyoutSubItem x:Name="TreeDownload" Text="Download" >
+                                        <MenuFlyoutItem x:Name="TreeDownloadAll" Text="All" />
+                                        <MenuFlyoutItem x:Name="TreeDownloadTop" Text="Top Directory"/>
+                                    </MenuFlyoutSubItem>
                                     <MenuFlyoutSeparator />
                                     <MenuFlyoutItem x:Name="TreeCheckout" Text="Checkout" />
-                                    <MenuFlyoutItem x:Name="TreeCommit" Text="Commit" />
                                     <MenuFlyoutItem x:Name="TreeUndoCheckout" Text="Undo Checkout" />
+                                    <MenuFlyoutSeparator />
+                                    <MenuFlyoutItem x:Name="TreeCommit" Text="Commit" />
                                     <MenuFlyoutSeparator />
                                     <MenuFlyoutItem x:Name="TreeAnalyze" Text="Analyze" />
                                     <MenuFlyoutSeparator />
-                                    <MenuFlyoutItem x:Name="TreeDelete" Text="Delete" />
-                                    <MenuFlyoutItem x:Name="TreeLogicalDelete" Text="Logical Delete" />
-                                    <MenuFlyoutItem x:Name="TreePermanentDelete" Text="Permanent Delete" />
-                                    <MenuFlyoutItem x:Name="TreeUndelete" Text="UnDelete" />
-                                    <MenuFlyoutItem x:Name="TreeLocalDelete" Text="Local Delete" />
+                                    <MenuFlyoutSubItem x:Name="TreeDelete" Text="Delete">
+                                        <MenuFlyoutItem x:Name="TreeLocalDelete" Text="Local" />
+                                        <MenuFlyoutItem x:Name="TreeLogicalDelete" Text="Logical" />
+                                        <MenuFlyoutItem x:Name="TreePermanentDelete" Text="Permanent" />
+                                    </MenuFlyoutSubItem>
+                                    <MenuFlyoutSubItem x:Name="TreeUndelete" Text="Restore">
+                                        <MenuFlyoutItem x:Name="TreeRestoreAll" Text="All" />
+                                        <MenuFlyoutItem x:Name="TreeRestoreTop" Text="Top Directory" />
+                                    </MenuFlyoutSubItem>
                                     <MenuFlyoutSeparator />
                                     <MenuFlyoutItem x:Name="TreeOpenDirectory" Text="Open Directory" />
                                 </MenuFlyout>
@@ -163,7 +176,18 @@
                                     Binding="{xaml:Binding Name}"
                                     Header="Name" />
                                 <com:DataGridTextColumn Binding="{xaml:Binding Type}" Header="Type" />
-                                <com:DataGridTextColumn Binding="{xaml:Binding Size}" Header="Size" />
+                                <com:DataGridTemplateColumn Header="Size">
+                                    <com:DataGridTemplateColumn.CellTemplate>
+                                        <xaml:DataTemplate>
+                                            <TextBlock
+                                                Text="{xaml:Binding Size, Converter={xaml:StaticResource FileSizeFormatter}}"
+                                                TextAlignment="Right"
+                                                HorizontalAlignment="Stretch"
+                                                Padding="5,0,5,0"
+                                                />
+                                        </xaml:DataTemplate>
+                                    </com:DataGridTemplateColumn.CellTemplate>
+                                </com:DataGridTemplateColumn>
                                 <com:DataGridTextColumn Binding="{xaml:Binding Category}" Header="Category" />
                                 <com:DataGridTextColumn Binding="{xaml:Binding Checkout}" Header="Checkout" />
                                 <com:DataGridTextColumn Binding="{xaml:Binding LocalDate}" Header="Local Date" />
@@ -172,15 +196,23 @@
                             </com:DataGrid.Columns>
                             <com:DataGrid.ContextFlyout>
                                 <MenuFlyout>
-                                    <MenuFlyoutItem x:Name="ListGetLatest" Text="Get Latest" />
-                                    <MenuFlyoutItem x:Name="ListCheckout" Text="Checkout" />
-                                    <MenuFlyoutItem x:Name="ListCommit" Text="Commit" />
-                                    <MenuFlyoutItem x:Name="ListUndoCheckout" Text="Undo Checkout" />
-                                    <MenuFlyoutItem x:Name="ListDelete" Text="Delete" />
                                     <MenuFlyoutSubItem x:Name="ListOpen" Text="Open">
                                         <MenuFlyoutItem x:Name="ListPreview" Text="Preview Latest Remote" />
                                         <MenuFlyoutItem x:Name="ListLocal" Text="Latest Local" />
                                         <MenuFlyoutItem x:Name="ListFileDirectory" Text="File Directory" />
+                                    </MenuFlyoutSubItem>
+                                    <MenuFlyoutItem x:Name="ListGetLatest" Text="Download" />
+                                    <MenuFlyoutSeparator/>
+                                    <MenuFlyoutItem x:Name="ListCheckout" Text="Checkout" />
+                                    <MenuFlyoutItem x:Name="ListUndoCheckout" Text="Undo Checkout" />
+                                    <MenuFlyoutSeparator/>
+                                    <MenuFlyoutItem x:Name="ListCommit" Text="Commit" />
+                                    <MenuFlyoutSeparator/>
+                                    <MenuFlyoutItem x:Name="ListRestore" Text="Restore"/>
+                                    <MenuFlyoutSubItem x:Name="ListDelete" Text="Delete" >
+                                        <MenuFlyoutItem x:Name="ListDeleteLocal" Text="Local" />
+                                        <MenuFlyoutItem x:Name="ListDeleteLogical" Text="Logical"/>
+                                        <MenuFlyoutItem x:Name="ListDeletePermanent" Text="Permanent" />
                                     </MenuFlyoutSubItem>
                                 </MenuFlyout>
                             </com:DataGrid.ContextFlyout>
@@ -219,6 +251,22 @@
                                 <com:DataGridTextColumn Binding="{xaml:Binding Size}" Header="Size" />
                                 <com:DataGridTextColumn Binding="{xaml:Binding RelDate}" Header="Rel Date" />
                             </com:DataGrid.Columns>
+                            <com:DataGrid.ContextFlyout>
+                                <MenuFlyout x:Name="HistoryContextMenu">
+                                    <MenuFlyoutSubItem x:Name="HistoryDownload" Text="Download">
+                                        <MenuFlyoutItem x:Name="HistoryDownloadTemp" Text="Temporary"/>
+                                        <MenuFlyoutItem x:Name="HistoryDownloadOverwrite" Text="Overwrite"/>
+                                    </MenuFlyoutSubItem>
+                                    <MenuFlyoutSubItem x:Name="HistoryOpen" Text="Open">
+                                        <MenuFlyoutItem x:Name="HistoryOpenTemp" Text="Temporary"/>
+                                        <MenuFlyoutItem x:Name="HistoryOpenOverwrite" Text="Overwrite"/>
+                                    </MenuFlyoutSubItem>
+                                    <MenuFlyoutSubItem x:Name="HistoryMove" Text="Move">
+                                        <MenuFlyoutItem x:Name="HistoryMoveTemp" Text="Temporary"/>
+                                        <MenuFlyoutItem x:Name="HistoryMoveOverwrite" Text="Overwrite"/>
+                                    </MenuFlyoutSubItem>
+                                </MenuFlyout>
+                            </com:DataGrid.ContextFlyout>
                         </com:DataGrid>
                     </TabViewItem>
                     <TabViewItem x:Name="ParentTab" Header="Where Used">

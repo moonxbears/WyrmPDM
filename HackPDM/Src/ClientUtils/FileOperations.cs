@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
+
 using HackPDM.Extensions.General;
 using HackPDM.Extensions.Odoo;
 using HackPDM.Forms.Hack;
@@ -17,12 +18,40 @@ using HackPDM.Odoo;
 using HackPDM.Odoo.OdooModels.Models;
 using HackPDM.Src.ClientUtils.Types;
 
+using Microsoft.UI.Xaml.Data;
+
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.ToolTip;
+
 using MessageBox = System.Windows.Forms.MessageBox;
 
 using OClient = HackPDM.Odoo.OdooClient;
 
 namespace HackPDM.ClientUtils;
 
+public class FileSizeConverter : IValueConverter
+{
+	public object Convert(object value, Type targetType, object parameter, string language)
+	{
+		if (value is long bytesize) 
+		{
+			return bytesize switch 
+			{ 
+				< 1024 => $"{bytesize}     B",
+				< 1048576 => $"{bytesize / 1024f:.##}   KB",
+				< 1073741824 => $"{bytesize / 1048576f:.##}   MB",
+				< 1099511627776 => $"{bytesize / 1073741824f:.##}   GB",
+				<= 1125899906842624 => $"{bytesize / 1099511627776f:.##}   TB",
+				_ => $"{bytesize}     B",
+			};
+		}
+		return value;
+	}
+
+	public object ConvertBack(object value, Type targetType, object parameter, string language)
+	{
+		return value;
+	}		
+}
 public static class FileOperations
 {
     public static string ConvertToBase64(string filePath)
