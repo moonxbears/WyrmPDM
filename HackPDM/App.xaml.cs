@@ -1,8 +1,10 @@
 ﻿using System.IO;
 
+using HackPDM.Extensions.Controls;
 using HackPDM.Helper;
 using HackPDM.Src.ClientUtils.Types;
 
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
@@ -36,15 +38,16 @@ public partial class HackApp : Application
     protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
     {
         Window = new MainWindow();
-        var rootFrame = new Frame();
+		Window.SetWindowType(AppWindowPresenterKind.Overlapped);
+		var rootFrame = new Frame();
         Window.Activate();
         Window.Content = rootFrame;
         rootFrame.Navigate(typeof(ProfileManager));
     }
     private void Setup ()
     {
-        string tempPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), StorageBox.APP_NAME);
-        if (!Directory.Exists(tempPath)) Directory.CreateDirectory(tempPath);
+		if (StorageBox.TemporaryPath == null) return;
+        if (!Directory.Exists(StorageBox.TemporaryPath)) Directory.CreateDirectory(StorageBox.TemporaryPath);
 		//Notifier.FileCheckLoop(); // start file check loop in background
 	}
 }

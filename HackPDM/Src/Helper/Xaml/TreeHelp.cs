@@ -128,9 +128,12 @@ namespace HackPDM.Src.Helper.Xaml
 
 					AddLocalEntries(grid, _HFM.LastSelectedNode, hackmap);
 
-					_HFM.OEntries.Sort((EntryRow x, EntryRow y) => string.Compare(x.Name, y.Name));
+					SafeHelper.SafeInvoker(grid, () =>
+					{
+						_HFM.OEntries.Sort((EntryRow x, EntryRow y) => string.Compare(x.Name, y.Name));
+						_HFM.IsListLoaded = true;
+					});
 				}
-				_HFM.IsListLoaded = true;
 			}
 			catch { }
 		}

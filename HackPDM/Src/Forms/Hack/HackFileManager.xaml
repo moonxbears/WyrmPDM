@@ -23,36 +23,36 @@
             <SplitView.Pane>
                 <Grid>
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
                     <BreadcrumbBar
-                    x:Name="OdooDirectoryBreadcrumb"
-                    Margin="0,0,0,10"
-                    VerticalAlignment="Top"
-                    BorderBrush="DimGray"
-                    BorderThickness="3"
-                    CornerRadius="10"
-                    ItemsSource="{x:Bind LastSelectedNodePaths}"
-                    Visibility="Visible"
-                        Grid.Row="0">
+                        x:Name="OdooDirectoryBreadcrumb"
+                        Grid.Row="0"
+                        Margin="0,0,0,10"
+                        VerticalAlignment="Top"
+                        BorderBrush="DimGray"
+                        BorderThickness="3"
+                        CornerRadius="10"
+                        ItemsSource="{x:Bind LastSelectedNodePaths}"
+                        Visibility="Visible">
                         <BreadcrumbBar.ItemTemplate>
                             <xaml:DataTemplate x:DataType="local:TreeData">
-                                <TextBlock Text="{x:Bind Name}"/>
+                                <TextBlock Text="{x:Bind Name}" />
                             </xaml:DataTemplate>
                         </BreadcrumbBar.ItemTemplate>
                     </BreadcrumbBar>
                     <ScrollViewer Grid.Row="1">
                         <TreeView
-                        x:Name="OdooDirectoryTree"
-                        Margin="0,0,10,0"
-                        VerticalAlignment="Top"
-                        BorderBrush="DimGray"
-                        BorderThickness="3"
-                        CanDrag="True"
-                        CanDragItems="False"
-                        CornerRadius="10"
-                        Visibility="Visible">
+                            x:Name="OdooDirectoryTree"
+                            Margin="0,0,10,0"
+                            VerticalAlignment="Top"
+                            BorderBrush="DimGray"
+                            BorderThickness="3"
+                            CanDrag="True"
+                            CanDragItems="False"
+                            CornerRadius="10"
+                            Visibility="Visible">
                             <TreeView.ContextFlyout>
                                 <MenuFlyout>
                                     <MenuFlyoutItem x:Name="TreeGetLatest" Text="Get Latest" />
@@ -107,7 +107,7 @@
                     x:Name="ListTabs"
                     Grid.Row="0"
                     Grid.Column="1"
-                    Grid.ColumnSpan="1"
+                    Grid.ColumnSpan="2"
                     Margin="0,0,10,0">
 
                     <TabViewItem Header="Entries" IsClosable="False">
@@ -147,8 +147,23 @@
                             Margin="0,0,5,0"
                             Source="{x:Bind Icon}" />
                                 -->
-
-                                <com:DataGridTextColumn Binding="{xaml:Binding Name}" Header="Name" />
+                                <com:DataGridTemplateColumn Width="32" Header="Icon">
+                                    <com:DataGridTemplateColumn.CellTemplate>
+                                        <xaml:DataTemplate>
+                                            <Image
+                                                Width="32"
+                                                Height="32"
+                                                Margin="0,0,4,0"
+                                                Source="{xaml:Binding Icon}" />
+                                        </xaml:DataTemplate>
+                                    </com:DataGridTemplateColumn.CellTemplate>
+                                </com:DataGridTemplateColumn>
+                                <com:DataGridTextColumn
+                                    Width="450"
+                                    Binding="{xaml:Binding Name}"
+                                    Header="Name" />
+                                <com:DataGridTextColumn Binding="{xaml:Binding Type}" Header="Type" />
+                                <com:DataGridTextColumn Binding="{xaml:Binding Size}" Header="Size" />
                                 <com:DataGridTextColumn Binding="{xaml:Binding Category}" Header="Category" />
                                 <com:DataGridTextColumn Binding="{xaml:Binding Checkout}" Header="Checkout" />
                                 <com:DataGridTextColumn Binding="{xaml:Binding LocalDate}" Header="Local Date" />
@@ -189,33 +204,83 @@
                     Grid.Row="2"
                     Grid.Column="1"
                     MaxHeight="400"
-                    Margin="10,0,0,0">
+                    Margin="10,0,0,0"
+                    SelectionChanged="VersionTabs_SelectionChanged">
                     <TabViewItem x:Name="HistoryTab" Header="History">
-                        <com:DataGrid x:Name="OdooHistory" ItemsSource="{x:Bind OHistories}" />
+                        <com:DataGrid
+                            x:Name="OdooHistory"
+                            AutoGenerateColumns="False"
+                            ItemsSource="{x:Bind OHistories}"
+                            LoadingRowGroup="OdooEntryDataGrid_LoadingRowGroup">
+                            <com:DataGrid.Columns>
+                                <com:DataGridTextColumn Binding="{xaml:Binding Version}" Header="Version" />
+                                <com:DataGridTextColumn Binding="{xaml:Binding ModUser}" Header="Mod User" />
+                                <com:DataGridTextColumn Binding="{xaml:Binding ModDate}" Header="Mod Date" />
+                                <com:DataGridTextColumn Binding="{xaml:Binding Size}" Header="Size" />
+                                <com:DataGridTextColumn Binding="{xaml:Binding RelDate}" Header="Rel Date" />
+                            </com:DataGrid.Columns>
+                        </com:DataGrid>
                     </TabViewItem>
                     <TabViewItem x:Name="ParentTab" Header="Where Used">
                         <com:DataGrid
                             x:Name="OdooParents"
+                            AutoGenerateColumns="False"
+                            CanUserSortColumns="False"
                             ItemsSource="{x:Bind OParents}"
-                            RowDetailsVisibilityMode="Collapsed" />
+                            RowDetailsVisibilityMode="Collapsed">
+                            <com:DataGrid.Columns>
+                                <com:DataGridTextColumn Binding="{xaml:Binding Version}" Header="Version" />
+                                <com:DataGridTextColumn Binding="{xaml:Binding BasePath}" Header="BasePath" />
+                            </com:DataGrid.Columns>
+                        </com:DataGrid>
                     </TabViewItem>
                     <TabViewItem x:Name="ChildTab" Header="Dependents">
                         <com:DataGrid
                             x:Name="OdooChildren"
+                            AutoGenerateColumns="False"
                             ItemsSource="{x:Bind OChildren}"
-                            RowDetailsVisibilityMode="Collapsed" />
+                            RowDetailsVisibilityMode="Collapsed"
+                            SelectionMode="Extended">
+                            <com:DataGrid.Columns>
+                                <com:DataGridTextColumn Binding="{xaml:Binding Version}" Header="Version" />
+                                <com:DataGridTextColumn Binding="{xaml:Binding BasePath}" Header="BasePath" />
+                            </com:DataGrid.Columns>
+                        </com:DataGrid>
                     </TabViewItem>
                     <TabViewItem x:Name="PropertiesTab" Header="Properties">
                         <com:DataGrid
                             x:Name="OdooProperties"
+                            AutoGenerateColumns="False"
                             ItemsSource="{x:Bind OProperties}"
-                            RowDetailsVisibilityMode="Collapsed" />
+                            RowDetailsVisibilityMode="Collapsed">
+                            <com:DataGrid.Columns>
+                                <com:DataGridTextColumn Binding="{xaml:Binding Version}" Header="Version" />
+                                <com:DataGridTextColumn Binding="{xaml:Binding Property}" Header="Property" />
+                                <com:DataGridTextColumn Binding="{xaml:Binding Configuration}" Header="Configuration" />
+                                <com:DataGridTextColumn Binding="{xaml:Binding Type}" Header="Type" />
+                                <com:DataGridTextColumn Binding="{xaml:Binding ValueData}" Header="Value" />
+                            </com:DataGrid.Columns>
+                        </com:DataGrid>
                     </TabViewItem>
                     <TabViewItem x:Name="InfoTab" Header="Info">
                         <com:DataGrid
                             x:Name="OdooVersionInfoList"
+                            AutoGenerateColumns="False"
+                            IsReadOnly="True"
                             ItemsSource="{x:Bind OVersions}"
-                            RowDetailsVisibilityMode="Collapsed" />
+                            RowDetailsVisibilityMode="Collapsed">
+                            <com:DataGrid.Columns>
+                                <com:DataGridTextColumn Binding="{xaml:Binding Id}" Header="Version Id" />
+                                <com:DataGridTextColumn Binding="{xaml:Binding FileSize}" Header="File Size" />
+                                <com:DataGridTextColumn Binding="{xaml:Binding DirectoryId}" Header="Directory Id" />
+                                <com:DataGridTextColumn Binding="{xaml:Binding NodeId}" Header="Node Id" />
+                                <com:DataGridTextColumn Binding="{xaml:Binding EntryId}" Header="Entry Id" />
+                                <com:DataGridTextColumn Binding="{xaml:Binding AttachmentId}" Header="Attachment Id" />
+                                <com:DataGridTextColumn Binding="{xaml:Binding ModifyDate}" Header="Modify Date" />
+                                <com:DataGridTextColumn Binding="{xaml:Binding Checksum}" Header="Checksum" />
+                                <com:DataGridTextColumn Binding="{xaml:Binding OdooCompletePath}" Header="Odoo Complete Path" />
+                            </com:DataGrid.Columns>
+                        </com:DataGrid>
                     </TabViewItem>
                 </TabView>
 

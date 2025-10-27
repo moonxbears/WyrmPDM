@@ -12,6 +12,7 @@ using HackPDM.Src.Data.Numeric;
 using Color = Windows.UI.Color;
 using HackPDM.Forms.Odoo;
 using HackPDM.Forms.Hack;
+using System.IO;
 
 
 namespace HackPDM;
@@ -34,8 +35,8 @@ public static class StorageBox
 	}
 	public static string? TemporaryPath
 	{
-		get => field ??= Settings.Get<string>("TemporaryPath");
-		set => Settings.Set("TemporaryPath", field = value);
+		get => field ??= Path.Combine(Path.GetTempPath(), APP_NAME);
+		set => field = value;
 	}
 	public static Dictionary<string, WindowConfig> PresetWindowConfig = new ()
 	{
@@ -47,7 +48,7 @@ public static class StorageBox
 	#endregion
 	#region Profile Manager
 	public const int PROFILE_MANAGER_WIDTH = 600;
-	public const int PROFILE_MANAGER_HEIGHT = 200;
+	public const int PROFILE_MANAGER_HEIGHT = 415;
 	public static Theme? MyTheme
 	{
 		get => Settings.Get<Theme?>("Theme");

@@ -9,6 +9,8 @@ using HackPDM.Extensions.General;
 using HackPDM.Odoo.OdooModels.Models;
 using HackPDM.Src.ClientUtils.Types;
 
+using SolidWorks.Interop.swdocumentmgr;
+
 using OClient = HackPDM.Odoo.OdooClient;
 
 namespace HackPDM.Odoo.OdooModels;
@@ -40,7 +42,7 @@ public abstract partial class HpBaseModel
     };
     public int Id { get; internal set; }
     // ID of the record in the database
-    public string HpModel
+    public virtual string HpModel
     {
         get
         {
@@ -320,7 +322,7 @@ public abstract partial class HpBaseModel
         return fieldNames;
     }
 }
-public abstract partial class HpBaseModel<T> : HpBaseModel where T : HpBaseModel, new()
+public partial class HpBaseModel<T> : HpBaseModel where T : HpBaseModel, new()
 {
     public virtual T GetRecord()
     {
@@ -736,8 +738,8 @@ public abstract partial class HpBaseModel<T> : HpBaseModel where T : HpBaseModel
         return Id.ToString();
     }
 }
-public abstract partial class HpBaseModel<T> : HpBaseModel where T : HpBaseModel, new()
-{
+public partial class HpBaseModel<T> : HpBaseModel where T : HpBaseModel, new()
+{	
     // async methods
 	internal async static Task<T[]> GetRecordsByIdsAsync(ArrayList recordIds, ArrayList? searchFilters = null, string[]? excludedFields = null, string[]? includedFields = null, string[]? insertFields = null)
 	{
@@ -948,4 +950,14 @@ public abstract partial class HpBaseModel<T> : HpBaseModel where T : HpBaseModel
 			CompleteConstruction();
 		}
 	}
+}
+public partial class HpBaseModel<T> : HpBaseModel where T : HpBaseModel, new()
+{
+	public static T Empty => field ??= new();
+	public override string HpModel 
+	{ 
+		get => GetHpModel(); 
+		internal set => HpModelDictionary[typeof(T)] = value; 
+	}
+	public HpBaseModel() { }
 }

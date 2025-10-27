@@ -10,86 +10,22 @@ using System.Reactive.Subjects;
 
 namespace HackPDM.Src.ClientUtils.Types
 {
-    public class ObservingCollection<T> : ObservableCollection<T>
+    public class EventCollection<T> : ObservableCollection<T>
     {
-        public event EventHandler<ItemChangedEventArgs<T>> ItemChanged;
+		public void ManualNotifyCollectionChanged(ReasonForCall reason)
+		{
+			NotifyCollectionChangedEventArgs arg = new(NotifyCollectionChangedAction.Replace, this, reason);
+			OnCollectionChanged(arg);
+		}
 
-        private readonly Subject<ItemChangedEventArgs<T>> _subject = new();
-        public IObservable<ItemChangedEventArgs<T>> ItemChanges => _subject;
-
-        private readonly List<IItemChangeListener<T>> _listeners = [];
-
-        public ObservingCollection() : base()
-        {
-
-        }
-
-
-        public void AddListener(IItemChangeListener<T> listener)
-            => _listeners.Add(listener);
-        public void RemoveListener(IItemChangeListener<T> listener)
-            => _listeners.Remove(listener);
-
-        protected override void InsertItem(int index, T item)
-        {
-            base.InsertItem(index, item);
-            RaiseItemChanged(item, ChangeType.Added);
-        }
-        protected override void RemoveItem(int index)
-        {
-            var item = this[index];
-            base.RemoveItem(index);
-            RaiseItemChanged(item, ChangeType.Removed);
-        }
-        protected override void SetItem(int index, T item)
-        {
-            base.SetItem(index, item);
-            RaiseItemChanged(item, ChangeType.Updated);
-        }
-        protected override void MoveItem(int oldIndex, int newIndex)
-        {
-            base.MoveItem(oldIndex, newIndex);
-            RaiseItemChanged(this[newIndex], ChangeType.Updated);
-        }
-
-        private void RaiseItemChanged(T item, ChangeType change)
-        {
-            var args = new ItemChangedEventArgs<T>(item, change);
-            ItemChanged?.Invoke(this, args);
-            _subject.OnNext(args);
-            foreach (var listener in _listeners)
-            {
-                switch (change)
-                {
-                    case ChangeType.Added:
-                        listener.OnItemAdded(this, args);
-                        break;
-                    case ChangeType.Removed:
-                        listener.OnItemRemoved(this, args);
-                        break;
-                    case ChangeType.Updated:
-                        listener.OnItemUpdated(this, args);
-                        break;
-                    case ChangeType.Selected:
-                        listener.OnItemSelected(this, args);
-                        break;
-                    case ChangeType.Clicked:
-                        listener.OnItemClicked(this, args);
-                        break;
-                    case ChangeType.Rendering:
-                        listener.OnItemRendering(this, args);
-                        break;
-                    case ChangeType.Focused:
-                        listener.OnItemFocused(this, args);
-                        break;
-                    case ChangeType.Hovered:
-                        listener.OnItemHovered(this, args);
-                        break;
-                }
-            }
-        }
-    }
-    public class ListViewCollection<T> : ObservingCollection<T>
+		public enum ReasonForCall
+		{
+			EndOfUpdate,
+			BeginningOfUpdate,
+			Other,
+		}
+	}
+    public class ListViewCollection<T> : EventCollection<T>
     {
         public ListView ListView { get; }
         public ListViewCollection(ListView listView)

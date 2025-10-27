@@ -5,17 +5,23 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+
 using HackPDM.Data;
 using HackPDM.Extensions.General;
+using HackPDM.Forms.Hack;
 using HackPDM.Odoo.OdooModels;
+using HackPDM.Odoo.OdooModels.Models;
 using HackPDM.Src.ClientUtils.Types;
 
-using MessageBox = System.Windows.Forms.MessageBox;
+using Microsoft.UI.Xaml.Controls;
+
+using SolidWorks.Interop.sldworks;
+using SolidWorks.Interop.swconst;
+
 using DialogResult = System.Windows.Forms.DialogResult;
+using MessageBox = System.Windows.Forms.MessageBox;
 using MessageBoxButtons = System.Windows.Forms.MessageBoxButtons;
 using MessageBoxIcon = System.Windows.Forms.MessageBoxIcon;
-
-using Microsoft.UI.Xaml.Controls;
 
 namespace HackPDM.ClientUtils;
 
@@ -379,6 +385,25 @@ public static class Help
 	public static Lazy<T> LazyIf<T>(bool condition, Func<T> @true, Func<T> @false)
 	{
 		return new Lazy<T>(() => condition ? @true() : @false());
+	}
+	public static bool ConvertSWFile<T>(HpVersion version, out T file) where T : new()
+	{
+		file = new T();
+		var swApp = new SldWorksClass();
+		FileInfo vInfo = new(Path.Combine(StorageBox.PwaPathAbsolute ?? "", version.WinPathway, version.name));
+		if (!vInfo.Exists) return false;
+
+		swDocumentTypes_e extSWType = version.file_ext.ToLower() switch
+		{
+			"sldprt" => swDocumentTypes_e.swDocPART,
+			"sldasm" => swDocumentTypes_e.swDocASSEMBLY,
+			"slddrw" => swDocumentTypes_e.swDocDRAWING,
+			_ => swDocumentTypes_e.swDocNONE,
+		};
+		
+		var model = swApp.OpenDoc(Path.Combine(StorageBox.TemporaryPath, version.name), (int)extSWType);
+		if (model == null) return false;
+		return false;
 	}
 }
 

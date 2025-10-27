@@ -17,7 +17,6 @@
   <ItemGroup>
     <None Remove="Src\Forms\Hack\HackFileManager.xaml" />
     <None Remove="Src\Forms\Hack\HackSettings.xaml" />
-    <None Remove="Src\Forms\Settings\BlankPage1.xaml" />
 	<None Remove="Src\Forms\Helper\MessageBox.xaml" />
     <None Remove="Src\Forms\Helper\MessageBoxWindow.xaml" />
     <None Remove="Src\Forms\Odoo\OdooFileTypeManager.xaml" />
@@ -510,9 +509,6 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Update="Src\Forms\Hack\HackFileManager.xaml">
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Update="Src\Forms\Settings\BlankPage1.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
 	<Page Update="Src\Forms\Hack\HackFileManager.xaml">

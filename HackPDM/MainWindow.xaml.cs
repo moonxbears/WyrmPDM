@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
 
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
@@ -13,6 +14,9 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
+using Windows.UI.WindowManagement;
+using HackPDM.Extensions.Controls;
+
 using WindowHelper = HackPDM.Helper.WindowHelper;
 
 // To learn more about WinUI, the WinUI project structure,
@@ -28,6 +32,6 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        WindowHelper.ResizeWindow(this, StorageBox.PROFILE_MANAGER_WIDTH, StorageBox.PROFILE_MANAGER_HEIGHT);
-    }
+		WindowHelper.ResizeWindow(this, StorageBox.PROFILE_MANAGER_WIDTH, StorageBox.PROFILE_MANAGER_HEIGHT);
+	}
 }

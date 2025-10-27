@@ -39,6 +39,10 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.WindowsAppSDK.Runtime;
 
+using Newtonsoft.Json.Linq;
+
+using SolidWorks.Interop.sldworks;
+
 using Windows.Storage.Streams;
 
 using DialogResult = System.Windows.Forms.DialogResult;
@@ -214,13 +218,13 @@ public sealed partial class HackFileManager : Page
 
 		OdooDirectoryTree.SelectionChanged += OdooDirectoryTree_SelectionChanged;
 
-		ONodes.CollectionChanged += CollectionChanged;
-		OEntries.CollectionChanged += CollectionChanged;
-		OHistories.CollectionChanged += CollectionChanged;
-		OParents.CollectionChanged += CollectionChanged;
-		OChildren.CollectionChanged += CollectionChanged;
-		OProperties.CollectionChanged += CollectionChanged;
-		OVersions.CollectionChanged += CollectionChanged;
+		// ONodes.CollectionChanged			+= CollectionChanged;
+		// OEntries.CollectionChanged		+= CollectionChanged;
+		// OHistories.CollectionChanged		+= CollectionChanged;
+		// OParents.CollectionChanged		+= CollectionChanged;
+		// OChildren.CollectionChanged		+= CollectionChanged;
+		// OProperties.CollectionChanged	+= CollectionChanged;
+		// OVersions.CollectionChanged		+= CollectionChanged;
 
 		OdooEntryList.SelectionChanged += OdooEntryList_SelectionChanged;
 		OdooEntryList.Sorting += List_ColumnClick;
@@ -286,10 +290,6 @@ public sealed partial class HackFileManager : Page
 	private async void Tree_Click_Undelete(object sender, RoutedEventArgs e)
 	{
 		await UnDeleteInternal();
-	}
-	private void CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
-	{
-		// TASK: implement
 	}
 	
 
@@ -532,18 +532,43 @@ public sealed partial class HackFileManager : Page
 		{
 			case StorageBox.HISTORY_TAB:
 				await _gridHelper.ProcessHistorySelectAsync(OdooHistory, entry, token);
+				SafeHelper.SafeInvoker(OdooHistory, () =>
+				{
+					OHistories.Sort((x, y) => x.Version.CompareTo(y.Version), true);
+					OdooHistory.UpdateLayout();
+				});
 				break;
 			case StorageBox.PARENT_TAB:
 				await _gridHelper.ProcessParentSelectAsync(OdooParents, entry, token);
+				SafeHelper.SafeInvoker(OdooParents, () =>
+				{
+					OParents.Sort((x, y) => x.Version.CompareTo(y.Version), true);
+					OdooParents.UpdateLayout();
+				});
 				break;
 			case StorageBox.CHILD_TAB:
 				await _gridHelper.ProcessChildSelectAsync(OdooChildren, entry, token);
+				SafeHelper.SafeInvoker(OdooChildren, () =>
+				{
+					OChildren.Sort((x, y) => x.Version.CompareTo(y.Version), true);
+					OdooChildren.UpdateLayout();
+				});
 				break;
 			case StorageBox.PROPERTIES_TAB:
 				await _gridHelper.ProcessPropertiesSelectAsync(OdooProperties, entry, token);
+				SafeHelper.SafeInvoker(OdooProperties, () =>
+				{
+					OProperties.Sort((x, y) => x.Version.CompareTo(y.Version), true);
+					OdooProperties.UpdateLayout();
+				});
 				break;
 			case StorageBox.INFO_TAB:
 				await _gridHelper.ProcessInfoSelectAsync(OdooVersionInfoList, entry, token);
+				SafeHelper.SafeInvoker(OdooVersionInfoList, () =>
+				{
+					OVersions.Sort((x, y) => x.Id.CompareTo(y.Id), true);
+					OdooVersionInfoList.UpdateLayout();
+				});
 				break;
 		}
 
@@ -907,6 +932,14 @@ public sealed partial class HackFileManager : Page
 		}
 	}
 	// item selection change events
+	private async void VersionTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
+	{
+		if (e.AddedItems.Count == 0) return;
+		if (OdooEntryList.SelectedItem is not EntryRow entry) return;
+		if (_cSource is not null) await _cSource.CancelAsync();
+		_cSource = new();
+		_ = ProcessEntrySelectionAsync(entry, _cSource.Token);
+	}
 	private async void OdooEntryList_SelectionChanged(object sender, SelectionChangedEventArgs e)
 	{
 		if (OdooEntryList.SelectedItems.Count > 1 || e.AddedItems.Count == 0)
@@ -940,17 +973,17 @@ public sealed partial class HackFileManager : Page
 	private void OdooHistory_ItemSelectionChanged(object sender, SelectionChangedEventArgs e)
 	{
 		if (e.AddedItems.Count == 0) return;
-		PreviewImageSelection((e.AddedItems.First() as HistoryRow), NameConfig.HistoryVersion.Name);
+		PreviewImageSelection((e.AddedItems.First() as HistoryRow)); //, NameConfig.HistoryVersion.Name);
 	}
 	private void OdooParents_ItemSelectionChanged(object sender, SelectionChangedEventArgs e)
 	{
 		if (e.AddedItems.Count == 0) return;
-		PreviewImageSelection((e.AddedItems.First() as ParentRow), NameConfig.ParentVersion.Name);
+		PreviewImageSelection((e.AddedItems.First() as ParentRow)); //, NameConfig.ParentVersion.Name);
 	}
 	private void OdooChildren_ItemSelectionChanged(object sender, SelectionChangedEventArgs e)
 	{
 		if (e.AddedItems.Count == 0) return;
-		PreviewImageSelection((e.AddedItems.First() as ChildrenRow), NameConfig.ChildrenVersion.Name);
+		PreviewImageSelection((e.AddedItems.First() as ChildrenRow)); //, NameConfig.ChildrenVersion.Name);
 	}
 	// change events
 	private async void ShowInactive_Checked(object sender, RoutedEventArgs e)
@@ -1755,7 +1788,7 @@ public sealed partial class HackFileManager : Page
 		version.DownloadFile(Path.GetTempPath());
 		FileOperations.OpenFile(Path.Combine(version.WinPathway, version.name));
 	}
-	private async void PreviewImageSelection<T>(T? item, string nameConfigId)
+	private async void PreviewImageSelection<T>(T? item)
 	{
 		switch (item)
 		{
@@ -2250,4 +2283,6 @@ public sealed partial class HackFileManager : Page
 	{
 
 	}
+
+	
 }

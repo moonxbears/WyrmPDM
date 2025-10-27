@@ -82,10 +82,15 @@ public partial class HpVersion : HpBaseModel<HpVersion>
             if (this.HashedValues.ContainsKey("dir_id"))
             {
                 WinPathway = HpDirectory.ConvertToWindowsPath(
-                    (string?)
-                    ((ArrayList?)this.HashedValues["dir_id"])?[1], false);
+                    (string)
+                    ((ArrayList)HashedValues["dir_id"])[1], false);
             }
-        }
+			if (WinPathway is null && this.HashedValues.ContainsKey("directory_complete_name"))
+			{
+				WinPathway = HpDirectory.ConvertToWindowsPath(
+					(HashedValues["directory_complete_name"] as string ?? ""), false);
+			}
+		}
         finally 
         {
             base.CompleteConstruction();

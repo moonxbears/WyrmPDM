@@ -70,6 +70,7 @@ public static class FileOperations
             string combinedPath = Path.Combine(HackDefaults.PwaPathAbsolute, file.BasePath);
             if (!Directory.Exists(combinedPath))
             {
+				//CreateDirectory(combinedPath);
                 Directory.CreateDirectory(combinedPath);
             }
             combinedPath = Path.Combine(combinedPath, file.Name);
@@ -99,7 +100,24 @@ public static class FileOperations
     {
         return file.Exists && SameChecksum( file.FullName, compareChecksum, GetHashAlgorithm( cType ) );
     }
-    public static bool SameChecksum( string directoryPath, string compareChecksum, HashAlgorithm alg )
+	public static DirectoryInfo CreateDirectory(string path)
+	{
+		List<DirectoryInfo> directories = [];
+		for (int i = 0; i < path.Length; i++)
+		{
+			if (path[i] == '/' || path[i] == '\\')
+			{
+				string subPath = path[..i];
+				if (!Directory.Exists(subPath))
+				{
+					directories.Add(Directory.CreateDirectory(subPath));
+				}
+			}
+		}
+
+		return directories.Last();
+	}
+	public static bool SameChecksum( string directoryPath, string compareChecksum, HashAlgorithm alg )
     {
         string fileChecksum = FileChecksum(directoryPath, alg);
         if ( fileChecksum != null && fileChecksum != "" && fileChecksum == compareChecksum )
@@ -168,19 +186,17 @@ public static class FileOperations
     }
     public static byte[] ReadFileInChunks(string filePath)
     {
-        using (FileStream fs = new(filePath, FileMode.Open, FileAccess.Read, FileShare.Read))
-        using (BufferedStream bs = new(fs))
-        using (MemoryStream ms = new())
-        {
-            byte[] buffer = new byte[4096]; // Adjust buffer size as needed
-            int bytesRead;
-            while ((bytesRead = bs.Read(buffer, 0, buffer.Length)) > 0)
-            {
-                ms.Write(buffer, 0, bytesRead);
-            }
-            return ms.ToArray();
-        }
-    }
+		using FileStream fs = new(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+		using BufferedStream bs = new(fs);
+		using MemoryStream ms = new();
+		byte[] buffer = new byte[4096]; // Adjust buffer size as needed
+		int bytesRead;
+		while ((bytesRead = bs.Read(buffer, 0, buffer.Length)) > 0)
+		{
+			ms.Write(buffer, 0, bytesRead);
+		}
+		return ms.ToArray();
+	}
     public static HackFile[] FilesInDirectory(string path, SearchOption searchOption = SearchOption.TopDirectoryOnly)
     {
         IEnumerable<string> filePaths = Directory.EnumerateFiles(path, "*", searchOption);

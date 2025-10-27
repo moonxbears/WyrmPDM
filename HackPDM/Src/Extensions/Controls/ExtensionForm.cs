@@ -14,8 +14,7 @@ using Control = Microsoft.UI.Xaml.Controls.Control;
 using HackPDM.Src.ClientUtils.Types;
 using CommunityToolkit.WinUI.UI.Controls;
 using System.Collections.ObjectModel;
-using CommunityToolkit.WinUI;
-using HackPDM.Extensions.General;
+using Microsoft.UI.Windowing;
 //using System.Windows.Controls;
 
 namespace HackPDM.Extensions.Controls;
@@ -46,6 +45,13 @@ public static class ExtensionForm
 			StartPoint = new Windows.Foundation.Point(0, 0),
 			EndPoint = new Windows.Foundation.Point(1, 1)
 		};
+	}
+	extension(Window window)
+	{
+		public bool SetWindowType(AppWindowPresenterKind kind)
+		{
+			try { window.AppWindow.SetPresenter(kind); return true; } catch { return false; }
+		}
 	}
 	extension(DataGrid grid)
 	{
