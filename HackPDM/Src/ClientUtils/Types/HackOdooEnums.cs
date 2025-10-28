@@ -155,3 +155,9 @@ public enum ThemeType
     Light,
     Preset1,
 }
+public enum ExtType
+{
+	Svg,
+	Png,
+	Other
+}

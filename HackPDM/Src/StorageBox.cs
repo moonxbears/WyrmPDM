@@ -109,7 +109,9 @@ public static class StorageBox
 	public const string LOCALPREFIX     = "ms-appdata:///local";
 	public const string ASSETSFOLDER    = "Assets";
 	public const string IMAGEFOLDER     = "Images";
+
 	public const string EXTENSIONFOLDER = "ExtensionIcons";
+	public const string ICONFOLDER		= "Icons";
 	public const string FOLDERICONS     = "FolderIcons";
 	public const string STATUSFOLDER    = "StatusIcons";
 	#endregion

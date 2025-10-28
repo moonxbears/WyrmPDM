@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 using HackPDM.Src.ClientUtils.Types;
@@ -33,5 +34,10 @@ public class ImageListProvider : IImageProvider
 		await ms.WriteAsync(imgBytes);
 		var img = Image.FromStream(ms);
 		_imageList.Images.Add(key, img);
+	}
+
+	public async Task<ImageSource?> GetImageAsync(string key)
+	{
+		throw new NotImplementedException();
 	}
 }

@@ -23,7 +23,8 @@ namespace HackPDM.Data;
 public partial class EntryRow : ItemData, IRowData
 {
 	// (MVVM) VIEW
-	public BitmapImage? Icon        { get; set; } = Assets.GetImage("file-icon_32") as BitmapImage;
+	public ImageSource? Icon        { get; set; }
+	public ImageSource? StatusIcon	{ get; set; }
 	public int?          Id         { get; set; }
 	public string?      Type        { get; set; }
 	public long?         Size       { get; set; }
@@ -145,7 +146,7 @@ public partial class TreeData : IEnumerable<TreeData>
 	public partial TreeData? Parent { get; }
 	public object? Tag { get; set; }
 	public int? DirectoryId { get; set; }
-	public BitmapImage? Icon { get; set; } = Assets.GetImage("simple-folder-icon_32") as BitmapImage;
+	public ImageSource? Icon { get; set; }
 	public TreeView? ParentTree { get; internal set; }
 	public TreeViewNode? Node { get; internal set; }
 	public partial TreeViewItem? VisualContainer { get; }

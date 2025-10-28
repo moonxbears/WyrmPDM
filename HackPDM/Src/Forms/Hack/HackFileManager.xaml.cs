@@ -218,6 +218,7 @@ public sealed partial class HackFileManager : Page
 		OdooDirectoryBreadcrumb.ItemClicked += OdooDirectoryBreadcrumb_ItemClicked;
 
 		OdooDirectoryTree.SelectionChanged += OdooDirectoryTree_SelectionChanged;
+		OdooDirectoryTree.RightTapped += OdooDirectoryTree_RightTapped;
 
 		// ONodes.CollectionChanged			+= CollectionChanged;
 		// OEntries.CollectionChanged		+= CollectionChanged;
@@ -289,7 +290,13 @@ public sealed partial class HackFileManager : Page
 		HistoryMoveOverwrite.Click		+= History_Click_OverwriteMove;
 	}
 
-
+	private void OdooDirectoryTree_RightTapped(object sender, RightTappedRoutedEventArgs e)
+	{
+		var tree = sender as TreeView;
+		var elem = e.OriginalSource is FrameworkElement ui ? ui.DataContext as TreeData : null;
+		tree?.SelectedNode = elem?.Node;
+		ODT_SetLastSelected(elem);
+	}
 
 	private async Task HackFileManager_Load()
 	{
@@ -300,6 +307,9 @@ public sealed partial class HackFileManager : Page
 		=> OdooDirectoryTree;
 	internal DataGrid GetOdooEntryList()
 			=> OdooEntryList;
+	internal Image GetOdooEntryImage() => OdooEntryImage;
+	internal ProgressRing GetProgressRing() => LoadRing;
+	internal (Image, ProgressRing) GetVisualizer() => (OdooEntryImage, LoadRing);
 	internal void RestartEntries() => _treeHelper.RestartEntries(OdooDirectoryTree, OdooEntryList);
 	#endregion
 	#region TEST_VARIABLES
@@ -571,7 +581,7 @@ public sealed partial class HackFileManager : Page
 		{
 			case StorageBox.HISTORY_TAB:
 				await _gridHelper.ProcessHistorySelectAsync(OdooHistory, entry, token);
-				SafeHelper.SafeInvoker(OdooHistory, () =>
+				SafeHelper.SafeInvoker(() =>
 				{
 					OHistories.Sort((x, y) => x.Version.CompareTo(y.Version), true);
 					OdooHistory.UpdateLayout();
@@ -579,7 +589,7 @@ public sealed partial class HackFileManager : Page
 				break;
 			case StorageBox.PARENT_TAB:
 				await _gridHelper.ProcessParentSelectAsync(OdooParents, entry, token);
-				SafeHelper.SafeInvoker(OdooParents, () =>
+				SafeHelper.SafeInvoker(() =>
 				{
 					OParents.Sort((x, y) => x.Version.CompareTo(y.Version), true);
 					OdooParents.UpdateLayout();
@@ -587,7 +597,7 @@ public sealed partial class HackFileManager : Page
 				break;
 			case StorageBox.CHILD_TAB:
 				await _gridHelper.ProcessChildSelectAsync(OdooChildren, entry, token);
-				SafeHelper.SafeInvoker(OdooChildren, () =>
+				SafeHelper.SafeInvoker(() =>
 				{
 					OChildren.Sort((x, y) => x.Version.CompareTo(y.Version), true);
 					OdooChildren.UpdateLayout();
@@ -595,7 +605,7 @@ public sealed partial class HackFileManager : Page
 				break;
 			case StorageBox.PROPERTIES_TAB:
 				await _gridHelper.ProcessPropertiesSelectAsync(OdooProperties, entry, token);
-				SafeHelper.SafeInvoker(OdooProperties, () =>
+				SafeHelper.SafeInvoker(() =>
 				{
 					OProperties.Sort((x, y) => x.Version.CompareTo(y.Version), true);
 					OdooProperties.UpdateLayout();
@@ -603,7 +613,7 @@ public sealed partial class HackFileManager : Page
 				break;
 			case StorageBox.INFO_TAB:
 				await _gridHelper.ProcessInfoSelectAsync(OdooVersionInfoList, entry, token);
-				SafeHelper.SafeInvoker(OdooVersionInfoList, () =>
+				SafeHelper.SafeInvoker(() =>
 				{
 					OVersions.Sort((x, y) => x.Id.CompareTo(y.Id), true);
 					OdooVersionInfoList.UpdateLayout();
@@ -935,6 +945,20 @@ public sealed partial class HackFileManager : Page
 
 	#region Form Event Handlers
 	// after select events
+	private async void ODT_SetLastSelected(TreeData? tData)
+	{
+		LastSelectedNode = tData?.Node;
+		LastSelectedNodePath = LastSelectedNode?.LinkedData.FullPath;
+		LastSelectedNode?.UpdateBreadCrumbCollection(LastSelectedNodePaths);
+		
+		IsListLoaded = false;
+		if (LastSelectedNode is not null)
+		{
+			_treeItemChange = _treeHelper.TreeSelectItem(OdooDirectoryTree, LastSelectedNode, OdooEntryList, _cTreeSource.Token);
+			await _treeItemChange;
+		}
+
+	}
 	private async void OdooDirectoryTree_SelectionChanged(TreeView sender, TreeViewSelectionChangedEventArgs args)
 	{
 		_queuedTreeChange = (null, null);
@@ -960,7 +984,7 @@ public sealed partial class HackFileManager : Page
 			IsListLoaded = false;
 			if (LastSelectedNode is not null)
 			{
-				_treeItemChange = _treeHelper.TreeSelectItem(OdooDirectoryTree, LastSelectedNode, OdooEntryList, _cTreeSource.Token);
+				_treeItemChange = _treeHelper.TreeSelectItem(sender, LastSelectedNode, OdooEntryList, _cTreeSource.Token);
 				await _treeItemChange;
 			}
 
@@ -1529,10 +1553,10 @@ public sealed partial class HackFileManager : Page
 #endif
 	}
 	//
-	private void AdditionalTools_Click_Refresh(object sender, RoutedEventArgs e)
+	private async void AdditionalTools_Click_Refresh(object sender, RoutedEventArgs e)
 	{
 		OdooEntryImage.Source = _previewImage;
-		_treeHelper.RestartEntries(OdooDirectoryTree, OdooEntryList);
+		await _treeHelper.RestartTree(OdooDirectoryTree);
 	}
 	private void AdditionalTools_Click_Search(object sender, RoutedEventArgs e)
 	{

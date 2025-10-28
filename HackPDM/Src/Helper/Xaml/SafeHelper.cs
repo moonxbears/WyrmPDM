@@ -10,11 +10,12 @@ namespace HackPDM.Src.Helper.Xaml
 {
 	internal static class SafeHelper
 	{
-		internal static void SafeInvokeGen<T>(Control control, T data, Action<T> action)
+		internal static void SafeInvokeGen<T>(T data, Action<T> action)
 		{
 			HackFileManager.HackDispatcherQueue.TryEnqueue(() => action.Invoke(data));
 		}
-		internal static void SafeInvoker(Control control, Action action)
+		
+		internal static void SafeInvoker(Action action)
 		{
 			HackFileManager.HackDispatcherQueue.TryEnqueue(() =>
 					{
@@ -28,7 +29,7 @@ namespace HackPDM.Src.Helper.Xaml
 						}
 					});
 		}
-		internal static Task SafeInvokerAsync(Control control, Action action)
+		internal static Task SafeInvokerAsync(Action action)
 		{
 			var tcs = new TaskCompletionSource<bool>();
 			HackFileManager.

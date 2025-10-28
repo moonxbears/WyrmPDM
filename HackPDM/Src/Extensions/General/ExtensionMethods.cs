@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -8,9 +9,12 @@ using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 
 using HackPDM.ClientUtils;
 using HackPDM.Src.ClientUtils.Types;
+
+using Windows.ApplicationModel.Activation;
 
 namespace HackPDM.Extensions.General;
 
@@ -224,6 +228,53 @@ public static class ExtensionMethods
     {
         return str.Split(["\\", "/"], StringSplitOptions.RemoveEmptyEntries);
 	}
+    
+    //
+    //
+    //
+    //
+    // TODO: finish this
+    private static void TakeWhile<T>(this Span<T> span, Predicate<T> predicate)
+    {
+	    for (int i = 0; i < span.Length; i++)
+	    {
+		    ref var item = ref span[i];
+		    if (predicate(item))
+		    {
+			    // list[i] = item;
+		    }
+	    }
+    }
+	public static bool StartsWith(this Span<char> str, Span<string> list)
+	{
+		
+		BitArray mask = new(list.Length);
+		
+		for (int index = 0; index < str.Length; index++)
+		{
+			var current = str[index];
+			for (int i = 0; i < list.Length; i++)
+			{
+				if (mask.Get(i)) continue;
+				ref var listStr = ref list[i];
+				var listCurrent = listStr[index];
+
+				if (current == listCurrent)
+				{
+					if (i == list.Length - 1) return true;
+				}
+				else mask.Set(i, true);
+			}
+		}
+		return false;
+	}
+	//
+	//
+	//
+	//
+	//
+	//
+
 	public static ObservableCollection<string> SplitByPathObserve(this string str)
 		=> new (str.Split(["\\", "/"], StringSplitOptions.RemoveEmptyEntries));
     public static TArray Split<TArray>(this string str, string[]? delimiters = null, StringSplitOptions options = StringSplitOptions.RemoveEmptyEntries)
@@ -422,4 +473,75 @@ public static class FileInfoExtensions
         //    }
         //}
     }
+}
+public static class Conversions
+{
+	public static (T1, T1) Repeat2<T1>(this T1 v1) where T1 : struct
+		=> (v1, v1);
+	public static (T1, T1, T1) Repeat3<T1>(this T1 v1) where T1 : struct
+		=> (v1, v1, v1);
+	public static (T1, T1, T1, T1) Repeat4<T1>(this T1 v1) where T1 : struct
+		=> (v1, v1, v1, v1);
+	public static (T1, T1, T1, T1, T1) Repeat5<T1>(this T1 v1) where T1 : struct
+		=> (v1, v1, v1, v1, v1);
+	//private static T1[] RepeatTuple<T1>(T1 t1)
+}
+public class DynamicTuple<T>
+{
+	private readonly T[] _items;
+	public DynamicTuple(params T[] items)
+	{
+		_items = items;
+		ValueTuple<int, int> tup = (1, 2);
+		
+	}
+	public ref T this[int index] => ref _items[index];
+	//public T this[int index] => _items[index];
+	public int Length => _items.Length;
+
+	public void Deconstruct(out T first, out T second)
+	{
+		first = _items.Length > 0 ? _items[0] : default!; 
+		second = _items.Length > 1 ? _items[1] : default!;
+	}
+	public void Deconstruct(out T first, out T second, out T third)
+	{
+		first = _items.Length > 0 ? _items[0] : default!;
+		second = _items.Length > 1 ? _items[1] : default!;
+		third = _items.Length > 2 ? _items[2] : default!;
+	}
+	public void Deconstruct(out T a, out T b, out T c, out T d)
+	{
+		a	= _items.Length > 0		? _items[0]		: default!;
+		b	= _items.Length > 1		? _items[1]		: default!;
+		c	= _items.Length > 2		? _items[2]		: default!;
+		d	= _items.Length > 3		? _items[3]		: default!;
+	}
+	public void Deconstruct(out T a, out T b, out T c, out T d, out T e)
+	{
+		a = _items.Length > 0 ? _items[0] : default!;
+		b = _items.Length > 1 ? _items[1] : default!;
+		c = _items.Length > 2 ? _items[2] : default!;
+		d = _items.Length > 3 ? _items[3] : default!;
+		e = _items.Length > 4 ? _items[4] : default!;
+	}
+	public void Deconstruct(out T a, out T b, out T c, out T d, out T e, out T f)
+	{
+		a = _items.Length > 0 ? _items[0] : default!;
+		b = _items.Length > 1 ? _items[1] : default!;
+		c = _items.Length > 2 ? _items[2] : default!;
+		d = _items.Length > 3 ? _items[3] : default!;
+		e = _items.Length > 4 ? _items[4] : default!;
+		f = _items.Length > 5 ? _items[5] : default!;
+	}
+	public void Deconstruct(out T a, out T b, out T c, out T d, out T e, out T f, out T g)
+	{
+		a = _items.Length > 0 ? _items[0] : default!;
+		b = _items.Length > 1 ? _items[1] : default!;
+		c = _items.Length > 2 ? _items[2] : default!;
+		d = _items.Length > 3 ? _items[3] : default!;
+		e = _items.Length > 4 ? _items[4] : default!;
+		f = _items.Length > 5 ? _items[5] : default!;
+		g = _items.Length > 6 ? _items[6] : default!;
+	}
 }

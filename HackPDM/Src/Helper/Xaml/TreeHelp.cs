@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+using CommunityToolkit.WinUI;
 using CommunityToolkit.WinUI.UI.Controls;
 
 using HackPDM.ClientUtils;
@@ -24,6 +25,7 @@ using HackPDM.Properties;
 using HackPDM.Src.ClientUtils.Types;
 
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 
 using Windows.Storage.Streams;
@@ -49,10 +51,12 @@ namespace HackPDM.Src.Helper.Xaml
 		internal async Task LoadOdooDirectoryTree(TreeView tree)
 		{
 			_HFM.IsTreeLoaded = false;
+			var (img, ring) = _HFM.GetVisualizer();
+			LoadingVisualized(img, ring);
 
 			try
 			{
-				await SafeHelper.SafeInvokerAsync(tree, async void () =>
+				await SafeHelper.SafeInvokerAsync(async void () =>
 				{
 					try
 					{
@@ -89,10 +93,31 @@ namespace HackPDM.Src.Helper.Xaml
 			{
 				Debug.WriteLine(exception);
 			}
-			//SafeInvoke(OdooEntryImage, () =>
-			//{
-			//	//OdooEntryImage.Image = null;
-			//});
+			ResetImagePreview(img, ring);
+		}
+		internal void ResetImagePreview(Image img, ProgressRing ring)
+		{
+			SafeHelper.SafeInvoker(() =>
+			{
+				ring.Width = 0;
+				ring.Height = 0;
+				ring.IsActive = false;
+				var sp = img.FindParent<StackPanel>();
+				img.Width = sp?.Width ?? 0;
+				img.Height = sp?.Height ?? 0;
+			});
+		}
+		internal void LoadingVisualized(Image img, ProgressRing ring)
+		{
+			SafeHelper.SafeInvoker(async () =>
+			{
+				img.Width		= 0;
+				img.Height		= 0;
+				var sp = img.FindParent<StackPanel>();
+				ring.Width		= sp?.Width ?? 0;
+				ring.Height		= sp?.Height ?? 0;
+				ring.IsActive	= true;
+			});
 		}
 		internal async Task<(Hashtable entries, Dictionary<string, Task<HackFile>> hackmap)> GetHackAndEntry(int? directoryId)
 		{
@@ -128,7 +153,7 @@ namespace HackPDM.Src.Helper.Xaml
 
 					AddLocalEntries(grid, _HFM.LastSelectedNode, hackmap);
 
-					SafeHelper.SafeInvoker(grid, () =>
+					SafeHelper.SafeInvoker(() =>
 					{
 						_HFM.OEntries.Sort((EntryRow x, EntryRow y) => string.Compare(x.Name, y.Name));
 						_HFM.IsListLoaded = true;
@@ -167,22 +192,21 @@ namespace HackPDM.Src.Helper.Xaml
 				// remaining paths
 				if (validIndexNode.Item1 != paths.Length - 1)
 				{
-					AddLocalDirectories(treeView, validIndexNode.Item2, paths.AsSpan(validIndexNode.Item1 + 1), treeDict);
+					AddLocalDirectories(treeView, validIndexNode.Item2, paths[(validIndexNode.Item1 + 1) .. ], treeDict);
 				}
 			}
 		}
-		internal static void AddLocalDirectories(TreeView tree, TreeViewNode node, Span<string> pathway, Dictionary<string, TreeViewNode> treeDict)
+		internal async static void AddLocalDirectories(TreeView tree, TreeViewNode node, string[] pathway, Dictionary<string, TreeViewNode> treeDict)
 		{
-			string[] paths = [.. pathway];
-			SafeHelper.SafeInvoker(tree, () =>
+			SafeHelper.SafeInvoker(async () =>
 			{
-				for (int i = 0; i < paths.Length; i++)
+				for (int i = 0; i < pathway.Length; i++)
 				{
 					var parentData = node?.Content as TreeData;
 					TreeViewNode tNode = new();
 					var newNode = tNode.LinkedData;
-					newNode.Name = paths[i];
-					newNode.Icon = Assets.GetImage("simple-folder-icon_32.gif") as BitmapImage;
+					newNode.Name = pathway[i];
+					newNode.Icon = await Assets.GetImageAsync("folder_type_default");
 					newNode.DirectoryId = 0;
 
 					node?.Children.Add(tNode);
@@ -194,7 +218,7 @@ namespace HackPDM.Src.Helper.Xaml
 		}
 		internal static async Task AddDirectoriesToTree(TreeView tree, Hashtable entries)
 		{
-			await SafeHelper.SafeInvokerAsync(tree, () =>
+			await SafeHelper.SafeInvokerAsync(() =>
 			{
 				tree.RootNodes.Clear();
 				var child = RecurseAddNodesAsync(entries);
@@ -232,27 +256,29 @@ namespace HackPDM.Src.Helper.Xaml
 
 			if (!Directory.Exists(path))
 			{
-				dat.Icon = Assets.GetImage("folder-icon_remoteonly_32") as BitmapImage;
+				dat.Icon = await Assets.GetImageAsync("folder-icon_remoteonly_32") as BitmapImage;
 			}
 
 			return (treeNodeName, dat);
 		}
 		public static void RefreshTree(TreeView tree)
-			=> SafeHelper.SafeInvoker(tree, tree.UpdateLayout);
+			=> SafeHelper.SafeInvoker(tree.UpdateLayout);
 		public async Task RestartTree(TreeView tree)
 			=> await CreateTreeViewBackground(tree);
 		public void RestartEntries(TreeView tree, DataGrid grid)
 		{
 			if (_HFM.LastSelectedNode is null) return;
-			SafeHelper.SafeInvoker(tree, async () => await TreeSelectItem(tree, _HFM.LastSelectedNode!, grid));
-			SafeHelper.SafeInvoker(grid, async () =>
+			
+			SafeHelper.SafeInvoker(async () =>
 			{
+				await TreeSelectItem(tree, _HFM.LastSelectedNode!, grid);
 				await AsyncHelper.WaitUntil(() => _HFM.IsListLoaded);
 				if (grid.SelectedItems is not null and { Count: > 0 } items)
 				{
 					var entry = items[0] as EntryRow;
 					if (entry is not null) grid.ScrollIntoView(entry, grid.Columns.First());
 				}
+				grid.UpdateLayout();
 			});
 		}
 		#endregion
@@ -399,70 +425,14 @@ namespace HackPDM.Src.Helper.Xaml
 
 			// get or add image key
 
-			string strKey = status != "ok" ? $"{item.Type}.{status}" : item.Type;
-			BitmapImage? image = Assets.GetImage(strKey) as BitmapImage;
+			//string strKey = status != "ok" ? $"{item.Type}.{status}" : item.Type;
+			ImageSource? image = await Assets.GetImageAsync(item.Type)
+					?? (await GetRemoteImage(item.Type))
+					?? await Assets.GetImageAsync("file_type_default");
 
-			if (image is null)
-			{
-				// image key not present in ilListIcons
-				BitmapImage? imgExt = Assets.GetImage(item.Type) as BitmapImage;
+			ImageSource? statImg = await Assets.GetImageAsync(status);
 
-				if (imgExt == null)
-				{
-					if (OdooDefaults.ExtToType.TryGetValue($".{item.Type}", out var hpType))
-					{
-						// get remote image
-						imgExt = new();
-						using var stream = new InMemoryRandomAccessStream();
-						using var writer = new DataWriter(stream);
-						try
-						{
-							byte[] imgBytes = FileOperations.ConvertFromBase64(hpType.icon);
-							writer.WriteBytes(imgBytes);
-							await writer.StoreAsync();
-							await writer.FlushAsync();
-							writer.DetachStream();
-
-							stream.Seek(0);
-							await imgExt.SetSourceAsync(stream);
-						}
-						catch
-						{
-						}
-					}
-
-					if (imgExt == null)
-					{
-						imgExt = Assets.GetImage("default") as BitmapImage;
-					}
-					//else
-					//{
-					//	Assets.SetImage(item.Type, imgExt);
-					//}
-				}
-
-				// get status image
-
-				if (status == "ok")
-				{
-					if (imgExt is null) strKey = "default";
-				}
-				else
-				{
-					BitmapImage? imgStatus = Assets.GetImage(status) as BitmapImage;
-
-					// combine images
-					if (imgExt is not null && imgStatus is not null)
-					{
-						Assets.SetImage(strKey, (await ImageUtils.OverlayBitmapImagesAsync(imgExt, imgStatus)));
-					}
-					else
-					{
-						strKey = "default";
-					}
-				}
-			}
-			item.Icon = Assets.GetImage(strKey) as BitmapImage;
+			item.Icon = image;
 
 			item.Status = Enum.Parse<FileStatus>(status, true);
 			string category = table["category"] is string cat ? cat : StorageBox.EMPTY_PLACEHOLDER;
@@ -470,6 +440,37 @@ namespace HackPDM.Src.Helper.Xaml
 
 			item.FullName = fullName;
 			await GridHelp.UpdateListAsync(grid, item);
+		}
+		internal static async Task<ImageSource?> GetRemoteImage(string? name)
+		{
+			BitmapImage? imgExt = null;
+			if (string.IsNullOrEmpty(name)) return imgExt;
+			if (name.StartsWith("file_type_")) name = name[10..];
+			if (name.StartsWith("folder_type_")) name = name[12..];
+
+			if (OdooDefaults.ExtToType.TryGetValue($".{name}", out var hpType))
+			{
+				// get remote image
+				imgExt = new();
+				using var stream = new InMemoryRandomAccessStream();
+				using var writer = new DataWriter(stream);
+				try
+				{
+					byte[] imgBytes = FileOperations.ConvertFromBase64(hpType.icon);
+					writer.WriteBytes(imgBytes);
+					await writer.StoreAsync();
+					await writer.FlushAsync();
+					writer.DetachStream();
+
+					stream.Seek(0);
+					await imgExt.SetSourceAsync(stream);
+				}
+				catch
+				{
+				}
+			}
+
+			return imgExt;
 		}
 		internal async void AddLocalEntries(DataGrid grid, TreeViewNode node, Dictionary<string, Task<HackFile>>? hackFileMap = null)
 		{
@@ -523,54 +524,14 @@ namespace HackPDM.Src.Helper.Xaml
 
 
 			// get or add image key
-			string strKey = $"{type}.{status}";
-			BitmapImage? image = Assets.GetImage(strKey) as BitmapImage;
+			ImageSource? image = await Assets.GetImageAsync(item.Type)
+					?? (await GetRemoteImage(item.Type))
+					?? await Assets.GetImageAsync("file_type_default");
 
-			if (image == null)
-			{
-				// image key not present in ilListIcons
-				BitmapImage? imgExt = Assets.GetImage(item.Type) as BitmapImage;
-				if (imgExt == null)
-				{
-					// get remote image
-					imgExt = new();
-					using var stream = new InMemoryRandomAccessStream();
-					using var writer = new DataWriter(stream);
-					try
-					{
-						byte[] imgBytes = FileOperations.ConvertFromBase64(hpType?.icon ?? "");
-						writer.WriteBytes(imgBytes);
-						await writer.StoreAsync();
-						await writer.FlushAsync();
-						writer.DetachStream();
+			ImageSource? statImg = await Assets.GetImageAsync(status);
 
-						stream.Seek(0);
-						await imgExt.SetSourceAsync(stream);
-					}
-					catch
-					{
-					}
-
-				}
-
-				// get status image
-				BitmapImage? imgStatus = Assets.GetImage(status) as BitmapImage;
-
-				// combine images
-				if (imgExt is not null && imgStatus is not null)
-				{
-					Assets.SetImage(strKey, (await ImageUtils.OverlayBitmapImagesAsync(imgExt, imgStatus)));
-				}
-				else
-				{
-					strKey = "default";
-				}
-			}
-			try
-			{
-				item.Icon = Assets.GetImage(strKey) as BitmapImage;
-			}
-			catch { Debug.WriteLine("Can't load icon image"); }
+			item.Icon = image;
+			item.StatusIcon = statImg;
 
 			item.Checkout = null;
 			HpCategory? nameCategory = OdooDefaults.ExtToCat.TryGetValue($".{type}", out var cat) ? cat : null;

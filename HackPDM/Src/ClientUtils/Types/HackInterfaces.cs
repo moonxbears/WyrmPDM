@@ -1,6 +1,8 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Threading.Tasks;
+
 using HackPDM.Data;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
@@ -31,6 +33,7 @@ public interface ISettingsProvider
 public interface IImageProvider
 {
 	ImageSource? GetImage(string key);
+	Task<ImageSource?> GetImageAsync(string key);
 	Bitmap? GetBitmap(string key);
 	void SetImage(string key, byte[] imgBytes);
 	IEnumerable<string> GetAvailableKeys();

@@ -15,6 +15,8 @@ using Microsoft.UI.Xaml.Media.Imaging;
 using Windows.Graphics.Imaging;
 using Windows.Storage;
 
+using HackPDM.Extensions.General;
+
 namespace HackPDM.Helper.Compatibility;
 
 public class AssetsImageProvider : IImageProvider
@@ -51,26 +53,32 @@ public class AssetsImageProvider : IImageProvider
 	}
 	public async Task<ImageSource?> GetImageAsync(string key)
 	{
+		const string fileStr = "file_type";
+		const string foldStr = "folder_type";
+		Span<string> defined = [fileStr, foldStr];
+
+		ExtType ext = ExtType.Svg;// key.StartsWith(defined) ? ExtType.Svg : ExtType.Other;
         if (!AssetMap.TryGetValue(key, out var uriString)) return null;
-		Uri uri = new Uri(uriString);
-		return new BitmapImage(uri);
-		if (uri.Scheme == "ms-appx")
-		{
-		}
-		if (!FileCache.TryGetValue(key, out var file))
-		{
-			file = await StorageFile.GetFileFromPathAsync(uri.AbsolutePath);
-			FileCache.TryAdd(key, file);
-		}
-		try
-		{
-			var stream = await file.OpenAsync(FileAccessMode.Read);
-			var bitmap = new BitmapImage();
-			await bitmap.SetSourceAsync(stream);
-			return bitmap;
-		}
-		catch { Debug.WriteLine("Unable to load image"); }
-		return null;
+		Uri uri = new (uriString);
+		return ext == ExtType.Svg ? new SvgImageSource(uri) : new BitmapImage(uri);
+
+		//if (uri.Scheme == "ms-appx")
+		//{
+		//}
+		//if (!FileCache.TryGetValue(key, out var file))
+		//{
+		//	file = await StorageFile.GetFileFromPathAsync(uri.AbsolutePath);
+		//	FileCache.TryAdd(key, file);
+		//}
+		//try
+		//{
+		//	var stream = await file.OpenAsync(FileAccessMode.Read);
+		//	var bitmap = new BitmapImage();
+		//	await bitmap.SetSourceAsync(stream);
+		//	return bitmap;
+		//}
+		//catch { Debug.WriteLine("Unable to load image"); }
+		//return null;
     }
 	public async void SetImage(string key, byte[] imageBytes)
 	{

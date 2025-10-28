@@ -382,7 +382,7 @@ public static class OdooDefaults
 
         foreach ( HpEntryNameFilter filter in hpEntryNameFilters )
         {
-            dict.Add( $".{filter.name_proto}", filter );
+            dict.Add( $"{filter.name_proto}", filter );
         }
         return dict;
     }

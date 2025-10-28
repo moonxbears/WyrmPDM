@@ -5,8 +5,8 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:com="using:CommunityToolkit.WinUI.UI.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:local="using:HackPDM.Data"
     xmlns:help="using:HackPDM.ClientUtils"
+    xmlns:local="using:HackPDM.Data"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:sys="using:System"
     xmlns:ui="using:CommunityToolkit.WinUI"
@@ -14,9 +14,9 @@
     mc:Ignorable="d">
 
     <Page.Resources>
-        <help:FileSizeConverter x:Key="FileSizeFormatter"/>
+        <help:FileSizeConverter x:Key="FileSizeFormatter" />
     </Page.Resources>
-    
+
     <Grid Margin="12" CornerRadius="10">
         <!--  TreeView for Directories  -->
         <SplitView
@@ -60,9 +60,9 @@
                             Visibility="Visible">
                             <TreeView.ContextFlyout>
                                 <MenuFlyout>
-                                    <MenuFlyoutSubItem x:Name="TreeDownload" Text="Download" >
+                                    <MenuFlyoutSubItem x:Name="TreeDownload" Text="Download">
                                         <MenuFlyoutItem x:Name="TreeDownloadAll" Text="All" />
-                                        <MenuFlyoutItem x:Name="TreeDownloadTop" Text="Top Directory"/>
+                                        <MenuFlyoutItem x:Name="TreeDownloadTop" Text="Top Directory" />
                                     </MenuFlyoutSubItem>
                                     <MenuFlyoutSeparator />
                                     <MenuFlyoutItem x:Name="TreeCheckout" Text="Checkout" />
@@ -133,7 +133,8 @@
                             LoadingRowGroup="OdooEntryDataGrid_LoadingRowGroup"
                             RowDetailsVisibilityMode="Collapsed"
                             SelectionMode="Extended"
-                            Sorting="OdooEntryDataGrid_Sorting">
+                            Sorting="OdooEntryDataGrid_Sorting"
+                            VerticalScrollBarVisibility="Hidden">
                             <com:DataGrid.RowDetailsTemplate>
                                 <xaml:DataTemplate>
                                     <com:DataGrid
@@ -180,11 +181,11 @@
                                     <com:DataGridTemplateColumn.CellTemplate>
                                         <xaml:DataTemplate>
                                             <TextBlock
-                                                Text="{xaml:Binding Size, Converter={xaml:StaticResource FileSizeFormatter}}"
-                                                TextAlignment="Right"
-                                                HorizontalAlignment="Stretch"
                                                 Padding="5,0,5,0"
-                                                />
+                                                HorizontalAlignment="Stretch"
+                                                Text="{xaml:Binding Size,
+                                                                    Converter={xaml:StaticResource FileSizeFormatter}}"
+                                                TextAlignment="Right" />
                                         </xaml:DataTemplate>
                                     </com:DataGridTemplateColumn.CellTemplate>
                                 </com:DataGridTemplateColumn>
@@ -202,16 +203,16 @@
                                         <MenuFlyoutItem x:Name="ListFileDirectory" Text="File Directory" />
                                     </MenuFlyoutSubItem>
                                     <MenuFlyoutItem x:Name="ListGetLatest" Text="Download" />
-                                    <MenuFlyoutSeparator/>
+                                    <MenuFlyoutSeparator />
                                     <MenuFlyoutItem x:Name="ListCheckout" Text="Checkout" />
                                     <MenuFlyoutItem x:Name="ListUndoCheckout" Text="Undo Checkout" />
-                                    <MenuFlyoutSeparator/>
+                                    <MenuFlyoutSeparator />
                                     <MenuFlyoutItem x:Name="ListCommit" Text="Commit" />
-                                    <MenuFlyoutSeparator/>
-                                    <MenuFlyoutItem x:Name="ListRestore" Text="Restore"/>
-                                    <MenuFlyoutSubItem x:Name="ListDelete" Text="Delete" >
+                                    <MenuFlyoutSeparator />
+                                    <MenuFlyoutItem x:Name="ListRestore" Text="Restore" />
+                                    <MenuFlyoutSubItem x:Name="ListDelete" Text="Delete">
                                         <MenuFlyoutItem x:Name="ListDeleteLocal" Text="Local" />
-                                        <MenuFlyoutItem x:Name="ListDeleteLogical" Text="Logical"/>
+                                        <MenuFlyoutItem x:Name="ListDeleteLogical" Text="Logical" />
                                         <MenuFlyoutItem x:Name="ListDeletePermanent" Text="Permanent" />
                                     </MenuFlyoutSubItem>
                                 </MenuFlyout>
@@ -239,6 +240,7 @@
                     Margin="10,0,0,0"
                     SelectionChanged="VersionTabs_SelectionChanged">
                     <TabViewItem x:Name="HistoryTab" Header="History">
+
                         <com:DataGrid
                             x:Name="OdooHistory"
                             AutoGenerateColumns="False"
@@ -254,16 +256,16 @@
                             <com:DataGrid.ContextFlyout>
                                 <MenuFlyout x:Name="HistoryContextMenu">
                                     <MenuFlyoutSubItem x:Name="HistoryDownload" Text="Download">
-                                        <MenuFlyoutItem x:Name="HistoryDownloadTemp" Text="Temporary"/>
-                                        <MenuFlyoutItem x:Name="HistoryDownloadOverwrite" Text="Overwrite"/>
+                                        <MenuFlyoutItem x:Name="HistoryDownloadTemp" Text="Temporary" />
+                                        <MenuFlyoutItem x:Name="HistoryDownloadOverwrite" Text="Overwrite" />
                                     </MenuFlyoutSubItem>
                                     <MenuFlyoutSubItem x:Name="HistoryOpen" Text="Open">
-                                        <MenuFlyoutItem x:Name="HistoryOpenTemp" Text="Temporary"/>
-                                        <MenuFlyoutItem x:Name="HistoryOpenOverwrite" Text="Overwrite"/>
+                                        <MenuFlyoutItem x:Name="HistoryOpenTemp" Text="Temporary" />
+                                        <MenuFlyoutItem x:Name="HistoryOpenOverwrite" Text="Overwrite" />
                                     </MenuFlyoutSubItem>
                                     <MenuFlyoutSubItem x:Name="HistoryMove" Text="Move">
-                                        <MenuFlyoutItem x:Name="HistoryMoveTemp" Text="Temporary"/>
-                                        <MenuFlyoutItem x:Name="HistoryMoveOverwrite" Text="Overwrite"/>
+                                        <MenuFlyoutItem x:Name="HistoryMoveTemp" Text="Temporary" />
+                                        <MenuFlyoutItem x:Name="HistoryMoveOverwrite" Text="Overwrite" />
                                     </MenuFlyoutSubItem>
                                 </MenuFlyout>
                             </com:DataGrid.ContextFlyout>
@@ -348,13 +350,25 @@
                     </Grid.RowDefinitions>
                     <!--  Image Panel  -->
 
-                    <Image
-                        x:Name="OdooEntryImage"
+                    <StackPanel
+                        x:Name="ImageSlot"
                         Grid.Row="0"
                         Width="256"
-                        Height="274"
-                        Source="ms-appx:///Assets/placeholder.png"
-                        Stretch="UniformToFill" />
+                        Height="256">
+                        <ProgressRing
+                            x:Name="LoadRing"
+                            Width="Auto"
+                            Height="Auto"
+                            IsActive="True" />
+
+                        <Image
+                            x:Name="OdooEntryImage"
+                            Width="0"
+                            Height="0"
+                            Source="ms-appx:///Assets/placeholder.png"
+                            Stretch="UniformToFill" />
+
+                    </StackPanel>
                     <CommandBar
                         x:Name="MoreTools"
                         Grid.Row="1"

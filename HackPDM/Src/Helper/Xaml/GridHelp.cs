@@ -68,7 +68,7 @@ namespace HackPDM.Src.Helper.Xaml
 			if (!listVersions) return versions;
 
 			token.ThrowIfCancellationRequested();
-			await SafeHelper.SafeInvokerAsync(grid, () => PopulateHistory(grid, versions ?? []));
+			await SafeHelper.SafeInvokerAsync(() => PopulateHistory(grid, versions ?? []));
 			return versions;
 		}
 		internal async Task<List<HpVersionProperty[]?>?> ProcessPropertiesSelectAsync(DataGrid grid, EntryRow? entry, CancellationToken token, bool listProperties = true)
@@ -89,7 +89,7 @@ namespace HackPDM.Src.Helper.Xaml
 			}
 			if (!listProperties || (versionProperties is null or { Count: < 1 })) return versionProperties;
 			token.ThrowIfCancellationRequested();
-			await SafeHelper.SafeInvokerAsync(grid, () => PopulateProperties(grid, versionProperties ?? []));
+			await SafeHelper.SafeInvokerAsync(() => PopulateProperties(grid, versionProperties ?? []));
 			return versionProperties;
 		}
 		internal async Task<HpVersion[]?> ProcessParentSelectAsync(DataGrid grid, EntryRow? entry, CancellationToken token, bool listParents = true)
@@ -129,7 +129,7 @@ namespace HackPDM.Src.Helper.Xaml
 			}
 			if (!listParents || (parentVersions is null or { Length: < 1 })) return parentVersions;
 			token.ThrowIfCancellationRequested();
-			await SafeHelper.SafeInvokerAsync(grid, () => PopulateParent(grid, parentVersions ?? []));
+			await SafeHelper.SafeInvokerAsync(() => PopulateParent(grid, parentVersions ?? []));
 			return parentVersions;
 		}
 		internal async Task<HpVersion[]?> ProcessChildSelectAsync(DataGrid grid, EntryRow? entry, CancellationToken token, bool listChildren = true)
@@ -152,7 +152,7 @@ namespace HackPDM.Src.Helper.Xaml
 
 			if (!listChildren || (childVersions is null or { Length: < 1 })) return childVersions;
 			token.ThrowIfCancellationRequested();
-			await SafeHelper.SafeInvokerAsync(grid, () => PopulateChildren(grid, childVersions ?? []));
+			await SafeHelper.SafeInvokerAsync(() => PopulateChildren(grid, childVersions ?? []));
 			return childVersions;
 		}
 		internal async Task<HpVersion?> ProcessInfoSelectAsync(DataGrid grid, EntryRow? entry, CancellationToken token, bool listVersionInfo = true)
@@ -170,14 +170,14 @@ namespace HackPDM.Src.Helper.Xaml
 
 			if (!listVersionInfo || versionInfo is null) return versionInfo;
 			token.ThrowIfCancellationRequested();
-			await SafeHelper.SafeInvokerAsync(grid, () => PopulateVersionInfo(grid, versionInfo));
+			await SafeHelper.SafeInvokerAsync(() => PopulateVersionInfo(grid, versionInfo));
 			return versionInfo;
 		}
 		
 		internal static async Task UpdateListAsync<T>(DataGrid list, T item)
 		{
 			await Task.Yield();
-			SafeHelper.SafeInvoker(list, () => list.ItemAdd(item));
+			SafeHelper.SafeInvoker(() => list.ItemAdd(item));
 		}
 		internal HpVersion[]? GetVersionsForEntry(int entryId, string[]? excludedFields = null, string[]? insertedFields = null)
 			=> GetVersionsForEntryAsync(entryId, excludedFields, insertedFields).GetAwaiter().GetResult();
@@ -208,7 +208,7 @@ namespace HackPDM.Src.Helper.Xaml
 			{
 
 				if (allProperties == null) return;
-				SafeHelper.SafeInvokeGen(grid, allProperties, (allp) =>
+				SafeHelper.SafeInvokeGen(allProperties, (allp) =>
 				{
 					InitListViewInternal(grid);
 					foreach (HpVersionProperty[] versionProperties in allp)
@@ -251,7 +251,7 @@ namespace HackPDM.Src.Helper.Xaml
 			{
 
 				if (versions == null) return;
-				SafeHelper.SafeInvokeGen(grid, versions, (v) =>
+				SafeHelper.SafeInvokeGen(versions, (v) =>
 				{
 					InitListViewInternal(grid);
 					foreach (HpVersion version in v)
@@ -274,7 +274,7 @@ namespace HackPDM.Src.Helper.Xaml
 			{
 
 				if (versions == null) return;
-				SafeHelper.SafeInvokeGen(grid, versions, (v) =>
+				SafeHelper.SafeInvokeGen(versions, (v) =>
 				{
 					InitListViewInternal(grid);
 					foreach (HpVersion version in v)
@@ -301,7 +301,7 @@ namespace HackPDM.Src.Helper.Xaml
 			{
 
 				if (versions == null) return;
-				SafeHelper.SafeInvokeGen(grid, versions, (v) =>
+				SafeHelper.SafeInvokeGen(versions, (v) =>
 				{
 					InitListViewInternal(grid);
 					foreach (HpVersion version in v)
@@ -337,7 +337,7 @@ namespace HackPDM.Src.Helper.Xaml
 
 
 				if (version == null) return;
-				SafeHelper.SafeInvokeGen(grid, version, (v) =>
+				SafeHelper.SafeInvokeGen(version, (v) =>
 				{
 					InitListViewInternal(grid);
 					var item = EmptyListItemInternal<VersionRow>(grid);
@@ -389,18 +389,18 @@ namespace HackPDM.Src.Helper.Xaml
 		internal static T EmptyListItem<T>(ItemsControl list) where T : new()
 		{
 			T entry = new();
-			SafeHelper.SafeInvoker(list, () => list.ItemsSource ??= new ObservableCollection<T>());
+			SafeHelper.SafeInvoker(() => list.ItemsSource ??= new ObservableCollection<T>());
 			return entry;
 		}
 		internal static T EmptyListItem<T>(DataGrid grid) where T : new()
 		{
 			T entry = new();
-			SafeHelper.SafeInvoker(grid, () => grid.ItemsSource ??= new ObservableCollection<T>());
+			SafeHelper.SafeInvoker(() => grid.ItemsSource ??= new ObservableCollection<T>());
 			return entry;
 		}
 		//internal static void InitListViewPercentage(ListView list, ListDetail rows)
 		//{
-		//	SafeInvokeGen(list, rows, (row) =>
+		//	SafeInvokeGen(rows, (row) =>
 		//	{
 		//		list.ItemsSource = null;
 		//		List<ColumnHeader> offsets = [];
@@ -465,7 +465,7 @@ namespace HackPDM.Src.Helper.Xaml
 		}
 		internal static void InitGridView(ItemsControl control) => InitListView(control, null);
 		internal static void InitListView(ItemsControl control, ListDetail? rows)
-			=> SafeHelper.SafeInvoker(control, () =>
+			=> SafeHelper.SafeInvoker(() =>
 			{
 				try
 				{
