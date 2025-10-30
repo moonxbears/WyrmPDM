@@ -206,7 +206,7 @@ namespace HackPDM.Src.Helper.Xaml
 					TreeViewNode tNode = new();
 					var newNode = tNode.LinkedData;
 					newNode.Name = pathway[i];
-					newNode.Icon = await Assets.GetImageAsync("folder_type_default");
+					newNode.Icon = await Assets.GetImageAsync("fo_loc");
 					newNode.DirectoryId = 0;
 
 					node?.Children.Add(tNode);
@@ -214,52 +214,58 @@ namespace HackPDM.Src.Helper.Xaml
 					//treeDict.Add(parentData?.FullPath ?? "", node);
 				}
 			});
-
 		}
 		internal static async Task AddDirectoriesToTree(TreeView tree, Hashtable entries)
 		{
-			await SafeHelper.SafeInvokerAsync(() =>
+			await SafeHelper.SafeInvokerAsync(async () =>
 			{
 				tree.RootNodes.Clear();
-				var child = RecurseAddNodesAsync(entries);
-				child.Wait();
-				if (child.Result.Item1 is null) return;
-				tree.RootNodes.Add(child.Result.Item1);
+				await AddNodesMinimalMemoryAsync(tree, entries);
 			});
 		}
-		internal static async Task<(TreeViewNode?, TreeData)> RecurseAddNodesAsync(Hashtable node, int depth = 0)
-		{
-			// add container node (directory name)
 
-			// refresh to show active changes
-			// add children
-			TreeViewNode treeNodeName = new();
-			if (node["directories"] is Hashtable { Count: > 0 } directory)
+		internal static async Task AddNodesMinimalMemoryAsync(TreeView tree, Hashtable rootNode)
+		{
+			var remoteImage = await Assets.GetImageAsync("fo_serv");
+			var defaultImage = await Assets.GetImageAsync("def_fo");
+
+			var queue = new Queue<(TreeViewNode? parent, Hashtable node)>();
+			queue.Enqueue((null, rootNode));
+
+			while (queue.Count > 0)
 			{
-				foreach (DictionaryEntry pair in directory)
+				var (parent, node) = queue.Dequeue();
+
+				var myNode = new TreeViewNode();
+				if (parent is null)
+					tree.RootNodes.Add(myNode);
+				else
+					parent.Children.Add(myNode);
+
+				var dat = myNode.LinkedData;
+				dat.Name = node["name"] as string;
+				dat.DirectoryId = node["id"] as int?;
+
+				string? fullPath = dat.FullPath ?? dat.Name;
+				string path = HackDefaults.DefaultPath(fullPath ?? "root", true);
+
+				if (!Directory.Exists(path))
+					dat.Icon = remoteImage;
+				else
+					dat.Icon = defaultImage;
+
+					myNode.LinkedData = dat;
+
+				// Push children to stack (LIFO order — reverse if you want original order preserved)
+				if (node["directories"] is Hashtable { Count: > 0 } directory)
 				{
-					if (pair.Value is not Hashtable childDirectory) continue;
-					var child = await RecurseAddNodesAsync(childDirectory, depth + 1);
-					if (child.Item1 is not null) treeNodeName.Children.Add(child.Item1);
+					foreach (DictionaryEntry pair in directory)
+					{
+						if (pair.Value is Hashtable childDirectory)
+							queue.Enqueue((myNode, childDirectory));
+					}
 				}
 			}
-			var dat = treeNodeName.LinkedData;
-			dat.Name = node["name"] as string;
-			dat.DirectoryId = node["id"] as int?;
-			// if treeNode == null then it will be the root node
-			string? fullPath;
-			if (dat.FullPath is null)
-				fullPath = dat?.Name;
-			else
-				fullPath = dat?.FullPath;
-			string path = HackDefaults.DefaultPath(fullPath ?? "root", true);
-
-			if (!Directory.Exists(path))
-			{
-				dat.Icon = await Assets.GetImageAsync("folder-icon_remoteonly_32") as BitmapImage;
-			}
-
-			return (treeNodeName, dat);
 		}
 		public static void RefreshTree(TreeView tree)
 			=> SafeHelper.SafeInvoker(tree.UpdateLayout);
@@ -337,6 +343,7 @@ namespace HackPDM.Src.Helper.Xaml
 			Console.WriteLine($"remote entries time: {_HFM._stopwatch.Elapsed}");
 #endif
 		}
+
 		private static async Task AddRemoteEntry(DataGrid grid, DictionaryEntry pair, Dictionary<string, Task<HackFile>> hackFileMap)
 		{
 			if (pair.Value is not Hashtable table) return;
@@ -422,17 +429,17 @@ namespace HackPDM.Src.Helper.Xaml
 				status = "dt";
 			}
 
-
 			// get or add image key
 
 			//string strKey = status != "ok" ? $"{item.Type}.{status}" : item.Type;
 			ImageSource? image = await Assets.GetImageAsync(item.Type)
 					?? (await GetRemoteImage(item.Type))
-					?? await Assets.GetImageAsync("file_type_default");
+					?? await Assets.GetImageAsync("def_fi");
 
 			ImageSource? statImg = await Assets.GetImageAsync(status);
 
 			item.Icon = image;
+			item.StatusIcon = statImg;
 
 			item.Status = Enum.Parse<FileStatus>(status, true);
 			string category = table["category"] is string cat ? cat : StorageBox.EMPTY_PLACEHOLDER;
@@ -445,9 +452,7 @@ namespace HackPDM.Src.Helper.Xaml
 		{
 			BitmapImage? imgExt = null;
 			if (string.IsNullOrEmpty(name)) return imgExt;
-			if (name.StartsWith("file_type_")) name = name[10..];
-			if (name.StartsWith("folder_type_")) name = name[12..];
-
+			
 			if (OdooDefaults.ExtToType.TryGetValue($".{name}", out var hpType))
 			{
 				// get remote image
@@ -456,6 +461,7 @@ namespace HackPDM.Src.Helper.Xaml
 				using var writer = new DataWriter(stream);
 				try
 				{
+					if (hpType.icon is null) return null;
 					byte[] imgBytes = FileOperations.ConvertFromBase64(hpType.icon);
 					writer.WriteBytes(imgBytes);
 					await writer.StoreAsync();
@@ -467,6 +473,7 @@ namespace HackPDM.Src.Helper.Xaml
 				}
 				catch
 				{
+					return null;
 				}
 			}
 
@@ -526,7 +533,7 @@ namespace HackPDM.Src.Helper.Xaml
 			// get or add image key
 			ImageSource? image = await Assets.GetImageAsync(item.Type)
 					?? (await GetRemoteImage(item.Type))
-					?? await Assets.GetImageAsync("file_type_default");
+					?? await Assets.GetImageAsync("def_fi");
 
 			ImageSource? statImg = await Assets.GetImageAsync(status);
 

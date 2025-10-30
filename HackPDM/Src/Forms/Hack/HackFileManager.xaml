@@ -90,9 +90,9 @@
                                     <TreeViewItem Loaded="TreeViewItem_Loaded" Unloaded="TreeViewItem_Unloaded">
                                         <StackPanel Orientation="Horizontal">
                                             <Image
-                                                Width="16"
-                                                Height="16"
-                                                Margin="0,0,4,0"
+                                                Width="22"
+                                                Height="22"
+                                                Margin="0,0,8,0"
                                                 Source="{x:Bind Icon}" />
                                             <TextBlock Text="{x:Bind Name}" />
                                         </StackPanel>
@@ -126,15 +126,17 @@
                     <TabViewItem Header="Entries" IsClosable="False">
                         <com:DataGrid
                             x:Name="OdooEntryList"
+                            VerticalContentAlignment="Stretch"
                             AutoGenerateColumns="False"
                             CanUserSortColumns="True"
                             IsReadOnly="True"
                             ItemsSource="{x:Bind OEntries}"
                             LoadingRowGroup="OdooEntryDataGrid_LoadingRowGroup"
                             RowDetailsVisibilityMode="Collapsed"
+                            RowHeight="32"
                             SelectionMode="Extended"
                             Sorting="OdooEntryDataGrid_Sorting"
-                            VerticalScrollBarVisibility="Hidden">
+                            VerticalScrollBarVisibility="Visible">
                             <com:DataGrid.RowDetailsTemplate>
                                 <xaml:DataTemplate>
                                     <com:DataGrid
@@ -153,22 +155,27 @@
                                 </xaml:DataTemplate>
                             </com:DataGrid.RowDetailsTemplate>
                             <com:DataGrid.Columns>
-
-                                <!--
-                        <Image
-                            Width="32"
-                            Height="32"
-                            Margin="0,0,5,0"
-                            Source="{x:Bind Icon}" />
-                                -->
-                                <com:DataGridTemplateColumn Width="32" Header="Icon">
+                                <com:DataGridTemplateColumn Width="40">
                                     <com:DataGridTemplateColumn.CellTemplate>
                                         <xaml:DataTemplate>
-                                            <Image
-                                                Width="32"
+                                            <Canvas
+                                                Width="40"
                                                 Height="32"
-                                                Margin="0,0,4,0"
-                                                Source="{xaml:Binding Icon}" />
+                                                Margin="0,0,8,0">
+                                                <Image
+                                                    Canvas.Left="0"
+                                                    Canvas.Top="0"
+                                                    Width="32"
+                                                    Height="32"
+                                                    Source="{xaml:Binding Icon}" />
+                                                <Image
+                                                    Canvas.Left="10"
+                                                    Canvas.Top="0"
+                                                    Width="24"
+                                                    Height="24"
+                                                    Source="{xaml:Binding StatusIcon}"
+                                                    Stretch="UniformToFill" />
+                                            </Canvas>
                                         </xaml:DataTemplate>
                                     </com:DataGridTemplateColumn.CellTemplate>
                                 </com:DataGridTemplateColumn>
@@ -190,6 +197,7 @@
                                     </com:DataGridTemplateColumn.CellTemplate>
                                 </com:DataGridTemplateColumn>
                                 <com:DataGridTextColumn Binding="{xaml:Binding Category}" Header="Category" />
+                                <com:DataGridTextColumn Binding="{xaml:Binding Status}" Header="Status" />
                                 <com:DataGridTextColumn Binding="{xaml:Binding Checkout}" Header="Checkout" />
                                 <com:DataGridTextColumn Binding="{xaml:Binding LocalDate}" Header="Local Date" />
                                 <com:DataGridTextColumn Binding="{xaml:Binding RemoteDate}" Header="Remote Date" />

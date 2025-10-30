@@ -53,14 +53,9 @@ public class AssetsImageProvider : IImageProvider
 	}
 	public async Task<ImageSource?> GetImageAsync(string key)
 	{
-		const string fileStr = "file_type";
-		const string foldStr = "folder_type";
-		Span<string> defined = [fileStr, foldStr];
-
-		ExtType ext = ExtType.Svg;// key.StartsWith(defined) ? ExtType.Svg : ExtType.Other;
         if (!AssetMap.TryGetValue(key, out var uriString)) return null;
 		Uri uri = new (uriString);
-		return ext == ExtType.Svg ? new SvgImageSource(uri) : new BitmapImage(uri);
+		return uriString.EndsWith(".svg") ? new SvgImageSource(uri) : new BitmapImage(uri);
 
 		//if (uri.Scheme == "ms-appx")
 		//{
