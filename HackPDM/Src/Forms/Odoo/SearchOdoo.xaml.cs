@@ -6,7 +6,7 @@ using System.Collections.ObjectModel; // For ObservableCollection
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using MessageBox = System.Windows.MessageBox;
+using MessageBox = System.Windows.Forms.MessageBox;
 using CommunityToolkit.WinUI.UI.Controls;
 
 using HackPDM.ClientUtils; // Assuming this is still valid
@@ -22,7 +22,9 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 
-using RoutedEventArgs = Microsoft.UI.Xaml.RoutedEventArgs; // For MessageDialog (basic replacement for MessageBox)
+using RoutedEventArgs = Microsoft.UI.Xaml.RoutedEventArgs;
+using HackPDM.Extensions.Controls;
+using HackPDM.Helper; // For MessageDialog (basic replacement for MessageBox)
 
 namespace HackPDM.Forms.Settings
 {
@@ -34,20 +36,22 @@ namespace HackPDM.Forms.Settings
 	{
 		// NOTE: The SearchWidths and SearchPropWidths dictionaries are no longer needed.
 		// All column widths are now defined directly in the XAML.
-
+		
 		private HackFileManager hackman;
 
 		// --- WinForms Control Dependencies ---
 		// NOTE: These variables are System.Windows.Forms controls.
 		// If 'hackman' is also being migrated to WinUI 3, these should be
 		// changed to Microsoft.UI.Xaml.Controls.TreeView and .ListView.
-		private readonly TreeView OdooDirectoryTree;
-		private readonly DataGrid OdooEntryList;
+		private TreeView OdooDirectoryTree;
+		private DataGrid OdooEntryList;
 
+		private Window ParentWindow;
 		// --- Data collections for WinUI 3 ListView Binding ---
 		private ObservableCollection<SearchRow> SearchResultsList = new();
-		private ObservableCollection<SearchPropRow> PropertySearchList = new();
+		private ObservableCollection<SearchPropertiesRow> PropertiesActive = new();
 		private ObservableCollection<OperatorsRow> OperatorList = new();
+		private ObservableCollection<SearchPropertiesRow> PropertiesSearchable = new();
 
 		public SearchOdoo()
 		{
@@ -55,7 +59,7 @@ namespace HackPDM.Forms.Settings
 
 			// Set the ItemsSource for the ListViews. This is the "WinUI 3 way".
 			OdooSearchResults.ItemsSource = SearchResultsList;
-			OdooSearchPropList.ItemsSource = PropertySearchList;
+			OdooSearchPropList.ItemsSource = PropertiesActive;
 
 			SetPropertyDropdown();
 			SetPropertyEqualDropdown();
@@ -65,20 +69,26 @@ namespace HackPDM.Forms.Settings
 		// You may need to adjust how hackman is passed, or just remove "in".
 		public SearchOdoo(HackFileManager hackman) : this()
 		{
+			SetHackInstance(hackman);
+		}
+
+		public void SetHackInstance(HackFileManager hackman)
+		{
 			this.hackman = hackman;
 			this.OdooDirectoryTree = hackman.GetOdooDirectoryTree();
 			this.OdooEntryList = hackman.GetOdooEntryList();
-
-			SetPropertyDropdown();
-			SetPropertyEqualDropdown();
+		}
+		public void StoreWindowInstance(Window window)
+		{
+			ParentWindow = window;
 		}
 
 		private void SetPropertyDropdown()
 		{
 			foreach (var values in OdooDefaults.IdToProp)
 			{
-				OdooSearchProperty.Items.Add(
-					new LItem()
+				PropertiesSearchable.Add(
+					new SearchPropertiesRow()
 					{
 						Name = values.Value.name,
 						ID = values.Key,
@@ -86,19 +96,26 @@ namespace HackPDM.Forms.Settings
 					}
 				);
 			}
+			OdooSearchProperty.ItemsSource = PropertiesSearchable;
 		}
 		private void SetPropertyEqualDropdown()
 		{
+			OperatorsRow? defSearchCompare = null;
+			OperatorsRow? defSearchProp = null;
 			foreach (var op in Enum.GetValues<Operators>())
 			{
-				OperatorList.Add(new() { Operator = op });
+				OperatorsRow opRow = new() { Operator = op };
+				if (op == Operators.ILike) defSearchCompare = opRow;
+				else if (op == Operators.Equal) defSearchProp = opRow;
+				
+				OperatorList.Add(opRow);
 			}
 
 			OdooSearchPropEqual.ItemsSource = OperatorList;
 			OdooSearchComparer.ItemsSource = OperatorList;
 
-			OdooSearchPropEqual.SelectedItem = "=";
-			OdooSearchComparer.SelectedItem = "ilike";
+			OdooSearchPropEqual.SelectedItem = defSearchProp;
+			OdooSearchComparer.SelectedItem = defSearchCompare;
 		}
 
 
@@ -115,7 +132,7 @@ namespace HackPDM.Forms.Settings
 			bool localOnly = OdooLocalOnly.IsChecked == true;
 
 			// Get items from our ObservableCollection
-			var propItems = PropertySearchList;
+			var propItems = PropertiesActive;
 
 			if (!int.TryParse(OdooMaxRes.Text, out int maxResults))
 			{
@@ -238,7 +255,7 @@ namespace HackPDM.Forms.Settings
 				// Add a new SearchResultItem to our bound collection
 				SearchResultsList.Add(new SearchRow
 				{
-					Id = ht["id"].ToString(),
+					Id = ht["id"] as int?,
 					Name = ht["name"].ToString(),
 					Directory = ht["directory_complete_name"].ToString()
 				});
@@ -265,25 +282,22 @@ namespace HackPDM.Forms.Settings
 		private async Task<ArrayList[]> CompilePropertyParams()
 		{
 			List<Task<ArrayList>> tasks = [];
-			if (PropertySearchList?.Count > 0)
+			if (PropertiesActive?.Count > 0)
 			{
 				ArrayList fields = ["entry_id"];
-				for (int i = 0; i < PropertySearchList.Count; i++)
+				foreach (var item in PropertiesActive)
 				{
 					// Get the item from the collection
-					SearchPropRow item = PropertySearchList[i];
 
 					Task<ArrayList> newTask = Task.Run(async () =>
 					{
 						ArrayList arr1 = [];
 
 						// Use the data from our SearchPropertyItem
-						LItem lItem = item.PropLItem;
-
-						arr1.Add(new ArrayList { "prop_id", "=", lItem.ID });
+						arr1.Add(new ArrayList { "prop_id", "=", item.ID });
 						arr1.Add(new ArrayList{
 							"text_value",
-							item.Comparer,
+							item.Comparer.OperatorConversion(),
 							item.Value
 						});
 						return await OdooClient.BrowseAsync(HpVersionProperty.GetHpModel(), [arr1, fields], 10000);
@@ -307,10 +321,10 @@ namespace HackPDM.Forms.Settings
 
 			for (int i = 0; i < lists.Length; i++)
 			{
-				IEnumerable<int> version_ids = lists[i].Select<Hashtable, int>(item =>
-				{
-					return (int)(((ArrayList)item["entry_id"])[0]);
-				});
+				IEnumerable<int> version_ids = lists[i].SelectNotDefault<Hashtable, int>(hash
+					=> hash.TryGetValue<string, ArrayList>("entry_id", out var aList)
+						? aList?[0] as int? ?? 0
+						: 0);
 
 				if (i == 0)
 				{
@@ -351,7 +365,7 @@ namespace HackPDM.Forms.Settings
 
 			// Clear the bound collections
 			SearchResultsList.Clear();
-			PropertySearchList.Clear();
+			PropertiesActive.Clear();
 
 			OdooSearchComparer.SelectedItem = null;
 		}
@@ -360,19 +374,11 @@ namespace HackPDM.Forms.Settings
 		{
 			if (OdooSearchResults.SelectedItems.Count > 0)
 			{
-				// The selected item is now a SearchResultItem object
-				// FindSearchSelection((SearchResultItem)OdooSearchResults.SelectedItems[0]);
-
-				// --- CRITICAL NOTE ---
-				// FindSearchSelection is commented out below because it depends on
-				// System.Windows.Forms.TreeView. That logic must be migrated
-				// to use a WinUI 3 TreeView (Microsoft.UI.Xaml.Controls.TreeView)
-				// before this method can be re-enabled.
-				FindSearchSelection(e.OriginalSource as SearchRow);
-				await MessageBox.ShowAsync("FindSearchSelection logic must be migrated to WinUI 3 controls.");
+				FindSearchSelection((sender as DataGrid)?.SelectedItem as SearchRow);
+				// ParentWindow?.Close();
 			}
 		}
-		private async void FindSearchSelection(SearchRow item)
+		private async void FindSearchSelection(SearchRow? item)
 		{
 			if (item == null) return;
 
@@ -395,7 +401,7 @@ namespace HackPDM.Forms.Settings
 					bool wasFound = false;
 					foreach (var n in nodes)
 					{
-						if (n.Text == paths[i])
+						if (n.LinkedData.Name == paths[i])
 						{
 							wasFound = true;
 							node = n;
@@ -404,32 +410,36 @@ namespace HackPDM.Forms.Settings
 					}
 					if (!wasFound) throw new ArgumentException();
 				}
-				OdooDirectoryTree.CollapseAll();
+				OdooDirectoryTree.Collapse(node);
+				foreach (var item1 in node?.Parent.Children ?? [])
+				{
+					OdooDirectoryTree.Collapse(item1);
+				}
 				hackman.LastSelectedNode = node;
 				//hackman.lastSelectedNode.Expand();
-				hackman.LastSelectedNode.EnsureVisible();
-				OdooDirectoryTree.Select();
+				hackman.LastSelectedNode?.LinkedData.EnsureVisible(OdooDirectoryTree);
+				OdooDirectoryTree.SelectedNode = hackman.LastSelectedNode;
 
 				while (!hackman.IsListLoaded)
 				{
 					await Task.Delay(100);
 				}
-				ListViewItem listItem = null;
-				string index = NameConfig.SearchName.Name;
-				foreach (ListViewItem lv in OdooEntryList.Items)
+				EntryRow? entryItem = null;
+				// string index = NameConfig.SearchName.Name;
+				foreach (var entry in OdooEntryList.ItemsSource as ObservableCollection<EntryRow> ?? [])
 				{
-					if (lv.SubItems[index].Text == fileName)
+					if (entry.Name == fileName)
 					{
-						listItem = lv;
+						entryItem = entry;
 						break;
 					}
 				}
-				if (listItem == null) throw new ArgumentException();
+				if (entryItem == null) throw new ArgumentException();
 
-				listItem.Selected = true;
-				listItem.Focused = true;
-				OdooEntryList.FocusedItem = listItem;
-				OdooEntryList.EnsureVisible(listItem.Index);
+				OdooEntryList.SelectedItem = entryItem;
+				OdooEntryList.Focus(FocusState.Programmatic);
+				OdooEntryList.ScrollIntoView(entryItem, null);
+
 			}
 			catch
 			{
@@ -446,25 +456,20 @@ namespace HackPDM.Forms.Settings
 		{
 			if (OdooSearchProperty.SelectedItem == null || OdooSearchPropEqual.SelectedItem == null)
 			{
-				await MessageBox.ShowAsync("Add Property Name or Comparator");
+				await MessageBox.ShowAsync("Add Property Name and Comparator");
 				return;
 			}
 
 			// NOTE: InitListViewPercentage is removed.
 
-			LItem listItem = (LItem)OdooSearchProperty.SelectedItem;
+			if (OdooSearchProperty.SelectedItem is not SearchPropertiesRow listItem) return;
 
 			// Add a new SearchPropertyItem to our bound collection
-			PropertySearchList.Add(new SearchPropertyItem
-			{
-				PropLItem = listItem,
-				Comparer = (OdooSearchPropEqual.SelectedItem as OperatorsRow)?.OpRepr ?? "=",
-				Value = OdooSearchPropValue.Text
-			});
+			PropertiesActive.Add(listItem.Clone());
 		}
 		private void OdooPropertyReset_Click(object sender, RoutedEventArgs e)
 		{
-			PropertySearchList.Clear();
+			PropertiesActive.Clear();
 		}
 		private void OdooPropDelete_Click(object sender, RoutedEventArgs e)
 		{
@@ -472,11 +477,10 @@ namespace HackPDM.Forms.Settings
 			{
 				// We must copy the items to a list before removing,
 				// as you can't modify a collection while iterating it.
-				var selectedItems = OdooSearchPropList.SelectedItems.Cast<SearchPropertyItem>().ToList();
-
-				foreach (SearchPropertyItem item in selectedItems)
+				var selectedItems = OdooSearchPropList.SelectedItems.Cast<SearchPropertiesRow>();
+				foreach (var item in selectedItems!)
 				{
-					PropertySearchList.Remove(item);
+					PropertiesActive.Remove(item);
 				}
 			}
 		}
@@ -591,7 +595,7 @@ namespace HackPDM.Forms.Settings
 				await MessageBox.ShowAsync("Can't checkout local only entries");
 				return;
 			}
-			await CheckOutItems(OdooSearchResults.SelectedItems);
+			await CheckOutItems(OdooSearchResults.SelectedItems.Cast<SearchRow>());
 		}
 		private async void unCheckoutToolStripMenuItem_Click(object sender, RoutedEventArgs e)
 		{
@@ -600,50 +604,44 @@ namespace HackPDM.Forms.Settings
 				await MessageBox.ShowAsync("Can't uncheckout local only entries");
 				return;
 			}
-			await CheckOutItems(OdooSearchResults.SelectedItems, false);
+			await CheckOutItems(OdooSearchResults.SelectedItems.Cast<SearchRow>(), false);
 		}
-		private async Task CheckOutItems(IEnumerable items, bool willCheckout = true)
+		private async Task CheckOutItems(IEnumerable<SearchRow>? items, bool willCheckout = true)
 		{
+			if (items is null || (items.TryGetNonEnumeratedCount(out int count) ? count : items?.Count()) < 1) return;
 			ArrayList ids = [];
 
 			// 'items' is now a collection of SearchResultItem
-			foreach (SearchResultItem item in items)
+			foreach (var item in items)
 			{
-				ids.Add(int.Parse(item.ID));
+				ids.Add(item.Id);
 			}
-			HpEntry[] entries = await HpEntry.GetRecordsByIdsAsync(ids);
-			foreach (HpEntry entry in entries)
-			{
-				if (willCheckout && entry.CanCheckOut())
-				{
-					await entry.CheckOut();
-				}
-				if (!willCheckout && entry.CanUnCheckOut())
-				{
-					await entry.UnCheckOut();
-				}
-			}
+			// get latest status
+			WindowHelper.CreateWindowAndPage<StatusDialog>(out var Dialog, out _);
+			HackFileManager.Dialog = Dialog;
+			await hackman.GetLatestInternal(ids);
+			//
+			await hackman.CheckoutInternal(ids);
 		}
 
-		private void openToolStripMenuItem_Click(object sender, RoutedEventArgs e)
+		private async void openToolStripMenuItem_Click(object sender, RoutedEventArgs e)
 		{
 			// 'items' is now a collection of SearchResultItem
-			var selectedItems = OdooSearchResults.SelectedItems.Cast<SearchResultItem>();
+			var selectedItems = OdooSearchResults.SelectedItems.Cast<SearchRow>();
 
 			if (OdooLocalOnly.IsChecked == true)
 			{
-				foreach (SearchResultItem item in selectedItems)
+				foreach (var item in selectedItems ?? [])
 				{
-					string path = item.Name; // Assuming this is correct from original
+					string path = item.Directory; // Assuming this is correct from original
 					OpenLocalFile(path);
 				}
 			}
 			else
 			{
-				foreach (SearchResultItem item in selectedItems)
+				foreach (var item in selectedItems ?? [])
 				{
-					int id = int.Parse(item.ID);
-					DownloadRemoteFile(id);
+					await DownloadRemoteFile(item.Id ?? 0);
 				}
 			}
 
@@ -683,22 +681,5 @@ namespace HackPDM.Forms.Settings
 			version.DownloadFile(StorageBox.TemporaryPath);
 			FileOperations.OpenFile(Path.Combine(version.WinPathway, version.name));
 		}
-	}
-
-
-	// NOTE: These classes are from your original file and are unchanged.
-
-	public class LItem
-	{
-		public int ID { get; set; }
-		public string Name { get; set; }
-		public bool IsTextOrDate { get; set; }
-
-		public override string ToString() => Name;
-	}
-	public class LEqualItem
-	{
-		public Operators Operators { get; set; }
-		public override string ToString() => Operators.OperatorConversion();
 	}
 }

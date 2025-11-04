@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Threading.Tasks;
@@ -13,7 +14,14 @@ public interface IConvert<T>
 {
 	T ConvertFromHt(Hashtable ht);
 }
-public interface IRowData { }
+public interface ICloneable<T>
+{
+	T Clone();
+}
+public interface IRowData<T> : ICloneable<T>
+{
+	
+}
 public interface ITreeItem
 {
 	public object? Tag { get; set; }

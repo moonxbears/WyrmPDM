@@ -46,6 +46,8 @@ using SolidWorks.Interop.sldworks;
 
 using Windows.Storage.Streams;
 
+using HackPDM.Src.Extensions.General;
+
 using DialogResult = System.Windows.Forms.DialogResult;
 using Directory = System.IO.Directory;
 using MessageBox = System.Windows.Forms.MessageBox;
@@ -89,7 +91,7 @@ public sealed partial class HackFileManager : Page
 	public ObservableCollection<TreeData> ONodes { get; internal set; } = [];
 
 	public static NotifyIcon Notify { get; } = Notifier.Notify;
-	public static StatusDialog Dialog { get; set; }
+	public static StatusDialog? Dialog { get; set; }
 	public static ConcurrentQueue<(StatusMessage action, string description)> QueueAsyncStatus = new();
 	public static ListDetail ActiveList { get; set; }
 	public static Dictionary<object, TreeViewNode> ItemToContainerMap = new();
@@ -261,9 +263,6 @@ public sealed partial class HackFileManager : Page
 		ListFileDirectory.Click			+= List_Click_OpenDirectory;
 		ListRestore.Click				+= List_Click_Restore;
 		ListOpen.DoubleTapped			+= List_Click_Open;
-		ListPreview.Click				+= List_Click_OpenLatestRemote;
-		ListLocal.Click					+= List_Click_OpenLatestLocal;
-		ListFileDirectory.Click			+= List_Click_OpenDirectory;
 
 		// additional toolbar
 		OdooRefreshDropdown.Click		+= AdditionalTools_Click_Refresh;
@@ -369,13 +368,12 @@ public sealed partial class HackFileManager : Page
 		}
 		catch
 		{
-			MessageBox.Show("Cancelled Download");
+			await MessageBox.ShowAsync("Cancelled Download");
 		}
 
 		Dialog.SetProgressBar(versions.Length, versions.Length);
-
-
-		MessageBox.Show($"Completed!");
+		
+		await MessageBox.ShowAsync("Completed!");
 		_treeHelper.RestartEntries(OdooDirectoryTree, OdooEntryList);
 	}
 	private async Task Async_Commit(ValueTuple<HpEntry[], List<HackFile>> arguments)
@@ -452,11 +450,12 @@ public sealed partial class HackFileManager : Page
 	private async Task Async_CheckOut(HpEntry[] entries)
 	{
 		object lockObject = new();
-
+		entries = [.. FilterCheckoutEntries(entries)];
+		
 		_processCounter = 0;
 		SkipCounter = 0;
 		_maxCount = entries.Length;
-		Dialog.AddStatusLine(StatusMessage.INFO, $"{_maxCount} check outs");
+		Dialog?.AddStatusLine(StatusMessage.INFO, $"{_maxCount} check outs");
 		for (int i = 0; i < entries.Length; i++)
 		{
 			HpEntry entry = entries[i];
@@ -632,27 +631,27 @@ public sealed partial class HackFileManager : Page
 	#endregion
 
 	#region CheckOut Functions
-	private IEnumerable<HpEntry> FilterCheckoutEntries(HpEntry[] entries)
+	private static IEnumerable<HpEntry> FilterCheckoutEntries(HpEntry[] entries)
 	{
 		foreach (HpEntry entry in entries)
 		{
-			if (entry.checkout_user == 0)
+			if (entry.checkout_user is null or 0)
 			{
 				yield return entry;
 			}
 		}
 	}
-	private IEnumerable<HpEntry> FilterUnCheckoutEntries(HpEntry[] entries)
+	private static IEnumerable<HpEntry> FilterUnCheckoutEntries(HpEntry[] entries)
 	{
 		foreach (HpEntry entry in entries)
 		{
-			if (entry.checkout_user != 0)
+			if (entry.checkout_user is not null && entry.checkout_user == OdooDefaults.OdooId)
 			{
 				yield return entry;
 			}
 		}
 	}
-	private async Task CheckOutEntry(HpEntry entry)
+	private async Task CheckOutEntry(HpEntry? entry)
 	{
 		if (entry == null)
 			return;
@@ -1257,7 +1256,7 @@ public sealed partial class HackFileManager : Page
 #endif
 	}
 	//
-	private async void List_Click_GetLatest(object sender, RoutedEventArgs e)
+	internal async void List_Click_GetLatest(object sender, RoutedEventArgs e)
 	{
 		WindowHelper.CreateWindowAndPage<StatusDialog>(out var Dialog, out _);
 		HackFileManager.Dialog = Dialog;
@@ -1297,7 +1296,7 @@ public sealed partial class HackFileManager : Page
 		}
 		await CommitInternal(entryIDs, hackFiles);
 	}
-	private async void List_Click_Checkout(object sender, RoutedEventArgs e)
+	internal async void List_Click_Checkout(object sender, RoutedEventArgs e)
 	{
 		List_Click_GetLatest(null, null);
 		var entryItem = OdooEntryList.SelectedItems;
@@ -1314,7 +1313,7 @@ public sealed partial class HackFileManager : Page
 
 		await CheckoutInternal(entryIDs);
 	}
-	private async void List_Click_UndoCheckout(object sender, RoutedEventArgs e)
+	internal async void List_Click_UndoCheckout(object sender, RoutedEventArgs e)
 	{
 		var entryItem = OdooEntryList.SelectedItems;
 
@@ -1448,6 +1447,7 @@ public sealed partial class HackFileManager : Page
 	}
 	private void List_Click_OpenDirectory(object sender, RoutedEventArgs e)
 	{
+		List<string?> openedDirectory = [];
 		foreach (EntryRow item in OdooEntryList.SelectedItems)
 		{
 			string? path = item.FullName;
@@ -1462,7 +1462,11 @@ public sealed partial class HackFileManager : Page
 				FileInfo file = new FileInfo(path);
 				if (!file.Exists) continue;
 
-				FileOperations.OpenFolder(file.DirectoryName);
+				if(!openedDirectory.Any(s=> file.DirectoryName?.Equals(s) ?? true))
+				{
+					openedDirectory.Add(file.DirectoryName);
+					FileOperations.OpenFolder(file.DirectoryName!);
+				}
 			}
 			catch
 			{
@@ -1560,8 +1564,10 @@ public sealed partial class HackFileManager : Page
 	}
 	private void AdditionalTools_Click_Search(object sender, RoutedEventArgs e)
 	{
-		var searchWindow = WindowHelper.CreateWindowPage(typeof(SearchOdoo));
-		searchWindow.Title = "Search Files";
+		WindowHelper.CreateWindowAndPage<SearchOdoo>(out var page, out var window);
+		window.Title = "Search Files";
+		page.SetHackInstance(this);
+		page.StoreWindowInstance(window);
 	}
 	private void AdditionalTools_Click_ManageTypes(object sender, RoutedEventArgs e)
 		=> WindowHelper.CreateWindowPage(typeof(OdooFileTypeManager)).Title = "Manage Types";
@@ -1633,6 +1639,7 @@ public sealed partial class HackFileManager : Page
 					   $"\tNode ID	= {version.node_id}\n" +
 					   $"\tDir ID = {version.dir_id}\n" +
 					   $"\tWin DL Path = {version.WinPathway}";
+
 		var response = MessageBox.Show($"{eText}\n this will download version ids: {vIdsText}\n{vText}", "Version Download", buttons: MessageBoxButtons.YesNoCancel);
 		if (response != DialogResult.Yes) return;
 		HpVersion[] downVersions = await HpVersion.GetRecordsByIdsAsync(versions);
@@ -1899,26 +1906,16 @@ public sealed partial class HackFileManager : Page
 			{
 				await Task.Delay(100);
 			}
-			ListViewItem? listItem = null;
-			string index = NameConfig.SearchName.Name;
+			EntryRow? entryItem = OEntries.FirstOrDefault(entryItem => entryItem.Name == fileName);
+			if (entryItem == null) throw new ArgumentException("entry doesn't exist", nameof(fileName));
 
-			foreach (EntryRow rows in OEntries)
-			{
-				if (rows.Name == fileName)
-				{
-					listItem = rows.Item;
-					break;
-				}
-			}
-			if (listItem == null) throw new ArgumentException();
-
-			listItem.IsSelected = true;
-			listItem.Focus(FocusState.Programmatic);
-			//(listItem.Content as EntryRow)?.
-			listItem.StartBringIntoView();
+			OdooEntryList.SelectedItem = entryItem;
+			OdooEntryList.Focus(FocusState.Programmatic);
+			OdooEntryList.ScrollIntoView(entryItem, null);
 		}
 		catch
 		{
+			Debug.WriteLine("Unable to find search selection");
 		}
 	}
 	private void DownloadOpen(bool toTemp = false)
@@ -2229,7 +2226,7 @@ public sealed partial class HackFileManager : Page
 		return deletedIrAttachments && deletedVersions;
 	}
 	//
-	private async Task GetLatestInternal(ArrayList entryIDs)
+	internal async Task GetLatestInternal(ArrayList entryIDs)
 	{
 		Dialog.AddStatusLine(StatusMessage.INFO, "Finding Entry Dependencies...");
 		HpEntry[] entries = await HpEntry.GetRecordsByIdsAsync(entryIDs, includedFields: ["latest_version_id"]);
@@ -2243,7 +2240,7 @@ public sealed partial class HackFileManager : Page
 		(ArrayList, CancellationToken) arguments = (newIds, tokenSource.Token);
 		await AsyncHelper.AsyncRunner(() => Async_GetLatest(arguments), "Get Latest", tokenSource);
 	}
-	private async Task CommitInternal(ArrayList entryIDs, IEnumerable<HackFile> hackFiles)
+	internal async Task CommitInternal(ArrayList entryIDs, IEnumerable<HackFile> hackFiles)
 	{
 		HpEntry[] entries = await HpEntry.GetRecordsByIdsAsync(entryIDs, includedFields: ["latest_version_id"]);
 
@@ -2260,7 +2257,7 @@ public sealed partial class HackFileManager : Page
 
 		await AsyncHelper.AsyncRunner(() => Async_Commit((allEntries, hackFiles.ToList())), "Commit Files");
 	}
-	private async Task CheckoutInternal(ArrayList entryIDs)
+	internal async Task CheckoutInternal(ArrayList entryIDs)
 	{
 		HpEntry[] entriesTemp = await HpEntry.GetRecordsByIdsAsync(entryIDs, includedFields: ["latest_version_id"]);
 
@@ -2272,13 +2269,15 @@ public sealed partial class HackFileManager : Page
 		HpEntry[] entries = await HpEntry.GetRecordsByIdsAsync(newIds, excludedFields: ["type_id", "cat_id"]);
 
 		if (entries is null || entries.Length < 1) return;
-		WindowHelper.CreateWindowAndPage<StatusDialog>(out var Dialog, out _);
-		HackFileManager.Dialog = Dialog;
-
-		entries = [.. FilterCheckoutEntries(entries)];
+		if (Dialog is null) 
+		{
+			WindowHelper.CreateWindowAndPage<StatusDialog>(out var newDialog, out _);
+			Dialog = newDialog;
+		}
+		
 		await AsyncHelper.AsyncRunner(() => Async_CheckOut(entries), "Checkout Files");
 	}
-	private async Task UnCheckoutInternal(ArrayList entryIDs)
+	internal async Task UnCheckoutInternal(ArrayList entryIDs)
 	{
 		if (entryIDs is null or { Count: < 1 }) return;
 
@@ -2292,15 +2291,19 @@ public sealed partial class HackFileManager : Page
 
 		if (entries is null || entries.Length < 1)
 			return;
-		WindowHelper.CreateWindowAndPage<StatusDialog>(out var Dialog, out _);
-		HackFileManager.Dialog = Dialog;
+		
+		if (Dialog is null) 
+		{
+			WindowHelper.CreateWindowAndPage<StatusDialog>(out var newDialog, out _);
+			Dialog = newDialog;
+		}
 
 		// filter out entries that are already checked out
 		entries = [.. FilterUnCheckoutEntries(entries)];
 
 		await AsyncHelper.AsyncRunner(() => Async_UnCheckOut(entries), "UnCheckout Files");
 	}
-	private async Task LogicalDeleteInternal(ArrayList entryIDs)
+	internal async Task LogicalDeleteInternal(ArrayList entryIDs)
 	{
 		HpEntry[] entriesTemp = HpEntry.GetRecordsByIds(entryIDs, includedFields: ["latest_version_id"]);
 
@@ -2313,7 +2316,7 @@ public sealed partial class HackFileManager : Page
 
 		await AsyncHelper.AsyncRunner(() => Async_LogicalDelete(entries), "Logically Delete Files");
 	}
-	private async Task UnDeleteInternal(bool withSubdirectories = false)
+	internal async Task UnDeleteInternal(bool withSubdirectories = false)
 	{
 		WindowHelper.CreateWindowAndPage<StatusDialog>(out var Dialog, out _);
 		HackFileManager.Dialog = Dialog;

@@ -171,18 +171,26 @@ public static class OdooDefaults
 
         set => field = value;
     }
-    public static HpNode MyNode
+    public static HpNode? MyNode
     {
         get
         {
-            field ??= HpNodes?.First(node => node.name.Equals(System.Environment.MachineName));
+            field ??= HpNodes?.FirstOrDefault(node => node.name.Equals(Environment.MachineName.ToLower()))
+	            ?? TryAssignNewHpNode().Result ?? throw new ArgumentNullException(nameof(HpNode), @"Unable to register new node");
             return field;
         }
-        set
-        {
-            field = value;
-        }
     }
+
+    private static async Task<HpNode?> TryAssignNewHpNode()
+    {
+	    HpNode? node = null;
+	    HpNode createdNode = new() { name = Environment.MachineName.ToLower(), };
+	    if (HpNodes.Any(n => n.name.Equals(createdNode.name)))
+		    return node;
+
+	    return await HpNode.GetRecordByIdAsync(await createdNode.CreateAsync());
+    }
+
     public static int DownloadBatchSize
     {
         get

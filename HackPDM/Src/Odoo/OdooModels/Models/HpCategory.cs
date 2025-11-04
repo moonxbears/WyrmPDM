@@ -1,6 +1,8 @@
 ﻿//using static System.Net.Mime.MediaTypeNames;
 
 // ReSharper disable InconsistentNaming
+using System;
+
 namespace HackPDM.Odoo.OdooModels.Models;
 
 public partial class HpCategory : HpBaseModel<HpCategory>

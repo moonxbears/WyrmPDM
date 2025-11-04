@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
-using System.Windows;
+using System.Windows.Forms;
+
+using MessageBox = System.Windows.Forms.MessageBox;
 
 namespace HackPDM.Src.Extensions.General
 {
@@ -10,10 +12,9 @@ namespace HackPDM.Src.Extensions.General
 	{
 		extension(MessageBox box)
 		{
-			public static Task<MessageBoxResult> ShowAsync(string message)
-			{
-				return Task.Run(() => MessageBox.Show(message));
-			}
+			public static Task<DialogResult> ShowAsync(string message)
+				=> Task.Run(() => MessageBox.Show(message));
+			
 		}
 	}
 }

@@ -12,6 +12,7 @@ using HackPDM.Forms.Hack;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Imaging;
 
+using HackPDM.Extensions.General;
 using static HackPDM.Odoo.OdooModels.Models.HpVersionProperty;
 using HackPDM.Src.ClientUtils.Types;
 using Microsoft.UI.Xaml;
@@ -21,13 +22,25 @@ using HackPDM.ClientUtils;
 namespace HackPDM.Data;
 
 #region VIEWS
-public partial class OperatorsRow : ItemData, IRowData
+public partial class OperatorsRow : DataGridData, IRowData<OperatorsRow>
 {
 	// (MVVM) VIEW
 	public partial Operators Operator { get; set; }
 	public partial string? OpRepr { get; set; }
+
+	public OperatorsRow Clone()
+	{
+		var cItem = new OperatorsRow
+		{
+			Name = this.Name?.Cloned(),
+			Text = this.Text?.Cloned(),
+			Operator = this.Operator,
+			OpRepr = this.OpRepr
+		};
+		return cItem;
+	}
 }
-public partial class EntryRow : ItemData, IRowData
+public partial class EntryRow : DataGridData, IRowData<EntryRow>
 {
 	// (MVVM) VIEW
 	public ImageSource? Icon        { get; set; }
@@ -46,14 +59,29 @@ public partial class EntryRow : ItemData, IRowData
 	public partial bool? IsLocal { get; set; }
 	public partial bool	 IsOnlyLocal { get; }
 	public bool			IsRemote	{ get; set; }
-
-	public ObservableCollection<HistoryRow>? History { get; set; }
-	public ObservableCollection<VersionRow>? Versions { get; set; }
-	public ObservableCollection<PropertiesRow>? Properties { get; set; }
-	public ObservableCollection<ParentRow>? Parents { get; set; }
-	public ObservableCollection<ChildrenRow>? Children { get; set; }
+	public EntryRow Clone()
+	{
+		var cItem = new EntryRow
+		{
+			Name = this.Name?.Cloned(),
+			Text = this.Text?.Cloned(),
+			Icon		 = this.Icon,
+			StatusIcon	 = this.StatusIcon,
+			Id			 = this.Id,
+			Type		 = this.Type?.Cloned(),
+			Size		 = this.Size,
+			Status		 = this.Status,
+			Checkout	 = this.Checkout,
+			Category	 = this.Category,
+			LocalDate	 = this.LocalDate,
+			RemoteDate	 = this.RemoteDate,
+			FullName	 = this.FullName?.Cloned(),
+			LatestId	 = this.LatestId,
+		};
+		return cItem;
+	}
 }
-public class HistoryRow : ItemData, IRowData
+public class HistoryRow : DataGridData, IRowData<HistoryRow>
 {
 	// (MVVM) VIEW
 	public int          Version     { get; set; }
@@ -62,22 +90,61 @@ public class HistoryRow : ItemData, IRowData
 	public long?         Size        { get; set; }
 	public DateTime?    RelDate     { get; set; }
 	public HistoryRow() {}
+	public HistoryRow Clone()
+	{
+		var cItem = new HistoryRow
+		{
+			Name = this.Name?.Cloned(),
+			Text = this.Text?.Cloned(),
+			Version = this.Version,
+			ModUser = this.ModUser,
+			ModDate = this.ModDate,
+			Size = this.Size,
+			RelDate = this.RelDate,
+		};
+		
+		return cItem;
+	}
 }
-public class ParentRow : ItemData, IRowData
+public class ParentRow : DataGridData, IRowData<ParentRow>
 {
 	// (MVVM) VIEW
 	public int          Version     { get; set; }
 	public string?      BasePath    { get; set; }
 	public ParentRow() {}
+	public ParentRow Clone()
+	{
+		var cItem = new ParentRow
+		{
+			Name = this.Name?.Cloned(),
+			Text = this.Text?.Cloned(),
+			Version = this.Version,
+			BasePath = this.BasePath?.Cloned(),
+		};
+
+		return cItem;
+	}
 }
-public class ChildrenRow : ItemData, IRowData
+public class ChildrenRow : DataGridData, IRowData<ChildrenRow>
 {
 	// (MVVM) VIEW
 	public int          Version     { get; set; }
 	public string?      BasePath    { get; set; }
 	public ChildrenRow() {}
+	public ChildrenRow Clone()
+	{
+		var cItem = new ChildrenRow
+		{
+			Name = this.Name?.Cloned(),
+			Text = this.Text?.Cloned(),
+			Version = this.Version,
+			BasePath = this.BasePath?.Cloned(),
+		};
+
+		return cItem;
+	}
 }
-public class PropertiesRow : ItemData, IRowData
+public class PropertiesRow : DataGridData, IRowData<PropertiesRow>
 {
 	// (MVVM) VIEW
 	public int          Version     { get; set; }
@@ -86,8 +153,23 @@ public class PropertiesRow : ItemData, IRowData
 	public PropertyType?Type        { get; set; }
 	public object?      ValueData       { get; set; }
 	public PropertiesRow() {}
+	public PropertiesRow Clone()
+	{
+		var cItem = new PropertiesRow
+		{
+			Name = this.Name?.Cloned(),
+			Text = this.Text?.Cloned(),
+			Version = this.Version,
+			Property = this.Property,
+			Configuration = this.Configuration?.Cloned(),
+			Type = this.Type,
+			ValueData = Activator.CreateInstance(this.ValueData!.GetType()),
+		};
+		
+		return cItem;
+	}
 }
-public class VersionRow : ItemData, IRowData
+public class VersionRow : DataGridData, IRowData<VersionRow>
 {
 	// (MVVM) VIEW
 	public int Id { get; set; }
@@ -99,44 +181,137 @@ public class VersionRow : ItemData, IRowData
 	public DateTime? ModifyDate { get; set; }
 	public string? Checksum { get; set; }
 	public string? OdooCompletePath { get; set; }
+	public VersionRow Clone()
+	{
+		var cItem = new VersionRow
+		{
+			Name = this.Name?.Cloned(),
+			Text = this.Text?.Cloned(),
+			Id = this.Id,
+			FileSize = this.FileSize,
+			DirectoryId = this.DirectoryId,
+			NodeId = this.NodeId,
+			EntryId = this.EntryId,
+			AttachmentId = this.AttachmentId,
+			ModifyDate = this.ModifyDate,
+			Checksum = this.Checksum?.Cloned(),
+			OdooCompletePath = this.OdooCompletePath?.Cloned(),
+		};
+
+		return cItem;
+	}
 }
-public class SearchRow : ItemData, IRowData
+public class SearchRow : DataGridData, IRowData<SearchRow>
 {
 	// (MVVM) VIEW
 	public int? Id { get; set; }
-	public string? Name { get; set; }
 	public string? Directory { get; set; }
+	public SearchRow Clone()
+	{
+		var cItem = new SearchRow
+		{
+			Name = this.Name?.Cloned(),
+			Text = this.Text?.Cloned(),
+			Id = this.Id,
+			Directory = this.Directory,
+		};
+
+		return cItem;
+	}
 }
-public class SearchPropRow : ItemData, IRowData
+//public class SearchPropRow : DataGridData, IRowData
+//{
+//	// (MVVM) VIEW
+//	public string? Comparer { get; set; }
+//	public string? Value { get; set; }
+//}
+public class SearchPropertiesRow : DataGridData, IRowData<SearchPropertiesRow>
 {
 	// (MVVM) VIEW
-	public string? Comparer { get; set; }
+	public int ID { get; set; }
+	public Operators Comparer { get; set; }
 	public string? Value { get; set; }
+	public bool IsTextOrDate { get; set; }
+	public SearchPropertiesRow Clone()
+	{
+		var cItem = new SearchPropertiesRow
+		{
+			ID = this.ID,
+			Name = this.Name?.Cloned(),
+			Text = this.Text?.Cloned(),
+			Comparer = this.Comparer,
+			Value = this.Value?.Cloned(),
+			IsTextOrDate = this.IsTextOrDate,
+		};
+
+		return cItem;
+	}
 }
-public class FileTypeRow : ItemData, IRowData
+public class FileTypeRow : DataGridData, IRowData<FileTypeRow>
 {
 	// (MVVM) VIEW
 	public string? Extension { get; set; }
 	public string? Category { get; set; }
 	public string? RegEx { get; set; }
 	public string? Description { get; set; }
+	public FileTypeRow Clone()
+	{
+		var cItem = new FileTypeRow
+		{
+			Name = this.Name?.Cloned(),
+			Text = this.Text?.Cloned(),
+			Extension = this.Extension?.Cloned(),
+			Category = this.Category?.Cloned(),
+			RegEx = this.RegEx?.Cloned(),
+			Description = this.Description?.Cloned(),
+		};
+
+		return cItem;
+	}
 }
-public class FileTypeEntryFilterRow : ItemData, IRowData
+public class FileTypeEntryFilterRow : DataGridData, IRowData<FileTypeEntryFilterRow>
 {
 	// (MVVM) VIEW
 	public int Id { get; set; }
 	public string? Proto { get; set; }
 	public string? RegEx { get; set; }
 	public string? Description { get; set; }
+	public FileTypeEntryFilterRow Clone()
+	{
+		var cItem = new FileTypeEntryFilterRow
+		{
+			Name = this.Name?.Cloned(),
+			Text = this.Text?.Cloned(),
+			Id = this.Id,
+			Proto = this.Proto?.Cloned(),
+			RegEx = this.RegEx?.Cloned(),
+			Description = this.Description?.Cloned(),
+		};
+
+		return cItem;
+	}
 }
-public class FileTypeLocRow : ItemData, IRowData
+public class FileTypeLocRow : DataGridData, IRowData<FileTypeLocRow>
 {
 	// (MVVM) VIEW
 	public string? Extension { get; set; }
 	public string? Status { get; set; }
 	public string? Example { get; set; }
+	public FileTypeLocRow Clone()
+	{
+		var cItem = new FileTypeLocRow
+		{
+			Name = this.Name?.Cloned(),
+			Text = this.Text?.Cloned(),
+			Extension = this.Extension?.Cloned(),
+			Status = this.Status?.Cloned(),
+			Example = this.Example?.Cloned(),
+		};
+
+		return cItem;
+	}
 }
-public class FileTypeLocDatRow : ItemData, IRowData
+public class FileTypeLocDatRow : DataGridData, IRowData<FileTypeLocDatRow>
 {
 	// (MVVM) VIEW
 	public string? Extension { get; set; }
@@ -145,6 +320,22 @@ public class FileTypeLocDatRow : ItemData, IRowData
 	public string? Description { get; set; }
 	public object? Icon { get; set; } // Type is Unknown, so use object
 	public object? RemoveIcon { get; set; } // Type is Unknown, so use object
+	public FileTypeLocDatRow Clone()
+	{
+		var cItem = new FileTypeLocDatRow
+		{
+			Name = this.Name?.Cloned(),
+			Text = this.Text?.Cloned(),
+			Extension = this.Extension?.Cloned(),
+			RegEx = this.RegEx?.Cloned(),
+			Category = this.Category?.Cloned(),
+			Description = this.Description?.Cloned(),
+			Icon = this.Icon,
+			RemoveIcon = this.RemoveIcon,
+		};
+
+		return cItem;
+	}
 }
 public partial class TreeData : IEnumerable<TreeData>
 {
@@ -167,7 +358,7 @@ public partial class TreeData : IEnumerable<TreeData>
 #endregion
 
 #region VIEWMODELS
-public partial class OperatorsRow : ItemData, IRowData
+public partial class OperatorsRow : DataGridData
 {
 	// (MVVM) ViewModel
 	public partial Operators Operator 
@@ -245,7 +436,7 @@ public partial class TreeData : IEnumerable<TreeData>
 		}
 	}
 }
-public partial class EntryRow : ItemData, IRowData
+public partial class EntryRow : DataGridData
 {
 	// (MVVM) ViewModel
 	public partial bool? IsLocal
@@ -261,26 +452,35 @@ public partial class EntryRow : ItemData, IRowData
 }
 #endregion
 
-public class BasicStatusMessage : IRowData
+public class BasicStatusMessage : IRowData<BasicStatusMessage>
 {
 	// // (MVVM) VIEW
 	public StatusMessage Status { get; set; } = StatusMessage.OTHER;
 	public string? Message { get; set; }
+
+	public BasicStatusMessage Clone() => new()
+	{
+		Status = this.Status,
+		Message = this.Message?.Cloned(),
+	};
 }
-public partial class ItemData
+//public partial class ItemData : IRowData<ItemData>
+//{
+//	// (MVVM) VIEW
+//	public virtual string? Name { get; set; } = "";
+//	public virtual string? Text
+//	{
+//		get => field ??= Name;
+//		set;
+//	}
+//}
+public partial class DataGridData
 {
-	public virtual ListViewItem? Item { get; set; }
 	public virtual string? Name { get; set; } = "";
 	public virtual string? Text
 	{
 		get => field ??= Name;
 		set;
-	}
-
-	public virtual bool IsSelected
-	{
-		get => Item?.IsSelected ?? false;	
-		set => Item?.IsSelected = value;
 	}
 }
 public class Wrap<T>(T value) where T : struct

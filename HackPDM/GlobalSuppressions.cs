@@ -6,3 +6,5 @@
 using System.Diagnostics.CodeAnalysis;
 
 [assembly: SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "<Pending>", Scope = "member", Target = "~M:HackPDM.Forms.Helper.MessageBoxInstance.CreateDialog~Microsoft.UI.Xaml.Controls.ContentDialog")]
+[assembly: SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "<Pending>", Scope = "member", Target = "~M:HackPDM.Forms.Settings.SearchOdoo.OdooReset_Click(System.Object,Microsoft.UI.Xaml.RoutedEventArgs)")]
+[assembly: SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "<Pending>", Scope = "member", Target = "~M:HackPDM.Forms.Hack.HackFileManager.FindSearchSelectionAsync(System.String,System.String,System.String)~System.Threading.Tasks.Task")]

@@ -741,7 +741,7 @@ public partial class HpBaseModel<T> : HpBaseModel where T : HpBaseModel, new()
 public partial class HpBaseModel<T> : HpBaseModel where T : HpBaseModel, new()
 {	
     // async methods
-	internal async static Task<T[]> GetRecordsByIdsAsync(ArrayList recordIds, ArrayList? searchFilters = null, string[]? excludedFields = null, string[]? includedFields = null, string[]? insertFields = null)
+	internal async static Task<T[]?> GetRecordsByIdsAsync(ArrayList recordIds, ArrayList? searchFilters = null, string[]? excludedFields = null, string[]? includedFields = null, string[]? insertFields = null)
 	{
 		string modelName = HpModelDictionary[typeof(T)];
 
@@ -793,8 +793,9 @@ public partial class HpBaseModel<T> : HpBaseModel where T : HpBaseModel, new()
 
 	public static async Task<T?> GetRecordByIdAsync(int recordId, string[] excludedFields = null)
 	{
+		if (recordId == 0) return null;
 		T[] records = await GetRecordsByIdsAsync([recordId], excludedFields: excludedFields);
-		return records != null && records!.Length > 0 ? records![0] : default;
+		return records != null && records!.Length > 0 ? records![0] : null;
 	}
 	public static async Task<TOther[]?> GetRelatedRecordByIdsAsync<TOther>(ArrayList recordIds, string relatedFieldName, string[]? excludedFields = null, string[]? includedFields = null, string[]? insertFields = null) where TOther : HpBaseModel<TOther>, new()
 	{

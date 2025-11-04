@@ -36,7 +36,6 @@ public static class ExtensionMethods
 		}
 	}
 
-
 	public static T GetAssign<T>(this T obj, Func<T> func) where T : class
     {
         obj ??= func();
@@ -104,7 +103,7 @@ public static class ExtensionMethods
     }
     public static IEnumerable<TOut> SkipSelect<TIn, TOut>(this IEnumerable<TIn> source, Predicate<TIn> predicate, Func<TIn, TOut> selector)
     {
-        foreach (TIn obj in source.OfType<TIn>())
+        foreach (TIn obj in source)
         {
             if (!predicate(obj))
             {
@@ -112,7 +111,26 @@ public static class ExtensionMethods
             }
         }
     }
-    public static IEnumerable<TOut> SkipList<TOut>(this IEnumerable<TOut> source, IEnumerable<TOut> match)
+	public static IEnumerable<Tout> SkipSelect<TIn, Tout>(this ArrayList source, Predicate<TIn> predicate, Func<TIn, Tout> selector)
+	{
+		foreach (TIn obj in source.OfType<TIn>())
+		{
+			if (!predicate(obj))
+			{
+				yield return selector(obj);
+			}
+		}
+	}
+	public static IEnumerable<TOut> SelectNotDefault<TIn, TOut>(this ArrayList list, Func<TIn, TOut?> selector) where TOut : IEquatable<TOut>
+	{
+		foreach (TIn obj in list.OfType<TIn>())
+		{
+			var item = selector(obj);
+			if (item is { } clean && !clean.Equals(default)) yield return clean;
+		}
+	}
+
+	public static IEnumerable<TOut> SkipList<TOut>(this IEnumerable<TOut> source, IEnumerable<TOut> match)
     {
         foreach (TOut obj in source)
         {
@@ -412,6 +430,10 @@ public static class ExtensionMethods
     {
         public void Sort(Comparison<T> comparer, bool reverse = false) => oc.SortInternal(comparer, reverse);
 		public void ReverseSort(Comparison<T> comparer) => oc.SortInternal(comparer, true);
+	}
+	extension<T>(T obj) where T : class, ICloneable
+	{
+		public T Cloned() => obj.Clone() as T;
 	}
 }
 public static class ExtensionConvertMethods

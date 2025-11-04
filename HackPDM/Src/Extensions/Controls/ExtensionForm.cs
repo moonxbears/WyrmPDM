@@ -84,7 +84,7 @@ public static class ExtensionForm
 	}
 	extension(ListViewItem item)
 	{
-		public ItemData LinkedItem
+		public DataGridData LinkedItem
 		{
 			get
 			{
@@ -352,6 +352,6 @@ public static class ExtensionForm
 	{
 		public bool IsSingleton { get; set; }=false;
 		public TreeData? TreeNodeData { get; set;  } = null;
-		public ItemData? ItemData { get; set;  } = null;
+		public DataGridData? ItemData { get; set;  } = null;
 	}
 }
