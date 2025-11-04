@@ -34,7 +34,7 @@
                     <BreadcrumbBar
                         x:Name="OdooDirectoryBreadcrumb"
                         Grid.Row="0"
-                        Margin="0,0,0,10"
+                        Margin="5,0,5,10"
                         VerticalAlignment="Top"
                         BorderBrush="DimGray"
                         BorderThickness="3"

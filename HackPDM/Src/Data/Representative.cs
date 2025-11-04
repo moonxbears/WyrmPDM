@@ -16,10 +16,17 @@ using static HackPDM.Odoo.OdooModels.Models.HpVersionProperty;
 using HackPDM.Src.ClientUtils.Types;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
+using HackPDM.ClientUtils;
 
 namespace HackPDM.Data;
 
 #region VIEWS
+public partial class OperatorsRow : ItemData, IRowData
+{
+	// (MVVM) VIEW
+	public partial Operators Operator { get; set; }
+	public partial string? OpRepr { get; set; }
+}
 public partial class EntryRow : ItemData, IRowData
 {
 	// (MVVM) VIEW
@@ -96,7 +103,8 @@ public class VersionRow : ItemData, IRowData
 public class SearchRow : ItemData, IRowData
 {
 	// (MVVM) VIEW
-	public int Id { get; set; }
+	public int? Id { get; set; }
+	public string? Name { get; set; }
 	public string? Directory { get; set; }
 }
 public class SearchPropRow : ItemData, IRowData
@@ -159,6 +167,27 @@ public partial class TreeData : IEnumerable<TreeData>
 #endregion
 
 #region VIEWMODELS
+public partial class OperatorsRow : ItemData, IRowData
+{
+	// (MVVM) ViewModel
+	public partial Operators Operator 
+	{
+		get => field;
+		set
+		{
+			field = value;
+			OpRepr = OperatorConverter.OperatorToString(value);
+		}
+	}
+	public partial string? OpRepr 
+	{
+		get => field;
+		set
+		{
+			field = value;
+		} 
+	}
+}
 public partial class TreeData : IEnumerable<TreeData>
 {
 	// (MVVM) ViewModel
