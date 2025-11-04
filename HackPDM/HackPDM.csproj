@@ -21,6 +21,7 @@
     <None Remove="Src\Forms\Helper\MessageBoxWindow.xaml" />
     <None Remove="Src\Forms\Odoo\OdooFileTypeManager.xaml" />
     <None Remove="Src\Forms\Odoo\OdooSettings.xaml" />
+    <None Remove="Src\Forms\Odoo\SearchOdoo.xaml" />
     <None Remove="Src\Forms\Settings\ProfileManager.xaml" />
     <None Remove="Src\Forms\Settings\SearchOdoo.xaml" />
     <None Remove="Src\Forms\Settings\StatusDialog.xaml" />
@@ -505,6 +506,9 @@
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
+    <Page Update="Src\Forms\Odoo\SearchOdoo.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Update="Src\Forms\Hack\HackSettings.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
