@@ -12,6 +12,8 @@ using HackPDM.Odoo.OdooModels.Models;
 using HackPDM.Properties;
 using HackPDM.Src.ClientUtils.Types;
 
+using SolidWorks.Interop.swdocumentmgr;
+
 namespace HackPDM.Hack;
 
 public static class HackDefaults
@@ -545,6 +547,15 @@ public class HackFile : HackBaseFile
         hash.Add( this.FileContents );
         return hash.ToHashCode();
     }
+
+	internal static SwDmDocumentType GetSwDmDocumentTypeFromExtension(string file_ext)
+		=> file_ext switch
+		{
+			"sldprt" => SwDmDocumentType.swDmDocumentPart,
+			"sldasm" => SwDmDocumentType.swDmDocumentAssembly,
+			"slddrw" => SwDmDocumentType.swDmDocumentDrawing,
+			_ => SwDmDocumentType.swDmDocumentUnknown,
+		};
 }
 public struct DirectoryDict : IConvert<DirectoryDict>
 {

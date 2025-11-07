@@ -24,7 +24,8 @@ using Microsoft.UI.Xaml.Input;
 
 using RoutedEventArgs = Microsoft.UI.Xaml.RoutedEventArgs;
 using HackPDM.Extensions.Controls;
-using HackPDM.Helper; // For MessageDialog (basic replacement for MessageBox)
+using HackPDM.Helper;
+using WinRT; // For MessageDialog (basic replacement for MessageBox)
 
 namespace HackPDM.Forms.Settings
 {
@@ -477,67 +478,16 @@ namespace HackPDM.Forms.Settings
 			{
 				// We must copy the items to a list before removing,
 				// as you can't modify a collection while iterating it.
-				var selectedItems = OdooSearchPropList.SelectedItems.Cast<SearchPropertiesRow>();
-				foreach (var item in selectedItems!)
+
+				var selectedItems = OdooSearchPropList.SelectedItems.As<IList>();
+				for (int i = selectedItems.Count; i >= 0; i--)
 				{
-					PropertiesActive.Remove(item);
+					var item = selectedItems[i] as SearchPropertiesRow;
+					if (item is not null) PropertiesActive.Remove(item);
 				}
 			}
 		}
 		#endregion
-
-
-		/*
-        // --- CRITICAL: MIGRATION REQUIRED ---
-        // This method cannot be converted directly because it relies on
-        // System.Windows.Forms.TreeNode and System.Windows.Forms.TreeView.
-        // Your 'hackman' class seems to be tightly coupled to WinForms.
-        // To make this work, 'hackman.GetOdooDirectoryTree()' must be updated
-        // to return a Microsoft.UI.Xaml.Controls.TreeView, and this logic
-        // must be rewritten to traverse WinUI 3's 'TreeViewNode' objects.
-
-        private async void FindSearchSelection(SearchResultItem item)
-        {
-            if (item == null) return;
-
-            // first select the treeview node
-            // then select the listview item
-            string directory = item.Directory;
-            string fileName = item.Name;
-
-            string[] paths = directory.Split(new[] { " / " }, StringSplitOptions.None);
-
-            System.Windows.Forms.TreeNodeCollection nodes = null;
-            System.Windows.Forms.TreeNode node = null;
-            try
-            {
-                for (int i = 0; i < paths.Length; i++)
-                {
-                    if (i == 0) nodes = OdooDirectoryTree.Nodes;
-                    else nodes = node.Nodes;
-
-                    bool wasFound = false;
-                    foreach (System.Windows.Forms.TreeNode n in nodes)
-                    {
-                        if (n.Text == paths[i])
-                        {
-                            wasFound = true;
-                            node = n;
-                            break;
-                        }
-                    }
-                    if (!wasFound) throw new ArgumentException();
-                }
-                
-                // ... (Rest of WinForms-specific logic) ...
-            }
-            catch
-            {
-                return;
-            }
-        }
-        */
-
 
 		private void ControlEnabler()
 		{

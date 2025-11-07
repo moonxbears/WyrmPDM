@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 
@@ -10,7 +11,8 @@ namespace HackPDM.Src.Data.Numeric
     class TypeRepresentative
     {
     }
-    public struct int2 : IVectorize2<int>
+	
+	public struct int2 : IVectorize2<int>
     {
 		public int x { get; set; }
         public int r { get => x; set => x = value; }

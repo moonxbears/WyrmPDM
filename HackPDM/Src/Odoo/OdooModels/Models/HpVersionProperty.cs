@@ -126,6 +126,7 @@ public partial class HpVersionProperty : HpBaseModel<HpVersionProperty>
                 if (!OdooDefaults.DependentExt.Contains($".{version.file_ext.ToUpper()}")) continue;
                 string pathway = version.WinPathway;
                 List<string> paths = [];
+				
                 List<Tuple<string, string, string, object>> props = HackDefaults.DocMgr.GetProperties(pathway);
                 HpVersionProperty[] properties = [.. props.Select(prop =>
                 {

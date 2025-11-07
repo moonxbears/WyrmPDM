@@ -179,7 +179,7 @@ public sealed partial class StatusDialog : Page
 				// set background color, based on status action
 
 				collection.Add(lvItem);
-				messageLog?.ScrollIntoView(lvItem, messageLog.Columns.First());
+				//messageLog?.ScrollIntoView(lvItem, messageLog.Columns.First());
 			}
         });
     }
@@ -195,8 +195,6 @@ public sealed partial class StatusDialog : Page
             lvItem.Message = statusMessage.description;
             // set background color, based on status action
             collection.Add(lvItem);
-            
-            
 		});
     }
     

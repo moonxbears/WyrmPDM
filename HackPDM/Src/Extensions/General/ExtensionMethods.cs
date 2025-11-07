@@ -438,7 +438,7 @@ public static class ExtensionMethods
 }
 public static class ExtensionConvertMethods
 {
-    public static T[] ToArray<T>(this ArrayList list) => [.. list.Cast<T>()];
+	public static T[] ToArray<T>(this ArrayList list) => [.. list.Cast<T>()];
     public static HashSet<T> ToHashSet<T>(this ArrayList list) => [.. list.Cast<T>()];
     public static ConcurrentBag<T> ToConcurrentBag<T>(this IEnumerable<T> items)
     {

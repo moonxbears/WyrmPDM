@@ -4,10 +4,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+
 using HackPDM.ClientUtils;
 using HackPDM.Extensions.General;
 using HackPDM.Hack;
 using HackPDM.Src.ClientUtils.Types;
+
+using SolidWorks.Interop.swdocumentmgr;
+
 
 //using static System.Net.Mime.MediaTypeNames;
 
@@ -32,7 +36,12 @@ public partial class HpVersion : HpBaseModel<HpVersion>
     public string? file_ext;
     public string? checksum;
     public string? file_contents;
-    public string? FileContentsBase64 { get; private set; }
+	public SwDmDocumentType FileTypeExt
+	{
+		get => file_ext is null or "" ? SwDmDocumentType.swDmDocumentUnknown : HackFile.GetSwDmDocumentTypeFromExtension(file_ext);
+	}
+
+	public string? FileContentsBase64 { get; private set; }
     public string? WinPathway { get; internal set; }
         
     static HpVersion()
@@ -196,7 +205,7 @@ public partial class HpVersion : HpBaseModel<HpVersion>
         }
         public HackFile DownloadFileData()
         {
-            if (file_contents == null) DownloadContents();
+            if (file_contents == null) file_contents = DownloadContents();
     
             HackFile file = new(name, null);
             if (file_contents == null) return file;

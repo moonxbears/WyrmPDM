@@ -1932,7 +1932,20 @@ public sealed partial class HackFileManager : Page
 		if (version is null) return null;
 
 		if (toTemp)
-			version.DownloadFile(Properties.Settings.Get<string>("TemporaryPath") ?? "");
+		{
+			string path = version.HashedValues.TryGetValue<string, ArrayList>("dir_id", out var arr)
+				&& arr?[1] is string str ? string.Join("\\", str.Split(" / ")[1..])
+				: "";
+			
+			string tempPath = Path.Combine(Properties.Settings.Get<string>("TemporaryPath"), path);
+			version.DownloadFile(tempPath);
+			if (version.FileTypeExt != SolidWorks.Interop.swdocumentmgr.SwDmDocumentType.swDmDocumentUnknown)
+			{
+				HackDefaults.DocMgr.GetDependencies(path);
+				HackDefaults.DocMgr.ReplaceDependencies(version.WinPathway, tempPath, version.FileTypeExt);
+				HackDefaults.DocMgr.GetDependencies(path);
+			}
+		}
 		else
 			version.DownloadFile(version.WinPathway);
 

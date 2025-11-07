@@ -20,8 +20,8 @@ public class SwDocMgr
 
     private SwDMApplication _swDocMgr = default;
 
-    // constructor
-    public SwDocMgr(string strLicenseKey)
+	// constructor
+	public SwDocMgr(string strLicenseKey)
     {
 
         SwDMClassFactory swClassFact;
@@ -40,7 +40,12 @@ public class SwDocMgr
         }
 
     }
-
+	public void ReplaceDependencies(string filepath, string newReference, SwDmDocumentType docType)
+	{
+		ISwDMDocument _swDMDoc;
+		_swDMDoc = _swDocMgr.GetDocument(filepath, docType, true, out var docResult);
+		_swDMDoc.ReplaceReference(filepath, newReference);
+	}
     public List<string[]> GetDependencies(string fileName, bool deep=false, bool noInterrupt=false)
     {
         // external references for assembly files (GetAllExternalReferences4)
