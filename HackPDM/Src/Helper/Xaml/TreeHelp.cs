@@ -36,10 +36,12 @@ namespace HackPDM.Src.Helper.Xaml
 	{
 		private HackFileManager _HFM { get; init; }
 		private TreeView _tree { get; init; }
+		private DataGrid _grid { get; init; }
 		internal TreeHelp(HackFileManager HackFM)
 		{
 			_HFM = HackFM;
 			_tree = HackFM.GetOdooDirectoryTree();
+			_grid = HackFM.GetOdooEntryList();
 		}
 
 		#region TreeView functions
@@ -157,6 +159,8 @@ namespace HackPDM.Src.Helper.Xaml
 					{
 						_HFM.OEntries.Sort((EntryRow x, EntryRow y) => string.Compare(x.Name, y.Name));
 						_HFM.IsListLoaded = true;
+						//_grid.InvalidateArrange();
+						_grid.UpdateLayout();
 					});
 				}
 			}
@@ -368,7 +372,7 @@ namespace HackPDM.Src.Helper.Xaml
 			// check if latest checksum
 			string status = "";
 			string? fullName = table["fullname"] as string;
-			HackFile hack = null;
+			HackFile? hack = null;
 			if (!string.IsNullOrWhiteSpace(fullName)) hack = hackFileMap[fullName].Result;
 
 			//string latest = EmptyPlaceholder;

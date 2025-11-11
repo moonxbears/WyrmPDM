@@ -946,16 +946,17 @@ public sealed partial class HackFileManager : Page
 	// after select events
 	private async void ODT_SetLastSelected(TreeData? tData)
 	{
+		
 		LastSelectedNode = tData?.Node;
 		LastSelectedNodePath = LastSelectedNode?.LinkedData.FullPath;
 		LastSelectedNode?.UpdateBreadCrumbCollection(LastSelectedNodePaths);
 		
 		IsListLoaded = false;
-		if (LastSelectedNode is not null)
-		{
-			_treeItemChange = _treeHelper.TreeSelectItem(OdooDirectoryTree, LastSelectedNode, OdooEntryList, _cTreeSource.Token);
-			await _treeItemChange;
-		}
+		//if (LastSelectedNode is not null)
+		//{
+		//	_treeItemChange = _treeHelper.TreeSelectItem(OdooDirectoryTree, LastSelectedNode, OdooEntryList, _cTreeSource.Token);
+		//	await _treeItemChange;
+		//}
 
 	}
 	private async void OdooDirectoryTree_SelectionChanged(TreeView sender, TreeViewSelectionChangedEventArgs args)
@@ -1051,7 +1052,10 @@ public sealed partial class HackFileManager : Page
 	private async void ShowInactive_Checked(object sender, RoutedEventArgs e)
 	{
 		IsActive = ShowInactive.IsChecked ?? false;
-		if (LastSelectedNode is not null) await _treeHelper.TreeSelectItem(OdooDirectoryTree, LastSelectedNode!, OdooEntryList);
+		if (LastSelectedNode is not null)
+		{
+			await _treeHelper.TreeSelectItem(OdooDirectoryTree, LastSelectedNode!, OdooEntryList);
+		}
 	}
 	// tree open events
 	private void OdooCMSTree_Opening(object sender, CancelEventArgs e)
@@ -1650,17 +1654,16 @@ public sealed partial class HackFileManager : Page
 	}
 	private async void OdooParents_DoubleClick(object sender, DoubleTappedRoutedEventArgs e)
 	{
-		if (OdooParents.SelectedItems?[0] is not ParentRow item) return;
+		if (OdooParents.SelectedItems is not [ParentRow item]) return;
 
 		string? pwaPath = item.BasePath;
-		string fileName = item.Name;
+		string? fileName = item.Name;
 		await FindSearchSelectionAsync(pwaPath, fileName);
 	}
 	private async void OdooChildren_DoubleClick(object sender, DoubleTappedRoutedEventArgs e)
 	{
-		var item = OdooChildren.SelectedItems?[0] as ChildrenRow;
-		if (item is null) return;
-
+		if (OdooChildren.SelectedItems is not [ChildrenRow item]) return;
+		
 		string? pwaPath = item.BasePath;
 		string fileName = item.Name;
 		await FindSearchSelectionAsync(pwaPath, fileName);

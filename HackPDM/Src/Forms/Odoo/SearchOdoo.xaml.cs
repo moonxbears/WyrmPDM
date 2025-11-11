@@ -397,10 +397,11 @@ namespace HackPDM.Forms.Settings
 				for (int i = 0; i < paths.Length; i++)
 				{
 					if (i == 0) nodes = OdooDirectoryTree.RootNodes;
-					else nodes = node.Children;
+					else nodes = node?.Children;
 
 					bool wasFound = false;
-					foreach (var n in nodes)
+					if (nodes == null) throw new ArgumentException();
+					foreach (var n in nodes!)
 					{
 						if (n.LinkedData.Name == paths[i])
 						{

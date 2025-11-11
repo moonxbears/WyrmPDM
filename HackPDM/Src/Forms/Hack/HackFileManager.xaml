@@ -189,7 +189,8 @@
                                         <xaml:DataTemplate>
                                             <TextBlock
                                                 Padding="5,0,5,0"
-                                                HorizontalAlignment="Stretch"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Center"
                                                 Text="{xaml:Binding Size,
                                                                     Converter={xaml:StaticResource FileSizeFormatter}}"
                                                 TextAlignment="Right" />
@@ -385,6 +386,7 @@
                             x:Name="ShowInactive"
                             VerticalAlignment="Center"
                             Checked="ShowInactive_Checked"
+                            Unchecked="ShowInactive_Checked"
                             Icon="Stop"
                             Label="Show Inactive" />
                         <AppBarButton
