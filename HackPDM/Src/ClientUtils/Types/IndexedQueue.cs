@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -72,8 +73,24 @@ public class IndexedQueue<T> : IEnumerable<T>, IEnumerable, ICollection<T>, IClo
         }
     }
 
+	public void PushFront(T item)
+	{
+		Start = (Start - 1) & _mask;
+		_buffer[Start] = item;
+		Count++;
+	}
+	public T PopFront()
+	{
+		if (Count == 0) throw new InvalidOperationException();
+		T item = _buffer[Start];
+		_buffer[Start] = default!;
+		Start = (Start + 1) & _mask;
+		Count--;
+		return item;
+	}
 
-    public void Enqueue(T item)
+
+	public void Enqueue(T item)
     {
         if (Count == Capacity)
         {
@@ -154,7 +171,8 @@ public class IndexedQueue<T> : IEnumerable<T>, IEnumerable, ICollection<T>, IClo
         T item = _buffer[Start];
         Start = (Start + 1) & _mask;
         Count--;
-        //TryShrink();
+        
+		TryShrink();
         return item;
     }
 

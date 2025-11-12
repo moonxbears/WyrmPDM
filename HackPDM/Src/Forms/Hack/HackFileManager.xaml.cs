@@ -55,6 +55,8 @@ using MessageBoxButtons = System.Windows.Forms.MessageBoxButtons;
 using MessageBoxIcon = System.Windows.Forms.MessageBoxIcon;
 using OClient = HackPDM.Odoo.OdooClient;
 using Path = System.IO.Path;
+using System.Drawing;
+using Image = Microsoft.UI.Xaml.Controls.Image;
 
 
 // To learn more about WinUI, the WinUI project structure,
@@ -82,6 +84,7 @@ internal record HackLists
 public sealed partial class HackFileManager : Page
 {
 	#region Declarations
+	public ObservableCollection<TreeData>? LastSelectedNodePaths { get; set; } = [];
 	public ObservableCollection<EntryRow> OEntries { get; internal set; } = [];
 	public ObservableCollection<HistoryRow> OHistories { get; internal set; } = [];
 	public ObservableCollection<ParentRow> OParents { get; internal set; } = [];
@@ -90,17 +93,12 @@ public sealed partial class HackFileManager : Page
 	public ObservableCollection<VersionRow> OVersions { get; internal set; } = [];
 	public ObservableCollection<TreeData> ONodes { get; internal set; } = [];
 
+	public static ConcurrentQueue<(StatusMessage action, string description)> QueueAsyncStatus = new();
+
 	public static NotifyIcon Notify { get; } = Notifier.Notify;
 	public static StatusDialog? Dialog { get; set; }
-	public static ConcurrentQueue<(StatusMessage action, string description)> QueueAsyncStatus = new();
 	public static ListDetail ActiveList { get; set; }
 	public static Dictionary<object, TreeViewNode> ItemToContainerMap = new();
-	public static int DownloadBatchSize
-	{
-		get => OdooDefaults.DownloadBatchSize;
-		set => OdooDefaults.DownloadBatchSize = value;
-	}
-	public static int SkipCounter { get; private set; }
 	private static Task? _entryListChange = default;
 	private static Task? _treeItemChange = default;
 	private static (object? sender, SelectionChangedEventArgs? e) _queuedEntryChange = (null, null);
@@ -114,17 +112,24 @@ public sealed partial class HackFileManager : Page
 	private static CancellationTokenSource _cTreeSource = new();
 
 	private static ImageSource? _previewImage = null;
-	internal bool IsActive { get; set; } = false;
+
+	public static int DownloadBatchSize
+	{
+		get => OdooDefaults.DownloadBatchSize;
+		set => OdooDefaults.DownloadBatchSize = value;
+	}
+	public static int SkipCounter { get; private set; }
 	internal static int _processCounter;
 	internal static int _totalProcessed;
 	internal static int _maxCount;
+	internal bool IsActive { get; set; } = false;
+	internal bool IsFiltered { get; set; } = true;
 
 	private TreeHelp _treeHelper { get; init; }
 	private GridHelp _gridHelper { get; init; }
 	internal HackLists _hackLists { get; init; }
 	public TreeViewNode? LastSelectedNode { get; set; } = null;
 	public string? LastSelectedNodePath { get; set; } = null;
-	public ObservableCollection<TreeData>? LastSelectedNodePaths { get; set; } = [];
 	// if EntryPollingMs is set to less than or equal to 0 then it will not poll for changes
 	public int EntryPollingMs { get; set; } = 5000;
 
@@ -262,6 +267,7 @@ public sealed partial class HackFileManager : Page
 		ListPreview.Click				+= List_Click_OpenLatestRemote;
 		ListFileDirectory.Click			+= List_Click_OpenDirectory;
 		ListRestore.Click				+= List_Click_Restore;
+		SaveIcon.Click					+= List_Click_SaveIcon;	
 		ListOpen.DoubleTapped			+= List_Click_Open;
 
 		// additional toolbar
@@ -287,6 +293,18 @@ public sealed partial class HackFileManager : Page
 		HistoryMove.DoubleTapped		+= History_Click_TemporaryMove;
 		HistoryMoveTemp.Click			+= History_Click_TemporaryMove;
 		HistoryMoveOverwrite.Click		+= History_Click_OverwriteMove;
+	}
+
+	private void List_Click_SaveIcon(object sender, RoutedEventArgs e)
+	{
+		if (OdooEntryList.SelectedItem is not EntryRow entry 
+			|| entry.Status is not (FileStatus.Lo or FileStatus.Ft or FileStatus.If)
+			|| entry.FullName is null) return;
+
+		var icon = Icon.ExtractAssociatedIcon(Path.Combine(entry.FullName));
+		
+		var bitmap = icon?.ToBitmap();
+		var bytes = bitmap.ToBytes();
 	}
 
 	private void OdooDirectoryTree_RightTapped(object sender, RightTappedRoutedEventArgs e)
@@ -860,7 +878,7 @@ public sealed partial class HackFileManager : Page
 
 		await Task.Run(async () =>
 		{
-			if (processVersions.Count > 0)
+			if (!processVersions.IsEmpty)
 			{
 				Task<int[]> finishSuccesses = Task.WhenAll(HpVersion.BatchDownloadFiles([.. processVersions]));
 				await finishSuccesses;
@@ -1056,6 +1074,10 @@ public sealed partial class HackFileManager : Page
 		{
 			await _treeHelper.TreeSelectItem(OdooDirectoryTree, LastSelectedNode!, OdooEntryList);
 		}
+	}
+	private void ShowHidden_Checked(object sender, RoutedEventArgs e)
+	{
+
 	}
 	// tree open events
 	private void OdooCMSTree_Opening(object sender, CancelEventArgs e)

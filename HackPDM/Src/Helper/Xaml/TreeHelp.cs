@@ -159,8 +159,8 @@ namespace HackPDM.Src.Helper.Xaml
 					{
 						_HFM.OEntries.Sort((EntryRow x, EntryRow y) => string.Compare(x.Name, y.Name));
 						_HFM.IsListLoaded = true;
-						//_grid.InvalidateArrange();
-						_grid.UpdateLayout();
+						_grid.InvalidateArrange();
+						//_grid.UpdateLayout();
 					});
 				}
 			}
@@ -508,7 +508,7 @@ namespace HackPDM.Src.Helper.Xaml
 			string type = file.TypeExt.ToLower();
 			string status = "lo";
 
-			if (OdooDefaults.RestrictTypes & !OdooDefaults.ExtToType.TryGetValue(type, out var hpType))
+			if ((OdooDefaults.RestrictTypes || _HFM.IsFiltered) & !OdooDefaults.ExtToType.TryGetValue(type, out var hpType))
 			{
 				status = "ft";
 			}
@@ -518,37 +518,30 @@ namespace HackPDM.Src.Helper.Xaml
 			}
 
 			type = type[1..];
-
-			EntryRow item = new();
-			item.Id = null;
-			item.Name = file.Name;
-
-
-			item.Type = type;
-
-			//double size =  (double)( file.FileSize * HackDefaults.ByteSizeMultiplier );
-			item.Size = file.FileSize;
-
-			item.LocalDate = file.ModifiedDate;
-			item.RemoteDate = null;
-			item.Status = FileStatus.Lo;
-
-
 			// get or add image key
-			ImageSource? image = await Assets.GetImageAsync(item.Type)
-					?? (await GetRemoteImage(item.Type))
+			ImageSource? image = await Assets.GetImageAsync(type)
+					?? (await GetRemoteImage(type))
 					?? await Assets.GetImageAsync("def_fi");
 
 			ImageSource? statImg = await Assets.GetImageAsync(status);
-
-			item.Icon = image;
-			item.StatusIcon = statImg;
-
-			item.Checkout = null;
 			HpCategory? nameCategory = OdooDefaults.ExtToCat.TryGetValue($".{type}", out var cat) ? cat : null;
-			item.Category = nameCategory;
-			item.FullName = file.FullPath;
-			
+
+			EntryRow item = new()
+			{
+				Id = null,
+				Name = file.Name,
+				Type = type,
+				Size = file.FileSize,
+				LocalDate = file.ModifiedDate,
+				RemoteDate = null,
+				Status = Enum.Parse<FileStatus>(status, true),
+				Icon = image,
+				StatusIcon = statImg,
+				Checkout = null,
+				Category = nameCategory,
+				FullName = file.FullPath
+			};
+
 			await GridHelp.UpdateListAsync(grid, item);
 		}
 

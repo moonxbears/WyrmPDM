@@ -32,7 +32,6 @@
             Padding="5,5,5,5"
             HorizontalAlignment="Left"
             VerticalAlignment="Bottom"
-            Click="HackSetting"
             Content="Hack Settings" />
 
         <!--  Odoo Settings Button  -->
@@ -46,7 +45,6 @@
             Padding="5,5,5,5"
             HorizontalAlignment="Left"
             VerticalAlignment="Bottom"
-            Click="OdooSetting"
             Content="Odoo Settings" />
         <!--  Odoo Login Button  -->
         <Button
@@ -59,7 +57,6 @@
             Padding="5,5,5,5"
             HorizontalAlignment="Stretch"
             VerticalAlignment="Bottom"
-            Click="AttemptLogin"
             Content="Odoo Login" />
 
         <!--  Status List View  -->

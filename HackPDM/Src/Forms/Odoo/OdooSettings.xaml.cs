@@ -81,7 +81,6 @@ public sealed partial class OdooSettings : Page
         OdooDefaults.OdooPass = txtOdooPass.Password;
         OdooDefaults.OdooUser = txtOdooUser.Text;
         OdooDefaults.OdooUrl = sb.ToString();
-        OdooDefaults.OdooId = 0;
     }
 
     private void textBox1_TextChanged(object sender, EventArgs e) => changeURL();

@@ -3,6 +3,7 @@ using System.Collections;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
+using System.Net.Http;
 using System.Text;
 using System.Xml;
 
@@ -76,6 +77,14 @@ public class XmlRpcRequest
 
 	public XmlRpcResponse? Send( string url, int timeout = 0, IWebProxy proxy = null )
 	{
+		//HttpClient client = new();
+		//SocketsHttpHandler handler = new()
+		//{
+		//	Proxy = proxy,
+		//	UseProxy = proxy != null,
+			
+		//};
+		//using var request = new HttpRequestMessage(HttpMethod.Post, url);
 		HttpWebRequest httpWebRequest = (HttpWebRequest)WebRequest.Create(url);
 		if ( httpWebRequest == null )
 		{

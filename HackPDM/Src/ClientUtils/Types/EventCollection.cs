@@ -1,16 +1,156 @@
-﻿using Microsoft.UI.Xaml.Controls;
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Linq;
 using System.Reactive;
 using System.Reactive.Subjects;
+using System.Threading.Tasks;
+
+using Microsoft.UI.Xaml.Controls;
 
 namespace HackPDM.Src.ClientUtils.Types
 {
-    public class EventCollection<T> : ObservableCollection<T>
+	public class ObservableQueue<T> : IndexedQueue<T>, INotifyCollectionChanged
+	{
+		public event NotifyCollectionChangedEventHandler? CollectionChanged;
+		private int _mask;
+		public new T this[int index]
+		{
+			get
+			{
+				return index < 0 || index >= Count ? throw new ArgumentOutOfRangeException() : base[(Start + index) & _mask];
+			}
+		}
+		
+
+		public ObservableQueue(int capacity) : this(capacity, false) {}
+		public ObservableQueue(int initialCapacity = 4, bool growable = true) : base(initialCapacity, growable)
+		{
+			this._mask = initialCapacity - 1;
+		}
+
+		protected virtual void OnCollectionChanged(NotifyCollectionChangedEventArgs e)
+		{
+			CollectionChanged?.Invoke(this, e);
+		}
+		public new void Enqueue(T item)
+		{
+			base.Enqueue(item);
+			if (Growable) _mask = Capacity - 1;
+			NotifyCollectionChangedEventArgs arg = new(NotifyCollectionChangedAction.Add, item, (Start + (Count - 1)) & _mask);
+			OnCollectionChanged(arg);
+		}
+		public bool TryEnqueue(T item)
+		{
+			try
+			{
+				base.Enqueue(item);
+				if (Growable) _mask = Capacity - 1;
+				NotifyCollectionChangedEventArgs arg = new(NotifyCollectionChangedAction.Add, item, (Start + (Count - 1)) & _mask);
+				OnCollectionChanged(arg);
+				return true;
+			}
+			catch { }
+			return false; 
+		}
+		public new T Dequeue()
+		{
+			T item = base.Dequeue();
+			NotifyCollectionChangedEventArgs arg = new(NotifyCollectionChangedAction.Remove);
+			OnCollectionChanged(arg);
+			return item;
+		}
+		public bool TryDequeue(out T? item)
+		{
+			if (Count == 0)
+			{
+				item = default;
+				return false;
+			}
+
+			item = base.Dequeue();
+
+			if (item is not null)
+			{
+				NotifyCollectionChangedEventArgs arg = new(NotifyCollectionChangedAction.Remove);
+				OnCollectionChanged(arg);
+				return true;
+			}
+			
+			item = default;
+			return false;
+		}
+		public new void PushFront(T item)
+		{
+			base.PushFront(item);
+			NotifyCollectionChangedEventArgs arg = new(NotifyCollectionChangedAction.Add, item, 0);
+			OnCollectionChanged(arg);
+		}
+		public new T PopFront()
+		{
+			T item = base.PopFront();
+			NotifyCollectionChangedEventArgs arg = new(NotifyCollectionChangedAction.Remove);
+			OnCollectionChanged(arg);
+			return item;
+		}
+		public bool TryPopFront(out T? item)
+		{
+			if (Count == 0)
+			{
+				item = default;
+				return false;
+			}
+			item = base.PopFront();
+			if (item is not null)
+			{
+				NotifyCollectionChangedEventArgs arg = new(NotifyCollectionChangedAction.Remove);
+				OnCollectionChanged(arg);
+				return true;
+			}
+			item = default;
+			return false;
+		}
+		public bool TryPushFront(T item)
+		{
+			try
+			{
+				base.PushFront(item);
+				NotifyCollectionChangedEventArgs arg = new(NotifyCollectionChangedAction.Add, item, 0);
+				OnCollectionChanged(arg);
+				return true;
+			}
+			catch { }
+			return false;
+		}
+		public new void Add(T item)
+		{
+			base.Add(item);
+			NotifyCollectionChangedEventArgs arg = new(NotifyCollectionChangedAction.Add, item, Count - 1);
+			OnCollectionChanged(arg);
+		}
+		public new void Clear()
+		{
+			base.Clear();
+			NotifyCollectionChangedEventArgs arg = new(NotifyCollectionChangedAction.Reset);
+			OnCollectionChanged(arg);
+		}
+		public new void Remove(T item)
+		{
+			base.Remove(item);
+			NotifyCollectionChangedEventArgs arg = new(NotifyCollectionChangedAction.Remove, item);
+			OnCollectionChanged(arg);
+		}
+		public new void TryShrink(int shrinkFactor = 1)
+		{
+			base.TryShrink(shrinkFactor);
+			_mask = Capacity - 1;
+			NotifyCollectionChangedEventArgs arg = new(NotifyCollectionChangedAction.Reset);
+			OnCollectionChanged(arg);
+		}
+	}
+	public class EventCollection<T> : ObservableCollection<T>
     {
 		public void ManualNotifyCollectionChanged(ReasonForCall reason)
 		{

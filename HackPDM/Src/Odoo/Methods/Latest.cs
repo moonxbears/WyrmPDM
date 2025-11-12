@@ -191,7 +191,7 @@ internal static class Latest
 			
 		foreach (var batch in versionBatches)
 		{
-			await throttler.WaitAsync();
+			await throttler.WaitAsync(cToken);
 
 			Task task = Task.Run(async () =>
 			{
@@ -204,7 +204,7 @@ internal static class Latest
 				{
 					throttler.Release();
 				}
-			});
+			}, cToken);
 
 			if (tasks.Count > OdooDefaults.ConcurrencySize)
 			{

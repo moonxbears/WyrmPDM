@@ -219,6 +219,8 @@
                                     <MenuFlyoutItem x:Name="ListCommit" Text="Commit" />
                                     <MenuFlyoutSeparator />
                                     <MenuFlyoutItem x:Name="ListRestore" Text="Restore" />
+                                    <MenuFlyoutItem x:Name="SaveIcon" Text="Upload Icon" />
+                                    <MenuFlyoutSeparator />
                                     <MenuFlyoutSubItem x:Name="ListDelete" Text="Delete">
                                         <MenuFlyoutItem x:Name="ListDeleteLocal" Text="Local" />
                                         <MenuFlyoutItem x:Name="ListDeleteLogical" Text="Logical" />
@@ -386,9 +388,16 @@
                             x:Name="ShowInactive"
                             VerticalAlignment="Center"
                             Checked="ShowInactive_Checked"
-                            Unchecked="ShowInactive_Checked"
                             Icon="Stop"
-                            Label="Show Inactive" />
+                            Label="Show Inactive"
+                            Unchecked="ShowInactive_Checked" />
+                        <AppBarToggleButton
+                            x:Name="ShowHidden"
+                            VerticalAlignment="Center"
+                            Checked="ShowHidden_Checked"
+                            Icon="View"
+                            Label="Ignore Filter"
+                            Unchecked="ShowHidden_Checked" />
                         <AppBarButton
                             x:Name="AdditionalTools"
                             VerticalAlignment="Center"

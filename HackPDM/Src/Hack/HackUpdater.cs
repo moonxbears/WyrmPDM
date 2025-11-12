@@ -10,6 +10,7 @@ using MessageBoxButton = System.Windows.MessageBoxButton;
 using DialogResult = System.Windows.MessageBoxResult;
 
 using HackPDM.Odoo;
+using HackPDM.Odoo.OdooModels.Models;
 
 namespace HackPDM.Hack;
 
@@ -19,21 +20,22 @@ internal class HackUpdater
 	const string BRANCH_NAME = "justinOdooIntegration";
 	const string PUBLISH_URL = "\\\\freedom\\Engineering\\hackpdm\\setup.exe";
 
-	private static string _odooClientVersion;
+	private static HpSetting? _odooClientVersion;
 
-	private static Version CurrentVersion()
+	private static Version? CurrentVersion()
 	{
 		return Assembly.GetExecutingAssembly().GetName().Version;
 	}
-	private static bool IsCorrectOdooVersion(Version version)
+	private static bool IsCorrectOdooVersion(Version? version, bool showOutdatedUpdater = false)
 	{
-		_odooClientVersion = OdooDefaults.HpSettings.Where( s => s.name == OdooDefaults.ODOO_VERSION_KEY_NAME ).First().char_value;
-			
-		if (_odooClientVersion == $"{version.Major}.{version.Minor}.{version.Build}.{version.Revision}")
+		string _hackClientVersion = $"{version?.Major}.{version?.Minor}.{version?.Build}.{version?.Revision}";
+		_odooClientVersion = OdooDefaults.HpSettings.Where( s => s.name == OdooDefaults.ODOO_VERSION_KEY_NAME ).FirstOrDefault();
+
+		if (_odooClientVersion is not null && _odooClientVersion.char_value.Equals(_hackClientVersion))
 			return true;
 
-		if ( MessageBox.Show( $"Latest version: {version.Major}.{version.Minor}.{version.Build}.{version.Revision} doesn't match odoo version: {_odooClientVersion}\n" +
-		                      $"Would you like to download the latest version?",
+		if (showOutdatedUpdater && MessageBox.Show( $"Latest version: {_hackClientVersion} doesn't match odoo version: {_odooClientVersion}\n" +
+		        $"Would you like to download the latest version?",
 			    "Versions",
 			    MessageBoxButton.YesNoCancel ) == DialogResult.Yes )
 		{
@@ -42,33 +44,10 @@ internal class HackUpdater
 
 		return false;
 	}
-	public static bool EnsureUpdated()
+	public static bool EnsureUpdated(bool showOutdatedUpdater = false)
 	{
 		var info = CurrentVersion();
-		//var ghBranch = await GetBranchRepo(repoID, branchName);
-		//var taskSync = GetReleasesAsync(repoID);
-		//taskSync.Wait();
-		//var ghReleases = taskSync.Result;
-
-		//if ( ghReleases.Count == 0 )
-		//{
-		//	MessageBox.Show( "No releases found on GitHub" );
-		//	return;
-		//}
-
-		//if (!IsLatestVersion(ghReleases[0], info))
-		//{
-		//	if (MessageBox.Show($"Latest version: {ghReleases[0].TagName}, doesn't match your version: {info}\n" +
-		//	 $"Would you like to download the latest version?",
-		//	 "Versions",
-		//	 MessageBoxButtons.YesNoCancel) == DialogResult.Yes)
-		//	{
-		//		UpdaterProcess(ghReleases[0]);
-		//	}
-		//	throw new Exception("Update to latest version");
-		//}
-
-		return IsCorrectOdooVersion(info);
+		return IsCorrectOdooVersion(info, showOutdatedUpdater);
 	}
 	public static void UpdaterProcess( )
 	{
@@ -76,6 +55,7 @@ internal class HackUpdater
 		{
 			MessageBox.Show($"Opening {PUBLISH_URL}");
 			Process proc = Process.Start( PUBLISH_URL );
+			HackApp.Current.Exit();
 		}
 		catch
 		{

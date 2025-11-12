@@ -4,12 +4,18 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Forms;
+
 using HackPDM.Extensions.General;
 using HackPDM.Hack;
 using HackPDM.Odoo.OdooModels;
 using HackPDM.Odoo.OdooModels.Models;
 using HackPDM.Properties;
 using Meziantou.Framework.Win32;
+
+using MessageBox = System.Windows.Forms.MessageBox;
+
 //using static System.Net.Mime.MediaTypeNames;
 
 
@@ -151,16 +157,23 @@ public static class OdooDefaults
             field = value;
         }
     }
-    public static int? OdooId
+	private static bool _failedLogin = false;
+	public static int? OdooId
     {
         get
         {
             try
             {
-                if (field is null or 0)
-                {
-                    field = OClient.Login(9000);
-                }
+				if (!_failedLogin && field is null or 0)
+				{
+					field = OClient.Login(7000);
+					if (field is null or 0)
+					{
+						_failedLogin = true;
+					}
+					return field;
+				}
+				return field;
             }
             catch
             {
@@ -169,7 +182,17 @@ public static class OdooDefaults
             return field;
         }
 
-        set => field = value;
+		internal set
+		{
+			if (value is not (null or 0))
+			{
+				if (value != field)
+				{
+					_failedLogin = false;
+					field = value;
+				}
+			}
+		}
     }
     public static HpNode? MyNode
     {

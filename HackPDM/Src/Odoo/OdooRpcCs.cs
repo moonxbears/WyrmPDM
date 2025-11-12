@@ -82,7 +82,11 @@ public static class OdooClient
     }
     public static int? Login(int? timeout = null)
     {
-        _latestException = "";
+		if (string.IsNullOrEmpty(OdooDefaults.OdooDb)
+			|| string.IsNullOrEmpty(OdooDefaults.OdooUser)
+			|| string.IsNullOrEmpty(OdooDefaults.OdooPass)) return 0;
+		
+		_latestException = "";
         int userTimeout = timeout == null ? _commonTimeout : (int)timeout;
 
         XmlRpcRequest client = new()
@@ -96,7 +100,7 @@ public static class OdooClient
         int ui;
         try
         {
-            XmlRpcResponse response = client.Send(OdooDefaults.OdooUrl + XmlrpcEndpoint + AuthenticationEndpoint, userTimeout);
+            XmlRpcResponse response = client.Send(OdooDefaults.OdooUrl + XmlrpcEndpoint + AuthenticationEndpoint, timeout: userTimeout);
             if (response is null)
             {
                 _latestException = "web request exception";

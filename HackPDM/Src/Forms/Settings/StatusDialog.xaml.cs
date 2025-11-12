@@ -45,7 +45,10 @@ public sealed partial class StatusDialog : Page
     public static Brush ColorDefaultFore { get; set; } = StorageBox.BrushBlack;
     public static Brush ColorDefaultBack { get; set; } = StorageBox.BrushWhite;
 
-    int _errorCount = 0;
+    private delegate void SetProgressBarDel(int[] @params);
+    private delegate void AddStatusLinesDel(List<(StatusMessage action, string description)> values);
+    
+	int _errorCount = 0;
     public static bool? SkipText
     {
         get
@@ -63,7 +66,7 @@ public sealed partial class StatusDialog : Page
     {
         get
         {
-            field ??= Setting.Get("HistoryLength", field);
+            field ??= Setting.Get("HistoryLength", field) ?? 1000;
             return field;
         }
         set
@@ -110,26 +113,22 @@ public sealed partial class StatusDialog : Page
     {
         AddStatusLine((action, description));
     }
-    public void AddStatusLines(List<(StatusMessage action, string description)> values)
-    {
-        AddStatusLinesInternal(values);
-    }
+
     public void AddStatusLines(ConcurrentQueue<(StatusMessage action, string description)> values)
     {
-        List<(StatusMessage, string)> batch = new(values.Count);
-        for (int i = 0; i < values.Count; i++)
-        {
-            if (values.TryDequeue(out (StatusMessage action, string description) item)) batch.Add(item);
-            else break;
-        }
-        AddStatusLinesInternal(batch);
+        //ObservableQueue<(StatusMessage, string)> batch = new(values.Count);
+        //for (int i = 0; i < values.Count; i++)
+        //{
+        //    if (values.TryDequeue(out (StatusMessage action, string description) item)) batch.Enqueue(item);
+        //    else break;
+        //}
+        AddStatusLinesInternal(values);
     }
 
     public void SetProgressBar(int value, int max)
     {
         SetProgressBarInternal([value, max]);
     }
-    private delegate void SetProgressBarDel(int[] @params);
     private void SetProgressBarInternal(int[] @params)
     {
         this.DispatcherQueue.ExecuteUI(()=>
@@ -145,44 +144,58 @@ public sealed partial class StatusDialog : Page
         });
     }
 
-    private delegate void AddStatusLinesDel(List<(StatusMessage action, string description)> values);
-    private void AddStatusLinesInternal(List<(StatusMessage action, string description)> values)
+    private void AddStatusLinesInternal(ConcurrentQueue<(StatusMessage action, string description)> values)
     {
-        this.DispatcherQueue.ExecuteUI(() =>
+		this.DispatcherQueue.ExecuteUI(()=>
         {
-            foreach (var (action, description) in values)
+            while (values.TryDequeue(out var value))
             {
-				GetDataGrid(action, out var collection, out var messageLog);
-				int totalCount = collection.Count;
-
-                if (totalCount > HistoryLength)
-                {
-                    // 65 lvM count
-                    // 100 values count
-                    // 165 total 
-                    // 150 history length 
-                    // 15 = total - history length
-                    // lvM - value = 150
-                    int histOffset = totalCount - HistoryLength ?? 1000;
-                    for (int i = 0; i < histOffset; i++)
-                    {
-                        if (collection.Count > 0)
-                        {
-                            collection.RemoveAt(0);
-                        }
-                    }
-                }
+				GetDataGrid(value.action, out var collection, out var messageLog);
+				
                 var lvItem = GridHelp.EmptyListItem<BasicStatusMessage>(messageLog);
-				lvItem.Status = action;
-				lvItem.Message = description;
+				lvItem.Status = value.action;
+				lvItem.Message = value.description;
 				//ColorizeStatus(item, lvItem);
 				// set background color, based on status action
 
 				collection.Add(lvItem);
-				//messageLog?.ScrollIntoView(lvItem, messageLog.Columns.First());
 			}
-        });
+
+			RemoveExcessLines(StatusList);
+			RemoveExcessLines(InfoList);
+			RemoveExcessLines(ErrorList);
+		});
     }
+	private void RemoveExcessLines(DataGrid grid)
+	{
+		object locker = new();
+		lock (locker)
+		{
+			var collection = grid.ItemsSource as ObservableCollection<BasicStatusMessage>;
+			if (collection == null) return;
+
+			int totalCount = collection!.Count;
+			
+			if (totalCount > (HistoryLength ?? 1000))
+			{
+				// 65 lvM count
+				// 100 values count
+				// 165 total 
+				// 150 history length 
+				// 15 = total - history length
+				// lvM - value = 150
+				int histOffset = (totalCount - HistoryLength) ?? 1000;
+				for (int i = 0; i < histOffset; i++)
+				{
+					if (collection.Count > 0)
+					{
+						collection.RemoveAt(0);
+					}
+				}
+			}
+			grid.ScrollIntoView(collection.LastOrDefault(), null);
+		}
+	}
     private delegate void AddStatusLineDel(string[] @params);
     private void AddStatusLine((StatusMessage action, string description) statusMessage)
     {
@@ -257,8 +270,9 @@ public sealed partial class StatusDialog : Page
 
     void CmdCloseClick()
     {
-        
-    }
+		Canceled = true;
+		ParentWindow?.Close();
+	}
 
     public void OperationCompleted()
     {
