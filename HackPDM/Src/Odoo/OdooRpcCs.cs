@@ -48,37 +48,36 @@ public static class OdooClient
         get;
         set;
     }
-    public static int CorrectUserId()
+    public static async Task<int> CorrectUserId()
     {
         try
         {
-            return OdooDefaults.OdooId is null or 0 ? 0 : 1;
+			return await Task.Run(()=>OdooDefaults.OdooId is null or 0 ? 0 : 1);
         }
-        catch
-        {
-            return -1;
-        }
+        catch {}
+		return -1;
     }
         
-    public static bool CorrectOdooAddress()
+    public static async Task<bool> CorrectOdooAddress()
     {
-        using ( Ping pinger = new Ping() )
-        {
-            PingReply reply = pinger.Send(OdooDefaults.OdooAddress);
-            return reply.Status == IPStatus.Success;
-        }
-    }
-    public static bool CorrectOdooPort()
+		using Ping pinger = new();
+		return OdooDefaults.OdooAddress is not null 
+			&& await pinger.SendPingAsync(OdooDefaults.OdooAddress) is PingReply reply 
+			&& reply.Status == IPStatus.Success;
+	}
+	public static bool CorrectOdooPort()
     {
         try
         {
-            new TcpClient( OdooDefaults.OdooAddress, int.Parse( OdooDefaults.OdooPort ) );
-            return true;
+			if (OdooDefaults.OdooAddress is not null
+				&& OdooDefaults.OdooPort is not null
+				&& new TcpClient( OdooDefaults.OdooAddress, int.Parse( OdooDefaults.OdooPort ) ) is not null)
+			{
+				return true;
+			}
         }
-        catch
-        {
-            return false;
-        }
+        catch {}
+		return false;
     }
     public static int? Login(int? timeout = null)
     {

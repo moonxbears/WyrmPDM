@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 
 using HackPDM.Forms.Hack;
 
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml.Controls;
 
 namespace HackPDM.Src.Helper.Xaml
@@ -14,20 +15,29 @@ namespace HackPDM.Src.Helper.Xaml
 		{
 			HackFileManager.HackDispatcherQueue.TryEnqueue(() => action.Invoke(data));
 		}
-		
+
 		internal static void SafeInvoker(Action action)
+			=> SafeInvokerInternal(action, DispatcherQueue.GetForCurrentThread());
+		
+		
+		private static void SafeInvokerInternal(Action action, DispatcherQueue dispatcher)
 		{
-			HackFileManager.HackDispatcherQueue.TryEnqueue(() =>
-					{
-						try
-						{
-							action.Invoke();
-						}
-						catch (Exception ex)
-						{
-							Debug.Fail(ex.Message, ex.StackTrace);
-						}
-					});
+			_ = dispatcher is not null and { HasThreadAccess: true}
+				? TryDoAction(action)
+				: dispatcher?.TryEnqueue(()=>TryDoAction(action));
+		}
+		private static bool TryDoAction(Action action)
+		{
+			try
+			{
+				action();
+				return true;
+			}
+			catch (Exception ex)
+			{
+				Debug.Fail(ex.Message, ex.StackTrace);
+				return false;
+			}
 		}
 		internal static Task SafeInvokerAsync(Action action)
 		{

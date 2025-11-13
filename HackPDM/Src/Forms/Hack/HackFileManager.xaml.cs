@@ -326,6 +326,9 @@ public sealed partial class HackFileManager : Page
 			=> OdooEntryList;
 	internal Image GetOdooEntryImage() => OdooEntryImage;
 	internal ProgressRing GetProgressRing() => LoadRing;
+	internal TextBlock GetEntriesLabel() => EntryListStatus;
+	internal TextBlock GetEntriesLocalLabel() => EntryListLocalOnly;
+	internal TextBlock GetEntriesRemoteLabel() => EntryListRemoteOnly;
 	internal (Image, ProgressRing) GetVisualizer() => (OdooEntryImage, LoadRing);
 	internal void RestartEntries() => _treeHelper.RestartEntries(OdooDirectoryTree, OdooEntryList);
 	#endregion
@@ -1283,6 +1286,8 @@ public sealed partial class HackFileManager : Page
 	}
 	//
 	internal async void List_Click_GetLatest(object sender, RoutedEventArgs e)
+		=> await ListClickGetLatest(sender, e);
+	internal async Task ListClickGetLatest(object sender, RoutedEventArgs e)
 	{
 		WindowHelper.CreateWindowAndPage<StatusDialog>(out var Dialog, out _);
 		HackFileManager.Dialog = Dialog;
@@ -1324,7 +1329,7 @@ public sealed partial class HackFileManager : Page
 	}
 	internal async void List_Click_Checkout(object sender, RoutedEventArgs e)
 	{
-		List_Click_GetLatest(null, null);
+		await ListClickGetLatest(sender, e);
 		var entryItem = OdooEntryList.SelectedItems;
 
 		ArrayList entryIDs = new(entryItem.Count);
@@ -2267,7 +2272,7 @@ public sealed partial class HackFileManager : Page
 	internal async Task GetLatestInternal(ArrayList entryIDs)
 	{
 		Dialog.AddStatusLine(StatusMessage.INFO, "Finding Entry Dependencies...");
-		HpEntry[] entries = await HpEntry.GetRecordsByIdsAsync(entryIDs, includedFields: ["latest_version_id"]);
+		HpEntry[]? entries = await HpEntry.GetRecordsByIdsAsync(entryIDs, includedFields: ["latest_version_id"]);
 		//HpEntry[] entries = HpEntry.GetRecordsByIDS(entryIDs, includedFields: ["latest_version_id"]);
 
 		ArrayList newIds = await GetEntryList([.. entries.Select(entry => entry.latest_version_id)]);
@@ -2280,10 +2285,10 @@ public sealed partial class HackFileManager : Page
 	}
 	internal async Task CommitInternal(ArrayList entryIDs, IEnumerable<HackFile> hackFiles)
 	{
-		HpEntry[] entries = await HpEntry.GetRecordsByIdsAsync(entryIDs, includedFields: ["latest_version_id"]);
+		HpEntry[]? entries = await HpEntry.GetRecordsByIdsAsync(entryIDs, includedFields: ["latest_version_id"]);
 
 		object arguments = null;
-		HpEntry[] allEntries = null;
+		HpEntry[]? allEntries = null;
 
 		if (entries is not null && entries.Length > 0)
 		{
@@ -2297,14 +2302,14 @@ public sealed partial class HackFileManager : Page
 	}
 	internal async Task CheckoutInternal(ArrayList entryIDs)
 	{
-		HpEntry[] entriesTemp = await HpEntry.GetRecordsByIdsAsync(entryIDs, includedFields: ["latest_version_id"]);
+		HpEntry[]? entriesTemp = await HpEntry.GetRecordsByIdsAsync(entryIDs, includedFields: ["latest_version_id"]);
 
 		ArrayList newIds = await GetEntryList([.. entriesTemp.Select(e => e.latest_version_id)]);
 
 		newIds.AddRange(entryIDs);
 		newIds = newIds.ToHashSet<int>().ToArrayList();
 
-		HpEntry[] entries = await HpEntry.GetRecordsByIdsAsync(newIds, excludedFields: ["type_id", "cat_id"]);
+		HpEntry[]? entries = await HpEntry.GetRecordsByIdsAsync(newIds, excludedFields: ["type_id", "cat_id"]);
 
 		if (entries is null || entries.Length < 1) return;
 		if (Dialog is null) 
@@ -2319,13 +2324,13 @@ public sealed partial class HackFileManager : Page
 	{
 		if (entryIDs is null or { Count: < 1 }) return;
 
-		HpEntry[] entriesTemp = await HpEntry.GetRecordsByIdsAsync(entryIDs, includedFields: ["latest_version_id"]);
+		var entriesTemp = await HpEntry.GetRecordsByIdsAsync(entryIDs, includedFields: ["latest_version_id"]);
 		ArrayList newIds = await GetEntryList([.. entriesTemp.Select(e => e.latest_version_id)]);
 
 		newIds.AddRange(entryIDs);
 		newIds = newIds.ToHashSet<int>().ToArrayList();
 
-		HpEntry[] entries = await HpEntry.GetRecordsByIdsAsync(newIds, excludedFields: ["type_id", "cat_id", "checkout_node"]);
+		var entries = await HpEntry.GetRecordsByIdsAsync(newIds, excludedFields: ["type_id", "cat_id", "checkout_node"]);
 
 		if (entries is null || entries.Length < 1)
 			return;
@@ -2343,14 +2348,14 @@ public sealed partial class HackFileManager : Page
 	}
 	internal async Task LogicalDeleteInternal(ArrayList entryIDs)
 	{
-		HpEntry[] entriesTemp = HpEntry.GetRecordsByIds(entryIDs, includedFields: ["latest_version_id"]);
+		HpEntry[]? entriesTemp = HpEntry.GetRecordsByIds(entryIDs, includedFields: ["latest_version_id"]);
 
 		ArrayList newIds = await GetEntryList([.. entriesTemp.Select(e => e.latest_version_id)]);
 
 		newIds.AddRange(entryIDs);
 		newIds = newIds.ToHashSet<int>().ToArrayList();
 
-		HpEntry[] entries = await HpEntry.GetRecordsByIdsAsync(newIds, excludedFields: ["type_id", "cat_id", "checkout_node"]);
+		HpEntry[]? entries = await HpEntry.GetRecordsByIdsAsync(newIds, excludedFields: ["type_id", "cat_id", "checkout_node"]);
 
 		await AsyncHelper.AsyncRunner(() => Async_LogicalDelete(entries), "Logically Delete Files");
 	}
@@ -2359,7 +2364,7 @@ public sealed partial class HackFileManager : Page
 		WindowHelper.CreateWindowAndPage<StatusDialog>(out var Dialog, out _);
 		HackFileManager.Dialog = Dialog;
 
-		HpEntry[] entries = await HpEntry.GetRecordsByIdsAsync(null, searchFilters: [new ArrayList() { "deleted", "=", true }, new ArrayList() { "dir_id", "=", LastSelectedNode?.LinkedData.DirectoryId ?? 0 }], excludedFields: ["type_id", "cat_id", "checkout_node"]);
+		HpEntry[]? entries = await HpEntry.GetRecordsByIdsAsync(null, searchFilters: [new ArrayList() { "deleted", "=", true }, new ArrayList() { "dir_id", "=", LastSelectedNode?.LinkedData.DirectoryId ?? 0 }], excludedFields: ["type_id", "cat_id", "checkout_node"]);
 		await AsyncHelper.AsyncRunner(() => Async_LogicalUnDelete(entries), "Logically UnDelete Files");
 	}
 
@@ -2368,13 +2373,13 @@ public sealed partial class HackFileManager : Page
 	private void TreeViewItem_Loaded(object sender, RoutedEventArgs e)
 	{
 		var tvi = sender as TreeViewItem;
-		var data = tvi.DataContext as TreeData;
+		var data = tvi?.DataContext as TreeData;
 	}
 
 	private void TreeViewItem_Unloaded(object sender, RoutedEventArgs e)
 	{
 		var tvi = sender as TreeViewItem;
-		var data = tvi.DataContext;
+		var data = tvi?.DataContext;
 		ItemToContainerMap.Remove(data);
 	}
 

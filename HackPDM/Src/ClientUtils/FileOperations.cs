@@ -289,12 +289,15 @@ public static class FileOperations
         return fileInfo.ToHackArray();
     }
 
-    public static HackFile[] FilesInDirectory(
+    public static HackFile[]? FilesInDirectory(
         string path, 
-        Dictionary<string, Task<HackFile>> hackFileMap, 
-        //out Dictionary<string, Hashtable> dividedEntries, 
-        SearchOption searchOption = SearchOption.TopDirectoryOnly)
+        Dictionary<string, Task<HackFile>>? hackFileMap,
+		//out Dictionary<string, Hashtable> dividedEntries, 
+		out int localAndRemoteCount,
+
+		SearchOption searchOption = SearchOption.TopDirectoryOnly)
     {
+		localAndRemoteCount = 0;
         if (!Directory.Exists(path))
         {
             //dividedEntries = null;
@@ -302,9 +305,9 @@ public static class FileOperations
         }
         string[] filePaths = [.. Directory.EnumerateFiles(path, "*", searchOption)];
 
-        return [.. filePaths.SkipSelect(filePath => 
+		HackFile[]? hackFiles = [.. filePaths.SkipSelect(filePath => 
         {
-            if (hackFileMap.TryGetValue(HpDirectory.WindowsToOdooPath(filePath, true), out Task<HackFile> hackTask))
+            if (hackFileMap?.TryGetValue(HpDirectory.WindowsToOdooPath(filePath, true), out var hackTask) is true)
             {
                 if (hackTask.Result != default)
                 {
@@ -313,6 +316,10 @@ public static class FileOperations
             }
             return false;
         }, filePath => new HackFile(filePath))];
+
+		localAndRemoteCount = filePaths.Length - hackFiles.Length;
+
+		return hackFiles;
     }
     public static ArrayList FilesNotInOdoo(string[] filePaths)
     {

@@ -111,7 +111,7 @@
                 </Grid.ColumnDefinitions>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*" />
-                    <RowDefinition Height="*" MaxHeight="5" />
+                    <RowDefinition Height="*" MaxHeight="15" />
                     <RowDefinition Height="*" MaxHeight="400" />
                     <RowDefinition Height="*" MaxHeight="30" />
                 </Grid.RowDefinitions>
@@ -241,7 +241,38 @@
                         </Grid>
                     </TabViewItem>
                 </TabView>
-
+                <Grid
+                    Grid.Row="1"
+                    Grid.Column="1"
+                    Grid.ColumnSpan="3">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock
+                        x:Name="EntryListStatus"
+                        Grid.Column="0"
+                        Padding="5,0,5,0"
+                        VerticalAlignment="Center"
+                        FontWeight="Bold"
+                        Text="Entries: None" />
+                    <TextBlock
+                        x:Name="EntryListLocalOnly"
+                        Grid.Column="1"
+                        Padding="5,0,5,0"
+                        VerticalAlignment="Center"
+                        FontWeight="Bold"
+                        Text="Local Only: None" />
+                    <TextBlock
+                        x:Name="EntryListRemoteOnly"
+                        Grid.Column="2"
+                        Padding="5,0,5,0"
+                        VerticalAlignment="Center"
+                        FontWeight="Bold"
+                        Text="Remote Only: None" />
+                </Grid>
                 <!--  Right-side controls (image, version tabs)  -->
                 <TabView
                     x:Name="VersionTabs"
@@ -349,7 +380,8 @@
                 <Grid
                     Grid.Row="2"
                     Grid.RowSpan="2"
-                    Grid.Column="3">
+                    Grid.Column="3"
+                    BorderThickness="4">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
@@ -371,7 +403,6 @@
                             Width="Auto"
                             Height="Auto"
                             IsActive="True" />
-
                         <Image
                             x:Name="OdooEntryImage"
                             Width="0"

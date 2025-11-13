@@ -15,10 +15,11 @@
             <ColumnDefinition Width="Auto" />
             <ColumnDefinition Width="Auto" />
             <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="40" />
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="55" />
         </Grid.RowDefinitions>
 
         <!--  Hack Settings Button  -->
@@ -58,16 +59,26 @@
             HorizontalAlignment="Stretch"
             VerticalAlignment="Bottom"
             Content="Odoo Login" />
-
+        <ProgressRing
+            x:Name="OdooLoginProgressRing"
+            Grid.Row="1"
+            Grid.Column="3"
+            Width="32"
+            Height="32"
+            Margin="5,5,5,5"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            IsActive="False" />
         <!--  Status List View  -->
         <com:DataGrid
             x:Name="ProfileManStatusList"
             Grid.Row="0"
             Grid.Column="0"
-            Grid.ColumnSpan="3"
+            Grid.ColumnSpan="4"
             Margin="0,5,0,10"
             HorizontalAlignment="Stretch"
             VerticalAlignment="Stretch"
+            AutoGenerateColumns="False"
             BorderThickness="1,1,1,1">
             <!--  FIX: Remove ListView.View, use ListView.ItemTemplate for UWP/WinUI  -->
             <com:DataGrid.Columns>

@@ -17,6 +17,8 @@ using HackFileManager = HackPDM.Forms.Hack.HackFileManager;
 using HackSettings = HackPDM.Properties.Settings;
 using MessageBox = System.Windows.Forms.MessageBox;
 using HackPDM.Src.Helper.Xaml;
+using System.Threading.Tasks;
+using Windows.UI.Composition;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -37,18 +39,21 @@ public sealed partial class ProfileManager : Page
     private void LoadSettings()
     {
         HackApp.Window?.Title = "Profile Manager - HackPDM";
-        odooSettingsBtn.Click += OdooSetting;
+
+		ProfileManStatusList.ItemsSource = OStatus;
+
+		odooSettingsBtn.Click += OdooSetting;
 		HackSettingsBtn.Click += HackSetting;
 		OdooLoginBtn.Click += AttemptLogin;
     }
-    private bool AbleToLogin()
+    private async Task<bool> AbleToLogin()
     {
         try
         {
             List<string> errors = [];
             
 
-            if (!OdooClient.CorrectOdooAddress())
+            if (!await OdooClient.CorrectOdooAddress())
             {
                 errors.Add("invalid odoo address or unreachable host");
             }
@@ -56,7 +61,7 @@ public sealed partial class ProfileManager : Page
             {
                 errors.Add("invalid odoo port or server is down");
             }
-			else if (OdooClient.CorrectUserId() is int status)
+			else if (await OdooClient.CorrectUserId() is int status)
 			{
 				switch (status)
 				{
@@ -107,9 +112,14 @@ public sealed partial class ProfileManager : Page
     {
         WindowHelper.CreateWindowPage<Hack.HackSettings>();
     }
-    public void AttemptLogin(object sender, RoutedEventArgs e)
+    public async void AttemptLogin(object sender, RoutedEventArgs e)
     {
-        if (!AbleToLogin()) return;
+		OdooLoginProgressRing.IsActive = true;
+		OdooLoginProgressRing.UpdateLayout();
+		var IsLoggedIn = await AbleToLogin(); 
+		OdooLoginProgressRing.IsActive = false;
+		if (!IsLoggedIn) return;
+
         WindowHelper.CreateWindowPage<HackFileManager>();
     }
 }

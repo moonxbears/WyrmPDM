@@ -99,7 +99,7 @@ namespace HackPDM.Src.Helper.Xaml
 		}
 		internal void ResetImagePreview(Image img, ProgressRing ring)
 		{
-			SafeHelper.SafeInvoker(() =>
+			_HFM.DispatcherQueue.TryEnqueue(() =>
 			{
 				ring.Width = 0;
 				ring.Height = 0;
@@ -111,7 +111,7 @@ namespace HackPDM.Src.Helper.Xaml
 		}
 		internal void LoadingVisualized(Image img, ProgressRing ring)
 		{
-			SafeHelper.SafeInvoker(async () =>
+			_HFM.DispatcherQueue.TryEnqueue(async () =>
 			{
 				img.Width		= 0;
 				img.Height		= 0;
@@ -150,17 +150,18 @@ namespace HackPDM.Src.Helper.Xaml
 					token.ThrowIfCancellationRequested();
 					(Hashtable entries, Dictionary<string, Task<HackFile>> hackmap) = await GetHackAndEntry(tData.DirectoryId);
 					token.ThrowIfCancellationRequested();
+
 					AddRemoteEntries(grid, entries, hackmap);
 					ListView items = new();
 
 					AddLocalEntries(grid, _HFM.LastSelectedNode, hackmap);
 
-					SafeHelper.SafeInvoker(() =>
+					_HFM.DispatcherQueue.TryEnqueue(() =>
 					{
 						_HFM.OEntries.Sort((EntryRow x, EntryRow y) => string.Compare(x.Name, y.Name));
 						_HFM.IsListLoaded = true;
-						_grid.InvalidateArrange();
-						//_grid.UpdateLayout();
+						//_grid.InvalidateArrange();
+						_grid.UpdateLayout();
 					});
 				}
 			}
@@ -202,7 +203,7 @@ namespace HackPDM.Src.Helper.Xaml
 		}
 		internal async static void AddLocalDirectories(TreeView tree, TreeViewNode node, string[] pathway, Dictionary<string, TreeViewNode> treeDict)
 		{
-			SafeHelper.SafeInvoker(async () =>
+			tree.DispatcherQueue.TryEnqueue(async () =>
 			{
 				for (int i = 0; i < pathway.Length; i++)
 				{
@@ -219,14 +220,14 @@ namespace HackPDM.Src.Helper.Xaml
 				}
 			});
 		}
-		internal static async Task AddDirectoriesToTree(TreeView tree, Hashtable entries)
-		{
-			await SafeHelper.SafeInvokerAsync(async () =>
-			{
-				tree.RootNodes.Clear();
-				await AddNodesMinimalMemoryAsync(tree, entries);
-			});
-		}
+		internal static async Task AddDirectoriesToTree(TreeView tree, Hashtable entries) 
+			=> SafeHelper.SafeInvoker(
+					async () =>
+					{
+						tree.RootNodes.Clear();
+						await AddNodesMinimalMemoryAsync(tree, entries);
+					}
+				);
 
 		internal static async Task AddNodesMinimalMemoryAsync(TreeView tree, Hashtable rootNode)
 		{
@@ -304,7 +305,7 @@ namespace HackPDM.Src.Helper.Xaml
 			// 6. if the entry is in both the entries hashtable and the hackFileMap but has been modified locally
 			// 7. if the entry is in both the entries hashtable and the hackFileMap but has been modified remotely
 
-			HackFile[]? files = GetHackNonEntries(node, hackFileMap);
+			HackFile[]? files = GetHackNonEntries(node, hackFileMap, out int lRC);
 			ObservableCollection<EntryRow>? items = grid.ItemsSource as ObservableCollection<EntryRow>;
 			if (items is null) return;
 
@@ -321,15 +322,17 @@ namespace HackPDM.Src.Helper.Xaml
 			}
 
 		}
-		private static HackFile[]? GetHackNonEntries(TreeViewNode node, Dictionary<string, Task<HackFile>>? hackFileMap)
+		private static HackFile[]? GetHackNonEntries(TreeViewNode? node, Dictionary<string, Task<HackFile>>? hackFileMap, out int localAndRemoteCount)
 		{
+			localAndRemoteCount = 0;
+			if (node is null) return null;
 			string path = HackDefaults.DefaultPath((node.Content as TreeData)?.FullPath, true);
 			if (!Directory.Exists(path)) return null;
 
-			HackFile[] files;
+			HackFile[]? files;
 
 			bool hasEntries = hackFileMap != null;
-			if (hasEntries) files = FileOperations.FilesInDirectory(path, hackFileMap); //, out Dictionary<string, Hashtable> conflictPaths);
+			if (hasEntries) files = FileOperations.FilesInDirectory(path, hackFileMap, out localAndRemoteCount); //, out Dictionary<string, Hashtable> conflictPaths);
 			else files = FileOperations.FilesInDirectory(path);
 			return files;
 		}
@@ -338,6 +341,7 @@ namespace HackPDM.Src.Helper.Xaml
 #if DEBUG
 			_HFM._stopwatch = Stopwatch.StartNew();
 #endif
+			_HFM.GetEntriesLabel().Text = $"Entries: {(hackFileMap.Count == 0 ? "None" : hackFileMap.Count)}";
 			foreach (DictionaryEntry pair in entries)
 			{
 				await AddRemoteEntry(grid, pair, hackFileMap);
@@ -488,10 +492,35 @@ namespace HackPDM.Src.Helper.Xaml
 #if DEBUG
 			_HFM._stopwatch = Stopwatch.StartNew();
 #endif
+			HackFile[]? files = GetHackNonEntries(node, hackFileMap, out int lRC);
+			int totalFiles = hackFileMap?.Count ?? 0;
+			int localOnly = files?.Length ?? 0;
+			int remoteOnly = totalFiles - lRC;
 
-			HackFile[]? files = GetHackNonEntries(node, hackFileMap);
+			_HFM.GetEntriesRemoteLabel().Text = $"Remote Only: {(remoteOnly == 0 ? "None" : remoteOnly)}";
+			switch (files)
+			{
+				case null:
+				{
+					_HFM.GetEntriesLocalLabel().Text = "Local Only: None";
+					if (totalFiles == 0)
+					{
+						_HFM.GetEntriesLabel().Text = $"Entries: {(remoteOnly == 0 ? "None" : remoteOnly)}";
+					}
+					return;
+				}
+				case { Length: < 1 }: 
+				{
+					goto case null;
+				}
+				default:
+				{
+					_HFM.GetEntriesLabel().Text = $"Entries: {totalFiles+localOnly}";
+					_HFM.GetEntriesLocalLabel().Text = $"Local Only: {files.Length}";
+					break;
+				}
+			}
 
-			if (files is null) return;
 			foreach (HackFile file in files)
 			{
 				await AddLocalEntry(grid, node, file);
