@@ -156,6 +156,8 @@ class hp_directory(models.Model):
             entry_dict["size"] = entry.latest_file_size
             latest_version = entry.latest_version_id
             entry_dict["latest"] = latest_version.id
+            latest_release = entry.latest_release_id
+            entry_dict["release"] = latest_release.id
             entry_dict["latest_checksum"] = latest_version.checksum
             entry_dict["latest_date"] = latest_version.file_modify_stamp
             entry_dict["deleted"] = entry.deleted
