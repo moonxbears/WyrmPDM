@@ -40,7 +40,7 @@ public static class Commit
             allEntries = HpEntry.GetRecordsByIds(newIds, excludedFields: ["type_id", "cat_id", "checkout_node"], insertFields: ["directory_complete_name"]);
         }
 
-        await AsyncHelper.AsyncRunner(() => Async_Commit((allEntries, hackFiles.ToList())), "Commit Files");
+        await AsyncHelper.AsyncRunner(() => Async_Commit((allEntries, hackFiles.ToList())), "Commit Files", HackFileManager.statusToken);
         Notifier.FileCheckLoop();
     }
     internal static async Task                          Async_Commit            (ValueTuple<HpEntry[], List<HackFile>> arguments)
@@ -79,12 +79,8 @@ public static class Commit
         }
 
         List<HpVersion> versions = new(entries.Count + hackFiles.Count);
-
-        while (hackFiles.TryTake(out HackFile result))
-        {
-            HpVersion newVersion = await OdooDefaults.ConvertHackFile(result);
-            versions.Add(newVersion);
-        }
+		
+        
 
         var datas = new List<(HackFile, HpEntry, HashedValueStoring)>(entries.Count);
 
@@ -102,13 +98,18 @@ public static class Commit
 
         var versionBatches = Help.BatchList(datas, OdooDefaults.DownloadBatchSize);
 
-
         sd.ProcessCounter = 0;
         sd.SkipCounter = 0;
         sd.MaxCount = entries.Count;
         if (versionBatches.Count > 0) HackFileManager.Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Commiting new versions to database...");
         else HackFileManager.Dialog.AddStatusLine(StatusMessage.INFO, $"No new remote versions to commit for existing entries to the database...");
-        for (int i = 0; i < versionBatches.Count; i++)
+
+		while (hackFiles.TryTake(out HackFile result))
+		{
+			HpVersion newVersion = await OdooDefaults.ConvertHackFile(result);
+			versions.Add(newVersion);
+		}
+		for (int i = 0; i < versionBatches.Count; i++)
         {
             HackFileManager.Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Commiting batch {i + 1}/{versionBatches.Count}...");
 

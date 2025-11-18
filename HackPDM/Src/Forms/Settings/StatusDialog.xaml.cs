@@ -21,6 +21,12 @@ using Microsoft.UI.Xaml.Media;
 
 using Setting = HackPDM.Properties.Settings;
 
+using MessageBox = System.Windows.Forms.MessageBox;
+using DialogResult = System.Windows.Forms.DialogResult;
+using MessageBoxButtons = System.Windows.Forms.MessageBoxButtons;
+using MessageBoxIcon = System.Windows.Forms.MessageBoxIcon;
+using MessageBoxDefaultButton = System.Windows.Forms.MessageBoxDefaultButton;
+
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
 
@@ -78,6 +84,7 @@ public sealed partial class StatusDialog : Page
     public bool DoubleBuff { get; set; } = true;
     public bool Canceled { get; private set; } = false;
     public bool HasLoaded { get; set; } = false;
+	internal bool IsInProcess { get; set; }
 
     public bool ShowStatusDialog(string titleText)
     {
@@ -97,7 +104,24 @@ public sealed partial class StatusDialog : Page
         InitializeComponent();
         ClearStatus();
         this.Loaded += new((s, e)=> HasLoaded = true);
+		ParentWindow?.AppWindow.Closing += AppWindow_Closing;
     }
+
+	private async void AppWindow_Closing(Microsoft.UI.Windowing.AppWindow sender, Microsoft.UI.Windowing.AppWindowClosingEventArgs args)
+	{
+		args.Cancel = DialogResult.OK != MessageBox.Show(
+			"There are items still processing..\nWould you like to continue and close the window and operations?", 
+			"Cancel Operation?",
+			MessageBoxButtons.OKCancel, MessageBoxIcon.Warning);
+		if (args.Cancel)
+		{
+			if (HackFileManager.statusToken is { } cts)
+			{
+				await cts.CancelAsync();
+			}
+			IsInProcess = false;
+		}
+	}
 
 	private StatusDialog(string titleText) : this()
     {

@@ -19,6 +19,7 @@ using StatusDialog = HackPDM.Forms.Settings.StatusDialog;
 
 using MessageBox = System.Windows.Forms.MessageBox;
 using HackPDM.Forms.Settings;
+using HackPDM.Src.Extensions.General;
 namespace HackPDM.Odoo.Methods;
 
 internal static class Latest
@@ -245,16 +246,18 @@ internal static class Latest
 		await HackFileManager.Dialog.ShowWait("Get Latest");
 
         HackFileManager.Dialog.AddStatusLine(StatusMessage.INFO, "Finding Entry Dependencies...");
-		HpEntry[] entries = await HpEntry.GetRecordsByIdsAsync(entryIDs, includedFields: ["latest_version_id"]);
+		HpEntry[]? entries = await HpEntry.GetRecordsByIdsAsync(entryIDs, includedFields: ["latest_version_id"]);
 		//HpEntry[] entries = HpEntry.GetRecordsByIDS(entryIDs, includedFields: ["latest_version_id"]);
-
+		if (entries is null) { return; }
+		await HackFileManager.statusToken.RenewTokenSourceAsync();
+		HackFileManager.Dialog.IsInProcess = true;
 		ArrayList newIds = await HpEntry.GetEntryList([.. entries.Select(entry => entry.latest_version_id)]);
 
 		newIds.AddRange(entryIDs);
 		newIds = newIds.ToHashSet<int>().ToArrayList();
-		CancellationTokenSource tokenSource = new();
-		(ArrayList, CancellationToken) arguments = (newIds, tokenSource.Token);
-		await AsyncHelper.AsyncRunner(() => Async_GetLatest(arguments, sentFromCheckout), "Get Latest", tokenSource);
+		(ArrayList, CancellationToken) arguments = (newIds, HackFileManager.statusToken!.Token);
+		await AsyncHelper.AsyncRunner(() => Async_GetLatest(arguments, sentFromCheckout), "Get Latest", HackFileManager.statusToken);
+		HackFileManager.Dialog.IsInProcess = false;
 		Notifier.FileCheckLoop();
 	}
 }

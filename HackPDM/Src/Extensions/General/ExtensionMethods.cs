@@ -10,6 +10,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 using HackPDM.ClientUtils;
 using HackPDM.Src.ClientUtils.Types;
@@ -434,6 +435,11 @@ public static class ExtensionMethods
 	extension<T>(T obj) where T : class, ICloneable
 	{
 		public T Cloned() => obj.Clone() as T;
+	}
+	public static void RenewTokenSource(this CancellationTokenSource? source)
+	{
+		source?.Cancel();
+		source = new();
 	}
 }
 public static class ExtensionConvertMethods

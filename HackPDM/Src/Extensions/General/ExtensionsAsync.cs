@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -15,6 +16,11 @@ namespace HackPDM.Src.Extensions.General
 			public static Task<DialogResult> ShowAsync(string message)
 				=> Task.Run(() => MessageBox.Show(message));
 			
+		}
+		public static async Task RenewTokenSourceAsync(this CancellationTokenSource? source)
+		{
+			if (source is not null) await source.CancelAsync();
+			source = new();
 		}
 	}
 }

@@ -363,8 +363,7 @@ namespace HackPDM.Src.Helper.Xaml
 			//item.SubItems.Add(((int)table["id"]).ToString());
 			item.Name = pair.Key.ToString();
 
-			object ttype = table["type"];
-			item.Type = ttype is string ttypeString ? ttypeString : StorageBox.EMPTY_PLACEHOLDER;
+			item.Type = table["type"] is string ttypeString ? ttypeString : StorageBox.EMPTY_PLACEHOLDER;
 
 			//double size = (double)( Convert.ToDouble(table["size"]) * HackDefaults.ByteSizeMultiplier );
 			item.Size = Convert.ToInt64(table["size"]);
@@ -374,7 +373,7 @@ namespace HackPDM.Src.Helper.Xaml
 			item.Checkout = checkout is null or 0 ? null : OdooDefaults.IdToUser.TryGetValue(checkout ?? 0, out HpUser? user) ? user : null;
 
 			// check if latest checksum
-			string status = "";
+			//string status = "";
 			string? fullName = table["fullname"] as string;
 			HackFile? hack = null;
 			if (!string.IsNullOrWhiteSpace(fullName)) hack = hackFileMap[fullName].Result;
@@ -388,70 +387,39 @@ namespace HackPDM.Src.Helper.Xaml
 
 			item.LocalDate = hack?.ModifiedDate.Year is null or 1 ? null : hack?.ModifiedDate;
 
-			// remote only
-			// local only
-			// new remote version
-			// checked out to me
-			// checked out to other
-			// ignore filter
-			// no remote file type
-			// local modification
-			// deleted
+			// remote only // local only // new remote version
+			// checked out to me  // checked out to other // ignore filter
+			// no remote file type // local modification // deleted
 			// destroyed
-
-			if (table["deleted"] is bool deleted && !deleted)
-			{
-				if (checkout != 0)
-				{
-					// cm = checked out to me
-					// co = checked out to other
-					status = checkout == OdooDefaults.OdooId ? "cm" : "co";
-				}
-				else
-				{
-					switch (table["latest_checksum"])
+			
+			FileStatus status = table["deleted"] is bool deleted && !deleted
+				? checkout != 0
+					? checkout == OdooDefaults.OdooId ? FileStatus.Cm : FileStatus.Co
+					: table["latest_checksum"] switch
 					{
-						case bool:
-							{
-								status = "lo";
-								break;
-							}
-						case string latestChecksum:
-							{
-								if (hack?.Checksum == null) status = "ro";
-								else if (hack.Checksum == latestChecksum) status = "ok";
-								else
-								{
-									// either the local version is newer or the remote version is newer
-									// because the checksums don't match
-									status = remoteDate > hack.ModifiedDate ? "nv" : "lm";
-								}
-								break;
-							}
-						default: status = "lo"; break;
+						bool => FileStatus.Lo,
+						string latestChecksum => hack?.Checksum switch
+						{
+							null => FileStatus.Ro,
+							_ when hack.Checksum == latestChecksum => FileStatus.Ok,
+							_ => remoteDate > hack.ModifiedDate ? FileStatus.Nv : FileStatus.Lm
+						},
+						_ => FileStatus.Lo
 					}
-				}
-			}
-			else
-			{
-				status = "dt";
-			}
+				: FileStatus.Dt;
+			item.Status = status;
 
-			// get or add image key
-
-			//string strKey = status != "ok" ? $"{item.Type}.{status}" : item.Type;
 			ImageSource? image = await Assets.GetImageAsync(item.Type)
 					?? (await GetRemoteImage(item.Type))
 					?? await Assets.GetImageAsync("def_fi");
 
-			ImageSource? statImg = await Assets.GetImageAsync(status);
+			ImageSource? statImg = await Assets.GetImageAsync(Enum.GetName(status) ?? "lo");
 
 			item.Icon = image;
 			item.StatusIcon = statImg;
 
-			item.Status = Enum.Parse<FileStatus>(status, true);
-			string category = table["category"] is string cat ? cat : StorageBox.EMPTY_PLACEHOLDER;
-			item.Category = OdooDefaults.HpCategories.Where(c => c.name.Equals(category)).First();
+			string? category = table["category"] as string;
+			if (category is not null) item.Category = OdooDefaults.HpCategories.Where(c => c.name.Equals(category)).FirstOrDefault();
 
 			item.FullName = fullName;
 			await GridHelp.UpdateListAsync(grid, item);
@@ -487,7 +455,8 @@ namespace HackPDM.Src.Helper.Xaml
 
 			return imgExt;
 		}
-		internal async void AddLocalEntries(DataGrid grid, TreeViewNode node, Dictionary<string, Task<HackFile>>? hackFileMap = null)
+		
+		internal async void AddLocalEntries(DataGrid grid, TreeViewNode? node, Dictionary<string, Task<HackFile>>? hackFileMap = null)
 		{
 #if DEBUG
 			_HFM._stopwatch = Stopwatch.StartNew();

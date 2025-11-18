@@ -57,6 +57,7 @@ using OClient = HackPDM.Odoo.OdooClient;
 using Path = System.IO.Path;
 using System.Drawing;
 using Image = Microsoft.UI.Xaml.Controls.Image;
+using System.Runtime.CompilerServices;
 
 
 // To learn more about WinUI, the WinUI project structure,
@@ -108,8 +109,9 @@ public sealed partial class HackFileManager : Page
 	{
 		WorkerSupportsCancellation = true
 	};
-	private static CancellationTokenSource _cSource = new();
-	private static CancellationTokenSource _cTreeSource = new();
+	private static CancellationTokenSource? _cSource = new();
+	private static CancellationTokenSource? _cTreeSource = new();
+	public static CancellationTokenSource? statusToken = new();
 
 	private static ImageSource? _previewImage = null;
 
@@ -408,61 +410,77 @@ public sealed partial class HackFileManager : Page
 
 
 		// testing filter hacks..
-		if (entries is not null && !entries.IsEmpty)
-			entries = await FilterCommitEntries(entries);
-		else entries = new();
+		entries = entries is not null && !entries.IsEmpty ? await FilterCommitEntries(entries) : [];
 
 		// section for checking if hack files have a checksum that matches the fullpath
-		if (hackFiles is not null && hackFiles.Count > 0)
-			hackFiles = await FilterCommitHackFiles(hackFiles);
-		else hackFiles = [];
+		hackFiles = hackFiles is not null && hackFiles.Count > 0 ? await FilterCommitHackFiles(hackFiles) : [];
 
-		List<HpVersion> versions = new(entries.Count() + hackFiles.Count());
 
+		HpVersion[] localConversions = new HpVersion[hackFiles.Count];
+
+		int index = 0;
 		while (hackFiles.TryTake(out HackFile result))
 		{
 			HpVersion newVersion = await OdooDefaults.ConvertHackFile(result);
-			versions.Add(newVersion);
+			localConversions[index++] = newVersion;
 		}
-
+		var localVersions = Help.BatchArray(localConversions, DownloadBatchSize);
 		var datas = new List<(HackFile, HpEntry, HashedValueStoring)>(entries.Count);
+
 
 		while (entries.TryTake(out HpEntry entry))
 		{
 			string entryDir = HpDirectory.ConvertToWindowsPath(entry.HashedValues["directory_complete_name"] as string, false);
 			HackFile hack = HackFile.GetFromPath(Path.Combine(HackDefaults.PwaPathAbsolute, entryDir, entry.name));
 			datas.Add((hack, entry, HashedValueStoring.None));
-			//HpVersion newVersion = await OdooDefaults.CreateNewVersion(hack, entry);
-			//versions.Add(newVersion);
 		}
 
-		var versionBatches = Help.BatchList(datas, DownloadBatchSize);
+		var versionBatches = Help.BatchArray(datas, DownloadBatchSize);
 
 		_processCounter = 0;
 		SkipCounter = 0;
-		_maxCount = entries.Count;
 		Dialog.AddStatusLine(StatusMessage.INFO,
-			versionBatches.Count > 0
+			(versionBatches?.Length ?? 0) > 0
 				? $"Commiting new versions to database..."
 				: $"No new remote versions to commit for existing entries to the database...");
-		for (int i = 0; i < versionBatches.Count; i++)
+
+		await statusToken.RenewTokenSourceAsync();
+		_maxCount = (versionBatches?.Length ?? 0) + (localVersions?.Length ?? 0);
+		Dialog.IsInProcess = true;
+		// Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Commiting new version property commits to database...");
+		// Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Commiting new version relationship commits to database...");
+		if (localVersions is not null)
 		{
-			Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Commiting batch {i + 1}/{versionBatches.Count}...");
+			Dialog.AddStatusLine(StatusMessage.PROCESSING, $"--- Preparing to commit local versions ---");
+			for (int i = 0; i < localVersions.Length; i++)
+			{
+				Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Commiting local version batch {i + 1}/{localVersions.Length}...");
+				HpVersionRelationship.Create(localVersions[i]);
+				Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Commiting local version relationships ...");
+				HpVersionProperty.Create(localVersions[i]);
+				Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Commiting local version properties ...");
+				Dialog.SetProgressBar((SkipCounter + _processCounter) / 3, _maxCount);
+				_processCounter += 1;
+			}
+		}
+		if (versionBatches is not null)
+		{
+			Dialog.AddStatusLine(StatusMessage.PROCESSING, $"--- Preparing to commit existing remote versions ---");
+			for (int i = 0; i < versionBatches.Length; i++)
+			{
+				Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Commiting existing remote version batch {i + 1}/{versionBatches.Length}...");
+				HpVersion[] vbatch = await HpVersion.CreateAllNew([.. versionBatches[i]]);
+				Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Commiting existing remote version relationships ...");
+				HpVersionRelationship.Create(vbatch);
+				Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Commiting existing remote version properties ...");
+				HpVersionProperty.Create(vbatch);
 
-			HpVersion[] vbatch = await HpVersion.CreateAllNew([.. versionBatches[i]]);
-			versions.AddRange(vbatch);
-
-			_processCounter += versionBatches[i].Count;
-			Dialog.SetProgressBar((SkipCounter + _processCounter) / 3, _maxCount);
+				_processCounter += 1;
+				Dialog.SetProgressBar((SkipCounter + _processCounter) / 3, _maxCount);
+			}
 		}
 
 		// create new parent, child hp_version_relationship's for versions
-		Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Commiting new version relationship commits to database...");
-		HpVersionRelationship.Create([.. versions]);
-		Dialog.SetProgressBar(2 * (_maxCount) / 3, _maxCount);
-
-		Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Commiting new version property commits to database...");
-		HpVersionProperty.Create([.. versions]);
 		Dialog.SetProgressBar(_maxCount, _maxCount);
 
 		MessageBox.Show($"Completed!");
@@ -836,47 +854,6 @@ public sealed partial class HackFileManager : Page
 				Dialog.AddStatusLines(QueueAsyncStatus);
 			}
 			Dialog.SetProgressBar(SkipCounter + _processCounter, _maxCount);
-
-
-			//          tasks.Add(
-			//              Task.Run(() =>
-			//              {
-			//                  if (version.checksum == null || version.checksum.Length == 0 || version.checksum == "False") 
-			//{
-			//	Interlocked.Increment(ref skipCounter);
-			//	return null;
-			//}
-			//                  if (FileOperations.SameChecksum(version, ChecksumType.SHA1))
-			//                  {
-			//                      //unprocessedVersions.Add(version.ID);
-			//                      queueAsyncStatus.Enqueue(["INFO", $"Skipping download (Found): {version.name}"]);
-			//                      Interlocked.Increment(ref skipCounter);
-			//                      return null;
-			//                  }
-			//                  return version;
-			//              })
-			//              .ContinueWith((task) =>
-			//              {
-			//                  if (task.Result == null) return;
-
-			//                  string fileName = Path.Combine(task.Result.winPathway, task.Result.name);
-			//                  processVersions.Add(task.Result);
-
-			//                  queueAsyncStatus.Enqueue(["INFO", $"Downloading missing latest file: {fileName}"]);
-			//                  Interlocked.Increment(ref processCounter);
-			//              })
-			//              .ContinueWith((task2) =>
-			//              {
-			//                  lock (lockObject)
-			//                  {
-			//                      if (SkipCounter % 100 == 0 || SkipCounter == maxCount)
-			//                      {
-			//                          Dialog.AddStatusLines(queueAsyncStatus);
-			//                      }
-			//                      Dialog.SetProgressBar(skipCounter + processCounter, maxCount);
-			//                  }
-			//              })
-			//          );
 		}
 
 		await Task.Run(async () =>
@@ -888,7 +865,7 @@ public sealed partial class HackFileManager : Page
 				return finishSuccesses.Result[0];
 			}
 			return 0;
-		});
+		}, statusToken.Token);
 
 		//      // when all the tasks are completed for checking checksums start another task 
 		//      // that then batch downloads those files to the correct folders.
@@ -911,7 +888,7 @@ public sealed partial class HackFileManager : Page
 
 		foreach (var batch in versionBatches)
 		{
-			await throttler.WaitAsync();
+			await throttler.WaitAsync(cToken);
 
 			Task task = Task.Run(async () =>
 			{
@@ -924,7 +901,7 @@ public sealed partial class HackFileManager : Page
 				{
 					throttler.Release();
 				}
-			});
+			}, cToken);
 
 			allTasks.Add(task);
 		}
@@ -937,6 +914,8 @@ public sealed partial class HackFileManager : Page
 		HackFileManager.Dialog = Dialog;
 		// Dialog = new StatusDialog();
 		//await Dialog.ShowWait("Get Latest");
+
+		await statusToken.RenewTokenSourceAsync();
 		object lockObject = new();
 
 		TreeViewNode? tnCurrent = LastSelectedNode;
@@ -958,11 +937,14 @@ public sealed partial class HackFileManager : Page
 			Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Retrieving all entries within directory ({directory.Id})");
 		}
 
+		Dialog.IsInProcess = true;
+
 		ArrayList entryIDs = directory.GetDirectoryEntryIDs(withSubdirectories, ShowInactive.IsChecked ?? false);
+		if (statusToken!.IsCancellationRequested) return;
 		await GetLatestInternal(entryIDs);
 	}
 	#endregion
-
+	
 	#region Form Event Handlers
 	// after select events
 	private async void ODT_SetLastSelected(TreeData? tData)
@@ -1221,7 +1203,10 @@ public sealed partial class HackFileManager : Page
 		}
 		else hpDirectory = new() { Id = dat?.DirectoryId ?? 0 };
 
+
+		await statusToken.RenewTokenSourceAsync();
 		ArrayList entryIDs = HpDirectory.GetDirectoryEntryIDs(hpDirectory.Id, true);
+		if (statusToken.IsCancellationRequested) return;
 
 		// get all files in folder path to commit.
 		await CommitInternal(entryIDs, HackFile.FolderPathToHackWithDependencies(pathway));
@@ -1291,6 +1276,7 @@ public sealed partial class HackFileManager : Page
 	{
 		WindowHelper.CreateWindowAndPage<StatusDialog>(out var Dialog, out _);
 		HackFileManager.Dialog = Dialog;
+		await statusToken.RenewTokenSourceAsync();
 
 		var entryItem = OdooEntryList.SelectedItems;
 
@@ -2270,7 +2256,7 @@ public sealed partial class HackFileManager : Page
 	}
 	//
 	internal async Task GetLatestInternal(ArrayList entryIDs)
-	{
+	{	
 		Dialog.AddStatusLine(StatusMessage.INFO, "Finding Entry Dependencies...");
 		HpEntry[]? entries = await HpEntry.GetRecordsByIdsAsync(entryIDs, includedFields: ["latest_version_id"]);
 		//HpEntry[] entries = HpEntry.GetRecordsByIDS(entryIDs, includedFields: ["latest_version_id"]);
@@ -2279,9 +2265,11 @@ public sealed partial class HackFileManager : Page
 
 		newIds.AddRange(entryIDs);
 		newIds = newIds.ToHashSet<int>().ToArrayList();
-		CancellationTokenSource tokenSource = new();
-		(ArrayList, CancellationToken) arguments = (newIds, tokenSource.Token);
-		await AsyncHelper.AsyncRunner(() => Async_GetLatest(arguments), "Get Latest", tokenSource);
+		
+		(ArrayList, CancellationToken) arguments = (newIds, statusToken.Token);
+
+		if (statusToken.IsCancellationRequested) return;
+		await AsyncHelper.AsyncRunner(() => Async_GetLatest(arguments), "Get Latest", statusToken);
 	}
 	internal async Task CommitInternal(ArrayList entryIDs, IEnumerable<HackFile> hackFiles)
 	{

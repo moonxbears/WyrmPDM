@@ -43,43 +43,24 @@ public partial class OperatorsRow : DataGridData, IRowData<OperatorsRow>
 public partial class EntryRow : DataGridData, IRowData<EntryRow>
 {
 	// (MVVM) VIEW
-	public ImageSource? Icon        { get; set; }
-	public ImageSource? StatusIcon	{ get; set; }
-	public int?          Id         { get; set; }
-	public string?      Type        { get; set; }
-	public long?         Size       { get; set; }
-	public FileStatus   Status      { get; set; } = FileStatus.Lo;
-	public HpUser?      Checkout    { get; set; }
-	public HpCategory?  Category    { get; set; }
-	public DateTime?    LocalDate   { get; set; }
-	public DateTime?    RemoteDate  { get; set; }
-	public string?      FullName    { get; set; }
-	public int?			LatestId	{ get; set; }
+	public ImageSource? Icon			{ get; set; }
+	public ImageSource? StatusIcon		{ get; set; }
+	public int?         Id				{ get; set; }
+	public string?      Type			{ get; set; }
+	public long?        Size			{ get; set; }
+	public FileStatus   Status			{ get; set; } = FileStatus.Lo;
+	public HpUser?      Checkout		{ get; set; }
+	public HpCategory?  Category		{ get; set; }
+	public DateTime?    LocalDate		{ get; set; }
+	public DateTime?    RemoteDate		{ get; set; }
+	public string?      FullName		{ get; set; }
+	public int?			LatestId		{ get; set; }
+	public int?			LatestReleaseId { get; set; }
 
-	public partial bool? IsLocal { get; set; }
-	public partial bool	 IsOnlyLocal { get; }
-	public bool			IsRemote	{ get; set; }
-	public EntryRow Clone()
-	{
-		var cItem = new EntryRow
-		{
-			Name = this.Name?.Cloned(),
-			Text = this.Text?.Cloned(),
-			Icon		 = this.Icon,
-			StatusIcon	 = this.StatusIcon,
-			Id			 = this.Id,
-			Type		 = this.Type?.Cloned(),
-			Size		 = this.Size,
-			Status		 = this.Status,
-			Checkout	 = this.Checkout,
-			Category	 = this.Category,
-			LocalDate	 = this.LocalDate,
-			RemoteDate	 = this.RemoteDate,
-			FullName	 = this.FullName?.Cloned(),
-			LatestId	 = this.LatestId,
-		};
-		return cItem;
-	}
+	public partial bool? IsLocal		{ get; set; }
+	public partial bool	 IsOnlyLocal	{ get; }
+	public bool			IsRemote		{ get; set; }
+	
 }
 public class HistoryRow : DataGridData, IRowData<HistoryRow>
 {
@@ -448,7 +429,28 @@ public partial class EntryRow : DataGridData
 		set => field = value;
 	}
 	public partial bool	IsOnlyLocal => (IsLocal ?? true) && !IsRemote;
-	
+	public EntryRow Clone()
+	{
+		var cItem = new EntryRow
+		{
+			Name = this.Name?.Cloned(),
+			Text = this.Text?.Cloned(),
+			Icon = this.Icon,
+			StatusIcon = this.StatusIcon,
+			Id = this.Id,
+			Type = this.Type?.Cloned(),
+			Size = this.Size,
+			Status = this.Status,
+			Checkout = this.Checkout,
+			Category = this.Category,
+			LocalDate = this.LocalDate,
+			RemoteDate = this.RemoteDate,
+			FullName = this.FullName?.Cloned(),
+			LatestId = this.LatestId,
+			LatestReleaseId = this.LatestReleaseId,
+		};
+		return cItem;
+	}
 }
 #endregion
 

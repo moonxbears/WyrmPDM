@@ -18,6 +18,8 @@ using Microsoft.UI.Xaml.Controls;
 using SolidWorks.Interop.sldworks;
 using SolidWorks.Interop.swconst;
 
+using static System.Runtime.InteropServices.JavaScript.JSType;
+
 using DialogResult = System.Windows.Forms.DialogResult;
 using MessageBox = System.Windows.Forms.MessageBox;
 using MessageBoxButtons = System.Windows.Forms.MessageBoxButtons;
@@ -133,11 +135,11 @@ public static class Help
 
     // [0, 1, 2, 3, 4]
     // [0, 1], [2, 3], [4]
-    public static List<List<T>> BatchList<T>(T[] list, int batchSize)
+    public static List<List<T>>? BatchList<T>(T[]? list, int batchSize)
     {
         if (list is null) return null;
         List<List<T>> batchList = [];
-        int listSize = list.Count();
+        int listSize = list.Length;
         Span<T> spanList = list.AsSpan();
 
         for (int i = 0; i < listSize; i += batchSize)
@@ -155,8 +157,29 @@ public static class Help
         }
         return batchList;
     }
-    public static List<List<T>> BatchList<T>(IEnumerable<T> list, int batchSize)
-        => BatchList<T>([.. list], batchSize);
+	public static T[][]? BatchArray<T>(T[]? array, int batchSize)
+	{
+		if (array is null) return null;
+		if (array.Length == 0) return null;
+
+		(var numOfBatches, var remainder) = Math.DivRem(array.Length, batchSize);
+
+		if (remainder > 0) numOfBatches++;
+		T[][] batchArray = new T[numOfBatches][];
+
+		for (int i = 0; i < numOfBatches; i++)
+		{
+			T[] values = i == numOfBatches-1 
+				? array[(i * batchSize)..((i * batchSize) + remainder)] 
+				: array[(i * batchSize) .. (i * 2 * batchSize)];
+			batchArray[i] = values;
+		}
+		return batchArray;
+	}
+	public static T[][]? BatchArray<T>(IEnumerable<T>? array, int batchSize)
+		=> array is null ? null : BatchArray<T>([.. array], batchSize);
+    public static List<List<T>>? BatchList<T>(IEnumerable<T>? list, int batchSize)
+        => list is null ? null : BatchList<T>([.. list], batchSize);
         
     // give the ArrayList class an extension method that selects
     public static IEnumerable<string> FastSlice(IEnumerable<string> source, int startIndex, string prependText = null, string appendText = null)
