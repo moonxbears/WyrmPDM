@@ -105,10 +105,6 @@ class hp_entry(models.Model):
         compute='_compute_all_properties',
         string='version properties',
     )
-    mapped_properties = fields.One2many(
-        compute='_compute_map_properties',
-        string='mapped properties',
-    )
 
     def first_helper(self, key = lambda x: True):
         try:
@@ -125,11 +121,6 @@ class hp_entry(models.Model):
                 windows_path_name = "\\".join([windows_path, rec.name])
                 rec.windows_complete_path = windows_path
                 rec.windows_complete_name = windows_path_name
-
-    def _compute_map_properties(self):
-        for record in self:
-            if record.version_property_ids:
-                record.mapped_properties = record.version_property_ids.mapped('')
 
     #@api.depends('version_ids')
     def _compute_all_properties(self):
