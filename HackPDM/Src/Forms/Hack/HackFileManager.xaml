@@ -197,7 +197,8 @@
                                         </xaml:DataTemplate>
                                     </com:DataGridTemplateColumn.CellTemplate>
                                 </com:DataGridTemplateColumn>
-                                <com:DataGridTextColumn Binding="{xaml:Binding Category}" Header="Category" />
+                                <!--<com:DataGridTextColumn Binding="{xaml:Binding Category}" Header="Category" />-->
+                                <com:DataGridTextColumn Binding="{xaml:Binding LatestReleaseId}" Header="Release" />
                                 <com:DataGridTextColumn Binding="{xaml:Binding Status}" Header="Status" />
                                 <com:DataGridTextColumn Binding="{xaml:Binding Checkout}" Header="Checkout" />
                                 <com:DataGridTextColumn Binding="{xaml:Binding LocalDate}" Header="Local Date" />
