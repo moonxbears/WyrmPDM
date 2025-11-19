@@ -27,7 +27,7 @@ public static class Commit
     {
         Notifier.CancelCheckLoop();
         HackFileManager.Dialog = new StatusDialog();
-        await HackFileManager.Dialog.ShowWait("Commit Files");
+        await HackFileManager.Dialog?.ShowWait("Commit Files");
 
         HpEntry[] entries = HpEntry.GetRecordsByIds(entryIDs, includedFields: ["latest_version_id"]);
         HpEntry[] allEntries = null;
@@ -57,9 +57,9 @@ public static class Commit
         // testing filter hacks..
         if (entries is not null && entries.Count > 0)
         {
-            HackFileManager.Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Filtering out uncommitable entries found remotely");
+            HackFileManager.Dialog?.AddStatusLine(StatusMessage.PROCESSING, $"Filtering out uncommitable entries found remotely");
             entries = await FilterCommitEntries(entries);
-            HackFileManager.Dialog.AddStatusLine(StatusMessage.INFO, $"Able to commit ({entries.Count}) remote files");
+            HackFileManager.Dialog?.AddStatusLine(StatusMessage.INFO, $"Able to commit ({entries.Count}) remote files");
         }
         else
         {
@@ -69,9 +69,9 @@ public static class Commit
         // section for checking if hack files have a checksum that matches the fullpath
         if (hackFiles is not null && hackFiles.Count > 0)
         {
-            HackFileManager.Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Filtering out uncommitable entries found locally");
+            HackFileManager.Dialog?.AddStatusLine(StatusMessage.PROCESSING, $"Filtering out uncommitable entries found locally");
             hackFiles = await FilterCommitHackFiles(hackFiles);
-            HackFileManager.Dialog.AddStatusLine(StatusMessage.INFO, $"Able to commit ({hackFiles.Count}) local only files");
+            HackFileManager.Dialog?.AddStatusLine(StatusMessage.INFO, $"Able to commit ({hackFiles.Count}) local only files");
         }
         else
         {
@@ -101,8 +101,8 @@ public static class Commit
         sd.ProcessCounter = 0;
         sd.SkipCounter = 0;
         sd.MaxCount = entries.Count;
-        if (versionBatches.Count > 0) HackFileManager.Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Commiting new versions to database...");
-        else HackFileManager.Dialog.AddStatusLine(StatusMessage.INFO, $"No new remote versions to commit for existing entries to the database...");
+        if (versionBatches.Count > 0) HackFileManager.Dialog?.AddStatusLine(StatusMessage.PROCESSING, $"Commiting new versions to database...");
+        else HackFileManager.Dialog?.AddStatusLine(StatusMessage.INFO, $"No new remote versions to commit for existing entries to the database...");
 
 		while (hackFiles.TryTake(out HackFile result))
 		{
@@ -111,39 +111,43 @@ public static class Commit
 		}
 		for (int i = 0; i < versionBatches.Count; i++)
         {
-            HackFileManager.Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Commiting batch {i + 1}/{versionBatches.Count}...");
+            HackFileManager.Dialog?.AddStatusLine(StatusMessage.PROCESSING, $"Commiting batch {i + 1}/{versionBatches.Count}...");
 
             HpVersion[] vbatch = await HpVersion.CreateAllNew([.. versionBatches[i]]);
             versions.AddRange(vbatch);
 
             sd.ProcessCounter += versionBatches[i].Count;
-            HackFileManager.Dialog.SetProgressBar((sd.SkipCounter + sd.ProcessCounter) / 3, sd.MaxCount);
+            HackFileManager.Dialog?.SetProgressBar((sd.SkipCounter + sd.ProcessCounter) / 3, sd.MaxCount);
         }
 
         // create new parent, child hp_version_relationship's for versions
         if (versions.Count < 1)
         {
-            HackFileManager.Dialog.AddStatusLine(StatusMessage.INFO, $"No new version relationship commits for database...");
+            HackFileManager.Dialog?.AddStatusLine(StatusMessage.INFO, $"No new version relationship commits for database...");
         }
         else
         {
-            HackFileManager.Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Commiting new version relationship commits to database...");
+            HackFileManager.Dialog?.AddStatusLine(StatusMessage.PROCESSING, $"Commiting new version relationship commits to database...");
             HpVersionRelationship.Create([.. versions]);
         }
-        HackFileManager.Dialog.SetProgressBar(2 * (sd.MaxCount) / 3, sd.MaxCount);
+        HackFileManager.Dialog?.SetProgressBar(2 * (sd.MaxCount) / 3, sd.MaxCount);
 
         if (versions.Count < 1)
         {
-            HackFileManager.Dialog.AddStatusLine(StatusMessage.INFO, $"No new version property commits for database...");
+            HackFileManager.Dialog?.AddStatusLine(StatusMessage.INFO, $"No new version property commits for database...");
         }
         else
         {
-            HackFileManager.Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Commiting new version property commits to database...");
+            HackFileManager.Dialog?.AddStatusLine(StatusMessage.PROCESSING, $"Commiting new version property commits to database...");
             HpVersionProperty.Create([.. versions]);
         }
-        HackFileManager.Dialog.SetProgressBar(sd.MaxCount, sd.MaxCount);
+        HackFileManager.Dialog?.SetProgressBar(sd.MaxCount, sd.MaxCount);
 
-        MessageBox.Show($"Completed!");
+		var hackFM = ISingletonPage<HackFileManager>.Singleton;
+		hackFM?.RestartTree();
+		hackFM?.RestartEntries();
+
+		MessageBox.Show($"Completed!");
     }
     internal static async Task<ConcurrentBag<HpEntry>>  FilterCommitEntries     (ConcurrentBag<HpEntry> entries)
     {
@@ -164,7 +168,7 @@ public static class Commit
                     {
                         lock (lockObject)
                         {
-                            HackFileManager.Dialog.AddStatusLine(StatusMessage.ERROR, $"entry is not checked out to you: {entry.name} ({entry.Id})");
+                            HackFileManager.Dialog?.AddStatusLine(StatusMessage.ERROR, $"entry is not checked out to you: {entry.name} ({entry.Id})");
                         }
                     }
                     else
@@ -172,7 +176,7 @@ public static class Commit
                         lock (lockObject)
                         {
                             string userString = OdooDefaults.IdToUser.TryGetValue(entry.checkout_user ?? 0, out HpUser user) ? $"{user.name} (id: {user.Id}))" : $"(id: {entry.checkout_user})";
-                            HackFileManager.Dialog.AddStatusLine(StatusMessage.ERROR, $"checked out to user {userString}: {entry.name} ({entry.Id}) ");
+                            HackFileManager.Dialog?.AddStatusLine(StatusMessage.ERROR, $"checked out to user {userString}: {entry.name} ({entry.Id}) ");
                         }
                     }
                     return null;
@@ -187,7 +191,7 @@ public static class Commit
                 {
                     lock (lockObject)
                     {
-                        HackFileManager.Dialog.AddStatusLine(StatusMessage.WARNING, $"Latest remote version {latestVersion.name} matches local version");
+                        HackFileManager.Dialog?.AddStatusLine(StatusMessage.WARNING, $"Latest remote version {latestVersion.name} matches local version");
                     }
                     entry.IsLatest = true;
                     // return null;
@@ -198,7 +202,7 @@ public static class Commit
                 {
                     lock (lockObject)
                     {
-                        HackFileManager.Dialog.AddStatusLine(StatusMessage.ERROR, $"{latestVersion.name} has no local version");
+                        HackFileManager.Dialog?.AddStatusLine(StatusMessage.ERROR, $"{latestVersion.name} has no local version");
                     }
 
                     return null;
@@ -206,7 +210,7 @@ public static class Commit
 
                 lock (lockObject)
                 {
-                    HackFileManager.Dialog.AddStatusLine(StatusMessage.PROCESSING, $"commiting {latestVersion.name}");
+                    HackFileManager.Dialog?.AddStatusLine(StatusMessage.PROCESSING, $"commiting {latestVersion.name}");
                 }
                 return entry;
             });

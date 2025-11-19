@@ -17,10 +17,12 @@ namespace HackPDM.Src.Extensions.General
 				=> Task.Run(() => MessageBox.Show(message));
 			
 		}
-		public static async Task RenewTokenSourceAsync(this CancellationTokenSource? source)
+		public static async Task<CancellationTokenSource> RenewTokenSourceAsync(this CancellationTokenSource? source)
 		{
 			if (source is not null) await source.CancelAsync();
+			
 			source = new();
+			return source;
 		}
 	}
 }

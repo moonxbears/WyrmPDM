@@ -376,7 +376,11 @@ namespace HackPDM.Src.Helper.Xaml
 			//string status = "";
 			string? fullName = table["fullname"] as string;
 			HackFile? hack = null;
-			if (!string.IsNullOrWhiteSpace(fullName)) hack = hackFileMap[fullName].Result;
+			if (!string.IsNullOrWhiteSpace(fullName)) hack = hackFileMap[fullName]?.Result;
+			item.ReprType = hack?.Exists is true
+				? EntryReprType.Both
+				: EntryReprType.Remote;
+			item.LatestReleaseId = table["release"] as int?;
 
 			//string latest = EmptyPlaceholder;
 			item.LatestId = table["latest"] as int?;
@@ -506,6 +510,8 @@ namespace HackPDM.Src.Helper.Xaml
 			string type = file.TypeExt.ToLower();
 			string status = "lo";
 
+
+
 			if ((OdooDefaults.RestrictTypes || _HFM.IsFiltered) & !OdooDefaults.ExtToType.TryGetValue(type, out var hpType))
 			{
 				status = "ft";
@@ -537,7 +543,8 @@ namespace HackPDM.Src.Helper.Xaml
 				StatusIcon = statImg,
 				Checkout = null,
 				Category = nameCategory,
-				FullName = file.FullPath
+				FullName = file.FullPath,
+				ReprType = EntryReprType.Local,
 			};
 
 			await GridHelp.UpdateListAsync(grid, item);

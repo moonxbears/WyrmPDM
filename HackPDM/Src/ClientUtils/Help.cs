@@ -171,7 +171,7 @@ public static class Help
 		{
 			T[] values = i == numOfBatches-1 
 				? array[(i * batchSize)..((i * batchSize) + remainder)] 
-				: array[(i * batchSize) .. (i * 2 * batchSize)];
+				: array[(i * batchSize) .. ((i+1) * batchSize)];
 			batchArray[i] = values;
 		}
 		return batchArray;

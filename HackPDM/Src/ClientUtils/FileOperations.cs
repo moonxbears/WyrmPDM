@@ -385,7 +385,7 @@ public static class FileOperations
                     // this means that this hackFile is in the database so it can be skipped
                     if (checksum == hackArr[i].Checksum)
                     {
-                        HackFileManager.Dialog.AddStatusLine(StatusMessage.FOUND, $"checksum found remotely ({hackArr [ i ].Checksum}) for: {filePath}" );
+                        HackFileManager.Dialog?.AddStatusLine(StatusMessage.FOUND, $"checksum found remotely ({hackArr [ i ].Checksum}) for: {filePath}" );
                         isFound = true;
                         break;
                     }
@@ -393,7 +393,7 @@ public static class FileOperations
             }
             if ( !isFound )
             {
-                HackFileManager.Dialog.AddStatusLine(StatusMessage.INFO, $"Queued commit for {hackArr[i].Name} (Checksum: {hackArr [ i ].Checksum}) for: {filePath}" );
+                HackFileManager.Dialog?.AddStatusLine(StatusMessage.INFO, $"Queued commit for {hackArr[i].Name} (Checksum: {hackArr [ i ].Checksum}) for: {filePath}" );
                 hacks.Add( hackArr [ i ] );
             }
 

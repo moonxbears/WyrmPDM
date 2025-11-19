@@ -161,3 +161,9 @@ public enum ExtType
 	Png,
 	Other
 }
+public enum EntryReprType
+{
+	Remote,
+	Local,
+	Both,
+}

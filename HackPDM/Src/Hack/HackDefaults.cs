@@ -327,6 +327,50 @@ public class HackFile : HackBaseFile
         string[] files = [.. Directory.EnumerateFiles(pathway, "*", options)];
         return FilePathsToHackWithDependencies(files);
     }
+
+
+
+
+	// ////////////////////////////////////////
+	// ////////////////////////////////////////
+	public static bool TryFilePathsToHackWithDependencies(out List<HackFile> files, params string[] filePaths)
+	{
+		HashSet<string> newFiles = [.. filePaths];
+		List<HackFile> hackFiles = [];
+		// find all dependencies
+		foreach (string file in filePaths)
+		{
+			var fInfo = new FileInfo(file);
+			if (OdooDefaults.DependentExt.Contains(fInfo.Extension))
+			{
+				var dependencies = HackDefaults.DocMgr.GetDependencies(file);
+				if (dependencies is not null && dependencies.Count > 0)
+				{
+					foreach (string[] deps in dependencies)
+					{
+						string path = deps[1];
+						var splitPath = path.Split([$"\\{HackDefaults.PwaPathRelative}\\"], StringSplitOptions.RemoveEmptyEntries);
+						if (splitPath.Length == 2)
+						{
+							newFiles.Add(Path.Combine([HackDefaults.PwaPathAbsolute, splitPath[1]]));
+						}
+					}
+				}
+			}
+		}
+		foreach (string item in newFiles)
+		{
+			HackFile hack = GetFromPath(item, FileOperations.GetRelativePath(item));
+			if (hack != null)
+				hackFiles.Add(hack);
+		}
+		files = hackFiles;
+		return true;
+	}
+
+	// ///////////////////////////////////////////////////////
+	// ///////////////////////////////////////////////////////
+
     public static List<HackFile> FilePathsToHackWithDependencies(params string[] filePaths)
     {
         HashSet<string> newFiles = [.. filePaths];
@@ -352,6 +396,7 @@ public class HackFile : HackBaseFile
                 }
             }
         }
+
         foreach (string item in newFiles)
         {
             HackFile hack = GetFromPath(item, FileOperations.GetRelativePath(item));
@@ -596,4 +641,39 @@ public struct HpEntryReturn : IConvert<HpEntryReturn>
             Name = (string)ht["name"],
         };
     }
+}
+public struct HackFileResults
+{
+	public List<HackFile> CleanFiles { get; private set; } = new();
+	public List<HackFile> BrokenFiles { get; private set; } = new();
+
+	public HackFileResults(List<HackFile> cleanFiles, List<HackFile> brokenFiles)
+	{
+
+	}
+}
+public struct ResultHackFile
+{
+	public bool IsBroken { get; private set; } = false;
+	public HackResult Result { get; private set; } = HackResult.NotTested;
+	public HackFile Hack { get; private set; }
+
+	public ResultHackFile(HackFile hack) : this(hack, false, HackResult.NotTested) {}
+	public ResultHackFile(HackFile hack, HackResult result) : this(hack, result is HackResult.Clean or HackResult.NotTested ? false : true, result) { }
+	public ResultHackFile(HackFile hack, bool isBroken, HackResult result) 
+	{
+		this.Hack = hack;
+		this.IsBroken = isBroken;
+		this.Result = result;
+	}
+
+}
+public enum HackResult
+{
+	NotTested,
+	Clean,
+	OutOfPWA,
+	BrokenDep,
+	MissingFile,
+	MissingDepFile,
 }

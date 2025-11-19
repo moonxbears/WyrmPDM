@@ -137,12 +137,18 @@ public partial class HpDirectory : HpBaseModel<HpDirectory>
         );
             
         
-    public ArrayList GetDirectoryEntryIDs(bool withSubEntries = false, bool withDeleted = true)
+    public ArrayList? GetDirectoryEntryIDs(bool withSubEntries = false, bool withDeleted = true)
         => GetDirectoryEntryIDs( this.Id, withSubEntries, withDeleted );
-    public static ArrayList GetDirectoryEntryIDs( int directoryId, bool withSubEntries = false, bool withDeleted = false )
+	public async Task<ArrayList?> GetDirectoryEntryIDsAsync(bool withSubEntries = false, bool withDeleted = true)
+		=> await GetDirectoryEntryIDsAsync(this.Id, withSubEntries, withDeleted);
+	public static async Task<ArrayList?> GetDirectoryEntryIDsAsync( int directoryId, bool withSubEntries = false, bool withDeleted = false)
+		=> directoryId != 0 
+			?  await OClient.CommandAsync<ArrayList>(GetHpModel()!, "get_all_entry_ids", [directoryId, withDeleted, withSubEntries], 10000 ) 
+            :   null;
+    public static ArrayList? GetDirectoryEntryIDs( int directoryId, bool withSubEntries = false, bool withDeleted = false )
     {
         return  directoryId != 0 
-            ?  OClient.Command<ArrayList>( GetHpModel(), "get_all_entry_ids", [ directoryId, withDeleted, withSubEntries ], 10000 ) 
+            ?  OClient.Command<ArrayList>( GetHpModel()!, "get_all_entry_ids", [ directoryId, withDeleted, withSubEntries ], 10000 ) 
             :   null;
     }
     public static string? ConvertToWindowsPath(string? pathway, bool withAbsolutePath)
@@ -151,12 +157,24 @@ public partial class HpDirectory : HpBaseModel<HpDirectory>
         string[] pathwaySegmented = pathway.Split([" / "], StringSplitOptions.RemoveEmptyEntries);
         if (pathwaySegmented[0] == "root" || pathwaySegmented[0] == HackDefaults.PwaPathRelative)
         {
-            pathwaySegmented = [.. pathwaySegmented.Skip(1)];
-        }
+			pathwaySegmented = pathwaySegmented[1..];
+		}
         string relativePath = string.Join(@"\", pathwaySegmented);
 
         return withAbsolutePath ? Path.Combine(HackDefaults.PwaPathAbsolute, relativePath) : relativePath;
     }
+	public static string? NodePathToWindowsPath(string? pathway, bool withAbsolutePath = true)
+	{
+		if (pathway is null) return null;
+		string[] pathwaySegmented = pathway.Split(["\\"], StringSplitOptions.RemoveEmptyEntries);
+		if (pathwaySegmented[0] == "root" || pathwaySegmented[0] == HackDefaults.PwaPathRelative)
+		{
+			pathwaySegmented = pathwaySegmented[1..];
+		}
+		string relativePath = string.Join(@"\", pathwaySegmented);
+
+		return withAbsolutePath ? Path.Combine(HackDefaults.PwaPathAbsolute, relativePath) : relativePath;
+	}
     public static string WindowsToOdooPath(string pathway, bool fromFullPath = false)
     {
         if (fromFullPath)

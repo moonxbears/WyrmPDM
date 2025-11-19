@@ -130,7 +130,16 @@ public static class ExtensionMethods
 			if (item is { } clean && !clean.Equals(default)) yield return clean;
 		}
 	}
-
+	public static (List<TOut>, List<TOut>) SegmentWhere<TOut>(this IEnumerable<TOut?> array, Predicate<TOut?> predicate)
+	{
+		(List<TOut>, List<TOut>) items = new(new(), new());
+		foreach (TOut? item in array)
+		{
+			if (predicate(item)) items.Item1.Add(item);
+			else items.Item2.Add(item);
+		}
+		return items;
+	}
 	public static IEnumerable<TOut> SkipList<TOut>(this IEnumerable<TOut> source, IEnumerable<TOut> match)
     {
         foreach (TOut obj in source)

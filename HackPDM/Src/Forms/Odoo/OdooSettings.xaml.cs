@@ -11,6 +11,7 @@ using Window = Microsoft.UI.Xaml.Window;
 using Microsoft.UI.Xaml.Controls;
 using HackPDM.Helper;
 using HackPDM.Extensions.Controls;
+using HackPDM.Src.ClientUtils.Types;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -20,8 +21,9 @@ namespace HackPDM.Forms.Odoo;
 /// <summary>
 /// An empty page that can be used on its own or navigated to within a Frame.
 /// </summary>
-public sealed partial class OdooSettings : Page
+public sealed partial class OdooSettings : Page, ISingletonPage<OdooSettings>
 {
+	public static OdooSettings? Singleton { get; }
     public OdooSettings()
     {
         InitializeComponent();

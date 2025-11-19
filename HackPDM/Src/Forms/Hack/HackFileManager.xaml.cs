@@ -82,7 +82,7 @@ internal record HackLists
 	internal ImmutableArray<DataGrid> SubLists
 		=> [ History, Parents, Children, Properties, Versions ];
 }
-public sealed partial class HackFileManager : Page
+public sealed partial class HackFileManager : Page, ISingletonPage<HackFileManager>
 {
 	#region Declarations
 	public ObservableCollection<TreeData>? LastSelectedNodePaths { get; set; } = [];
@@ -333,6 +333,7 @@ public sealed partial class HackFileManager : Page
 	internal TextBlock GetEntriesRemoteLabel() => EntryListRemoteOnly;
 	internal (Image, ProgressRing) GetVisualizer() => (OdooEntryImage, LoadRing);
 	internal void RestartEntries() => _treeHelper.RestartEntries(OdooDirectoryTree, OdooEntryList);
+	internal async Task RestartTree() => await _treeHelper.RestartTree(OdooDirectoryTree);
 	#endregion
 	#region TEST_VARIABLES
 #if DEBUG
@@ -373,18 +374,22 @@ public sealed partial class HackFileManager : Page
 		// add status lines for entry id and upcoming versions
 		lock (lockObject)
 		{
-			Dialog.AddStatusLine(StatusMessage.FOUND, $"{entryIDs.Count} entries");
-			Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Retrieving all latest versions associated with entries...");
+			Dialog?.AddStatusLine(StatusMessage.FOUND, $"{entryIDs.Count} entries");
+			Dialog?.AddStatusLine(StatusMessage.PROCESSING, $"Retrieving all latest versions associated with entries...");
 		}
 
 		var versions = GetLatestVersions(entryIDs, ["preview_image", "entry_id", "node_id", "file_modify_stamp", "attachment_id", "file_contents"]);
 
-		IEnumerable<List<HpVersion>> versionBatches = Help.BatchList(versions, DownloadBatchSize);
+		IEnumerable<IEnumerable<HpVersion>>? versionBatches = Help.BatchArray(versions, DownloadBatchSize);
 
 		_maxCount = versions.Length;
 		SkipCounter = 0;
 		_processCounter = 0;
 
+		if (versionBatches is null)
+		{
+			MessageBox.Show("Cancelled Download... No Versions to Process");
+		}
 		try
 		{
 			await ProcessDownloadsAsync(versionBatches, arguements.Item2, 5);
@@ -394,7 +399,7 @@ public sealed partial class HackFileManager : Page
 			await MessageBox.ShowAsync("Cancelled Download");
 		}
 
-		Dialog.SetProgressBar(versions.Length, versions.Length);
+		Dialog?.SetProgressBar(versions.Length, versions.Length);
 		
 		await MessageBox.ShowAsync("Completed!");
 		_treeHelper.RestartEntries(OdooDirectoryTree, OdooEntryList);
@@ -428,10 +433,13 @@ public sealed partial class HackFileManager : Page
 		var datas = new List<(HackFile, HpEntry, HashedValueStoring)>(entries.Count);
 
 
-		while (entries.TryTake(out HpEntry entry))
+		while (entries.TryTake(out HpEntry? entry))
 		{
-			string entryDir = HpDirectory.ConvertToWindowsPath(entry.HashedValues["directory_complete_name"] as string, false);
-			HackFile hack = HackFile.GetFromPath(Path.Combine(HackDefaults.PwaPathAbsolute, entryDir, entry.name));
+			if (entry is null) continue;
+			string? entryDir = HpDirectory.ConvertToWindowsPath(entry?.HashedValues["directory_complete_name"] as string, false);
+
+			if (entryDir is null) continue;
+			HackFile hack = HackFile.GetFromPath(Path.Combine(HackDefaults.PwaPathAbsolute, entryDir, entry!.name));
 			datas.Add((hack, entry, HashedValueStoring.None));
 		}
 
@@ -439,51 +447,52 @@ public sealed partial class HackFileManager : Page
 
 		_processCounter = 0;
 		SkipCounter = 0;
-		Dialog.AddStatusLine(StatusMessage.INFO,
+		Dialog?.AddStatusLine(StatusMessage.INFO,
 			(versionBatches?.Length ?? 0) > 0
 				? $"Commiting new versions to database..."
 				: $"No new remote versions to commit for existing entries to the database...");
 
-		await statusToken.RenewTokenSourceAsync();
+		statusToken = await statusToken.RenewTokenSourceAsync();
 		_maxCount = (versionBatches?.Length ?? 0) + (localVersions?.Length ?? 0);
-		Dialog.IsInProcess = true;
-		// Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Commiting new version property commits to database...");
-		// Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Commiting new version relationship commits to database...");
+		Dialog?.IsInProcess = true;
+		// Dialog?.AddStatusLine(StatusMessage.PROCESSING, $"Commiting new version property commits to database...");
+		// Dialog?.AddStatusLine(StatusMessage.PROCESSING, $"Commiting new version relationship commits to database...");
 		if (localVersions is not null)
 		{
-			Dialog.AddStatusLine(StatusMessage.PROCESSING, $"--- Preparing to commit local versions ---");
+			Dialog?.AddStatusLine(StatusMessage.PROCESSING, $"--- Preparing to commit local versions ---");
 			for (int i = 0; i < localVersions.Length; i++)
 			{
-				Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Commiting local version batch {i + 1}/{localVersions.Length}...");
+				Dialog?.AddStatusLine(StatusMessage.PROCESSING, $"Commiting local version batch {i + 1}/{localVersions.Length}...");
 				HpVersionRelationship.Create(localVersions[i]);
-				Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Commiting local version relationships ...");
+				Dialog?.AddStatusLine(StatusMessage.PROCESSING, $"Commiting local version relationships ...");
 				HpVersionProperty.Create(localVersions[i]);
-				Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Commiting local version properties ...");
-				Dialog.SetProgressBar((SkipCounter + _processCounter) / 3, _maxCount);
+				Dialog?.AddStatusLine(StatusMessage.PROCESSING, $"Commiting local version properties ...");
+				Dialog?.SetProgressBar((SkipCounter + _processCounter) / 3, _maxCount);
 				_processCounter += 1;
 			}
 		}
 		if (versionBatches is not null)
 		{
-			Dialog.AddStatusLine(StatusMessage.PROCESSING, $"--- Preparing to commit existing remote versions ---");
+			Dialog?.AddStatusLine(StatusMessage.PROCESSING, $"--- Preparing to commit existing remote versions ---");
 			for (int i = 0; i < versionBatches.Length; i++)
 			{
-				Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Commiting existing remote version batch {i + 1}/{versionBatches.Length}...");
+				Dialog?.AddStatusLine(StatusMessage.PROCESSING, $"Commiting existing remote version batch {i + 1}/{versionBatches.Length}...");
 				HpVersion[] vbatch = await HpVersion.CreateAllNew([.. versionBatches[i]]);
-				Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Commiting existing remote version relationships ...");
+				Dialog?.AddStatusLine(StatusMessage.PROCESSING, $"Commiting existing remote version relationships ...");
 				HpVersionRelationship.Create(vbatch);
-				Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Commiting existing remote version properties ...");
+				Dialog?.AddStatusLine(StatusMessage.PROCESSING, $"Commiting existing remote version properties ...");
 				HpVersionProperty.Create(vbatch);
 
 				_processCounter += 1;
-				Dialog.SetProgressBar((SkipCounter + _processCounter) / 3, _maxCount);
+				Dialog?.SetProgressBar((SkipCounter + _processCounter) / 3, _maxCount);
 			}
 		}
 
 		// create new parent, child hp_version_relationship's for versions
-		Dialog.SetProgressBar(_maxCount, _maxCount);
+		Dialog?.SetProgressBar(_maxCount, _maxCount);
 
 		MessageBox.Show($"Completed!");
+		await _treeHelper.RestartTree(OdooDirectoryTree);
 		_treeHelper.RestartEntries(OdooDirectoryTree, OdooEntryList);
 	}
 	private async Task Async_CheckOut(HpEntry[] entries)
@@ -501,18 +510,18 @@ public sealed partial class HackFileManager : Page
 
 			lock (lockObject)
 			{
-				Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Checking out {entry.name} ({entry.Id})");
+				Dialog?.AddStatusLine(StatusMessage.PROCESSING, $"Checking out {entry.name} ({entry.Id})");
 			}
 			await CheckOutEntry(entry);
 
 			lock (lockObject)
 			{
 				_processCounter += 1;
-				Dialog.SetProgressBar((SkipCounter + _processCounter), _maxCount);
+				Dialog?.SetProgressBar((SkipCounter + _processCounter), _maxCount);
 			}
 		}
 
-		Dialog.SetProgressBar(_maxCount, _maxCount);
+		Dialog?.SetProgressBar(_maxCount, _maxCount);
 		MessageBox.Show($"Completed!");
 		_treeHelper.RestartEntries(OdooDirectoryTree, OdooEntryList);
 	}
@@ -523,25 +532,25 @@ public sealed partial class HackFileManager : Page
 		_processCounter = 0;
 		SkipCounter = 0;
 		_maxCount = entries.Length;
-		Dialog.AddStatusLine(StatusMessage.INFO, $"{_maxCount} uncheck outs");
+		Dialog?.AddStatusLine(StatusMessage.INFO, $"{_maxCount} uncheck outs");
 		for (int i = 0; i < entries.Length; i++)
 		{
 			HpEntry entry = entries[i];
 
 			lock (lockObject)
 			{
-				Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Unchecking out {entry.name} ({entry.Id})");
+				Dialog?.AddStatusLine(StatusMessage.PROCESSING, $"Unchecking out {entry.name} ({entry.Id})");
 			}
 			await UnCheckOutEntry(entry);
 
 			lock (lockObject)
 			{
 				_processCounter += 1;
-				Dialog.SetProgressBar((SkipCounter + _processCounter), _maxCount);
+				Dialog?.SetProgressBar((SkipCounter + _processCounter), _maxCount);
 			}
 		}
 
-		Dialog.SetProgressBar(_maxCount, _maxCount);
+		Dialog?.SetProgressBar(_maxCount, _maxCount);
 		MessageBox.Show($"Completed!");
 		_treeHelper.RestartEntries(OdooDirectoryTree, OdooEntryList);
 	}
@@ -560,7 +569,7 @@ public sealed partial class HackFileManager : Page
 
 		if (vDeleted)
 		{
-			Dialog.AddStatusLine(StatusMessage.SUCCESS, $"Completed permanent delete");
+			Dialog?.AddStatusLine(StatusMessage.SUCCESS, $"Completed permanent delete");
 		}
 		else
 		{
@@ -569,6 +578,7 @@ public sealed partial class HackFileManager : Page
 		}
 
 		MessageBox.Show($"Completed!");
+		await _treeHelper.RestartTree(OdooDirectoryTree);
 		_treeHelper.RestartEntries(OdooDirectoryTree, OdooEntryList);
 	}
 	private async Task Async_LogicalDelete(HpEntry[] entries)
@@ -578,13 +588,14 @@ public sealed partial class HackFileManager : Page
 		{
 			lock (lockObject)
 			{
-				Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Setting InActive {entry.name}: {entry.Id}");
+				Dialog?.AddStatusLine(StatusMessage.PROCESSING, $"Setting InActive {entry.name}: {entry.Id}");
 			}
 			await entry.LogicalDelete();
 
 		}
 
 		MessageBox.Show($"Completed!");
+		await _treeHelper.RestartTree(OdooDirectoryTree);
 		_treeHelper.RestartEntries(OdooDirectoryTree, OdooEntryList);
 	}
 	private async Task Async_LogicalUnDelete(HpEntry[] entries)
@@ -594,13 +605,14 @@ public sealed partial class HackFileManager : Page
 		{
 			lock (lockObject)
 			{
-				Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Setting Active {entry.name}: {entry.Id}");
+				Dialog?.AddStatusLine(StatusMessage.PROCESSING, $"Setting Active {entry.name}: {entry.Id}");
 			}
 			await entry.LogicalUnDelete();
 		}
 
-		Dialog.SetProgressBar(5, 5);
+		Dialog?.SetProgressBar(5, 5);
 		MessageBox.Show($"Completed!");
+		await _treeHelper.RestartTree(OdooDirectoryTree);
 		_treeHelper.RestartEntries(OdooDirectoryTree, OdooEntryList);
 	}
 	private async Task Async_ListItemChange(EntryRow item, CancellationToken token)
@@ -726,7 +738,7 @@ public sealed partial class HackFileManager : Page
 					{
 						lock (lockObject)
 						{
-							Dialog.AddStatusLine(StatusMessage.ERROR, $"entry is not checked out to you: {entry.name} ({entry.Id})");
+							Dialog?.AddStatusLine(StatusMessage.ERROR, $"entry is not checked out to you: {entry.name} ({entry.Id})");
 						}
 					}
 					else
@@ -734,7 +746,7 @@ public sealed partial class HackFileManager : Page
 						lock (lockObject)
 						{
 							string userString = OdooDefaults.IdToUser.TryGetValue(entry.checkout_user ?? 0, out HpUser user) ? $"{user.name} (id: {user.Id}))" : $"(id: {entry.checkout_user})";
-							Dialog.AddStatusLine(StatusMessage.ERROR, $"checked out to user {userString}: {entry.name} ({entry.Id}) ");
+							Dialog?.AddStatusLine(StatusMessage.ERROR, $"checked out to user {userString}: {entry.name} ({entry.Id}) ");
 						}
 					}
 					return null;
@@ -749,7 +761,7 @@ public sealed partial class HackFileManager : Page
 				{
 					lock (lockObject)
 					{
-						Dialog.AddStatusLine(StatusMessage.FOUND, $"Remote {temp.name} has matching local version");
+						Dialog?.AddStatusLine(StatusMessage.FOUND, $"Remote {temp.name} has matching local version");
 					}
 
 					return null;
@@ -759,7 +771,7 @@ public sealed partial class HackFileManager : Page
 				{
 					lock (lockObject)
 					{
-						Dialog.AddStatusLine(StatusMessage.ERROR, $"{temp.name} has no local version");
+						Dialog?.AddStatusLine(StatusMessage.ERROR, $"{temp.name} has no local version");
 					}
 
 					return null;
@@ -767,7 +779,7 @@ public sealed partial class HackFileManager : Page
 
 				lock (lockObject)
 				{
-					Dialog.AddStatusLine(StatusMessage.PROCESSING, $"commiting {entryVersions.First().name}");
+					Dialog?.AddStatusLine(StatusMessage.PROCESSING, $"commiting {entryVersions.First().name}");
 				}
 				return entry;
 			});
@@ -807,7 +819,7 @@ public sealed partial class HackFileManager : Page
 		if (excludedFields == null) excludedFields = ["preview_image", "file_contents"];
 		return HpEntry.GetRelatedRecordByIds<HpVersion>(entryIDs, "latest_version_id", excludedFields);
 	}
-	private async Task ProcessVersionBatchAsync(List<HpVersion> batchVersions)
+	private async Task ProcessVersionBatchAsync(IEnumerable<HpVersion> batchVersions)
 	{
 		object lockObject = new();
 		ConcurrentBag<HpVersion> processVersions = [];
@@ -851,9 +863,9 @@ public sealed partial class HackFileManager : Page
 			_totalProcessed = SkipCounter + _processCounter;
 			if (_totalProcessed % 25 == 0 || _totalProcessed >= _maxCount)
 			{
-				Dialog.AddStatusLines(QueueAsyncStatus);
+				Dialog?.AddStatusLines(QueueAsyncStatus);
 			}
-			Dialog.SetProgressBar(SkipCounter + _processCounter, _maxCount);
+			Dialog?.SetProgressBar(SkipCounter + _processCounter, _maxCount);
 		}
 
 		await Task.Run(async () =>
@@ -881,7 +893,7 @@ public sealed partial class HackFileManager : Page
 		//    return 0;
 		//});
 	}
-	public async Task ProcessDownloadsAsync(IEnumerable<List<HpVersion>> versionBatches, CancellationToken cToken, int maxConcurrency = 3)
+	public async Task ProcessDownloadsAsync(IEnumerable<IEnumerable<HpVersion>> versionBatches, CancellationToken cToken, int maxConcurrency = 3)
 	{
 		SemaphoreSlim throttler = new(maxConcurrency);
 		List<Task> allTasks = [];
@@ -913,13 +925,13 @@ public sealed partial class HackFileManager : Page
 		WindowHelper.CreateWindowAndPage<StatusDialog>(out var Dialog, out _);
 		HackFileManager.Dialog = Dialog;
 		// Dialog = new StatusDialog();
-		//await Dialog.ShowWait("Get Latest");
+		//await Dialog?.ShowWait("Get Latest");
 
-		await statusToken.RenewTokenSourceAsync();
+		statusToken = await statusToken.RenewTokenSourceAsync();
 		object lockObject = new();
 
 		TreeViewNode? tnCurrent = LastSelectedNode;
-
+		TreeData? data = LastSelectedNode?.LinkedData;
 		if (tnCurrent == null)
 		{
 			MessageBox.Show("current directory doesn't exist remotely");
@@ -927,19 +939,20 @@ public sealed partial class HackFileManager : Page
 		}
 
 		// directory only needs ID set to find that record's entries
-		HpDirectory directory = new("temp")
+		HpDirectory directory = new()
 		{
-			Id = tnCurrent.LinkedData.DirectoryId ?? 0
+			Id = data?.DirectoryId ?? 0,
+			name = data?.Name ?? "",			
 		};
 
 		lock (lockObject)
 		{
-			Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Retrieving all entries within directory ({directory.Id})");
+			Dialog?.AddStatusLine(StatusMessage.PROCESSING, $"Retrieving all entries and their and their associated dependencies within directory ({directory.name}, id: {directory.Id})");
 		}
 
-		Dialog.IsInProcess = true;
+		Dialog?.IsInProcess = true;
 
-		ArrayList entryIDs = directory.GetDirectoryEntryIDs(withSubdirectories, ShowInactive.IsChecked ?? false);
+		ArrayList? entryIDs = await directory.GetDirectoryEntryIDsAsync(withSubdirectories, ShowInactive.IsChecked ?? false);
 		if (statusToken!.IsCancellationRequested) return;
 		await GetLatestInternal(entryIDs);
 	}
@@ -1181,31 +1194,16 @@ public sealed partial class HackFileManager : Page
 		=> GetLatestFromTreeNode(false);
 	private async void Tree_Click_Commit(object sender, RoutedEventArgs e)
 	{
-		WindowHelper.CreateWindowAndPage<StatusDialog>(out var Dialog, out _);
-		HackFileManager.Dialog = Dialog;
-
 		string pathway = LastSelectedNodePath?.Length < 5 ? HackDefaults.PwaPathAbsolute : Path.Combine(HackDefaults.PwaPathAbsolute, LastSelectedNodePath?[5..] ?? "");
 		HpDirectory hpDirectory;
 		TreeData? dat = LastSelectedNode?.LinkedData;
-		if (dat?.DirectoryId is not null and not 0)
-		{
-			List<string> paths = [];
-			EndNodePaths(LastSelectedNode, paths);
+		if (dat?.IsLocalOnly is true) return;
+		
+		WindowHelper.CreateWindowAndPage<StatusDialog>(out var Dialog, out _);
+		HackFileManager.Dialog = Dialog;
 
-			ArrayList? splitPaths = LastSelectedNodePath?.Split<ArrayList>("\\", StringSplitOptions.RemoveEmptyEntries);
-			hpDirectory = (await HpDirectory.CreateNew(splitPaths)).Last();
-
-			foreach (string path in paths)
-			{
-				splitPaths = path.Split<ArrayList>("\\", StringSplitOptions.RemoveEmptyEntries);
-				await HpDirectory.CreateNew(splitPaths);
-			}
-		}
-		else hpDirectory = new() { Id = dat?.DirectoryId ?? 0 };
-
-
-		await statusToken.RenewTokenSourceAsync();
-		ArrayList entryIDs = HpDirectory.GetDirectoryEntryIDs(hpDirectory.Id, true);
+		statusToken = await statusToken.RenewTokenSourceAsync();
+		ArrayList? entryIDs = await HpDirectory.GetDirectoryEntryIDsAsync(dat?.DirectoryId ?? 0, true);
 		if (statusToken.IsCancellationRequested) return;
 
 		// get all files in folder path to commit.
@@ -1214,14 +1212,14 @@ public sealed partial class HackFileManager : Page
 	private async void Tree_Click_Checkout(object sender, RoutedEventArgs e)
 	{
 		GetLatestFromTreeNode(true);
-		ArrayList entryIDs = HpDirectory.GetDirectoryEntryIDs(LastSelectedNode?.LinkedData.DirectoryId ?? 0, true);
+		ArrayList? entryIDs = await HpDirectory.GetDirectoryEntryIDsAsync(LastSelectedNode?.LinkedData.DirectoryId ?? 0, true);
 		await CheckoutInternal(entryIDs);
 	}
 	private async void Tree_Click_UndoCheckout(object sender, RoutedEventArgs e)
 	{
 		WindowHelper.CreateWindowAndPage<StatusDialog>(out var Dialog, out _);
 		HackFileManager.Dialog = Dialog;
-		ArrayList entryIDs = HpDirectory.GetDirectoryEntryIDs(LastSelectedNode?.LinkedData.DirectoryId ?? 0, true);
+		ArrayList? entryIDs = await HpDirectory.GetDirectoryEntryIDsAsync(LastSelectedNode?.LinkedData.DirectoryId ?? 0, true);
 
 		await UnCheckoutInternal(entryIDs);
 	}
@@ -1259,7 +1257,7 @@ public sealed partial class HackFileManager : Page
 		WindowHelper.CreateWindowAndPage<StatusDialog>(out var Dialog, out _);
 		HackFileManager.Dialog = Dialog;
 
-		ArrayList entryIDs = HpDirectory.GetDirectoryEntryIDs(LastSelectedNode?.LinkedData.DirectoryId ?? 0, true);
+		ArrayList? entryIDs = await HpDirectory.GetDirectoryEntryIDsAsync(LastSelectedNode?.LinkedData.DirectoryId ?? 0, true);
 
 		await LogicalDeleteInternal(entryIDs);
 	}
@@ -1276,7 +1274,7 @@ public sealed partial class HackFileManager : Page
 	{
 		WindowHelper.CreateWindowAndPage<StatusDialog>(out var Dialog, out _);
 		HackFileManager.Dialog = Dialog;
-		await statusToken.RenewTokenSourceAsync();
+		statusToken = await statusToken.RenewTokenSourceAsync();
 
 		var entryItem = OdooEntryList.SelectedItems;
 
@@ -1298,8 +1296,8 @@ public sealed partial class HackFileManager : Page
 		HackFileManager.Dialog = Dialog;
 
 		var entryItem = OdooEntryList.SelectedItems as List<EntryRow>;
-		var locals = entryItem?.Where(e => e.IsOnlyLocal);
-		var entryIDs = entryItem?.Where(e => !e.IsOnlyLocal).ToArrayList();
+		var locals = entryItem?.Where(e => e.IsOnlyLocal is true);
+		var entryIDs = entryItem?.Where(e => !e.IsOnlyLocal is true).ToArrayList();
 		HashSet<HackFile> hackFiles = [];
 		//int fullNameColumnIndex = OdooEntryList.Columns["FullName"].Index;
 		if (locals is not null)
@@ -2091,21 +2089,21 @@ public sealed partial class HackFileManager : Page
 			&& vProps.Count() > 0)
 		{
 			ArrayList newIds = vProps.GetIDs();
-			Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Deleting version properties...");
+			Dialog?.AddStatusLine(StatusMessage.PROCESSING, $"Deleting version properties...");
 			deletedVersionProps = await OClient.DeleteAsync(HpVersionProperty.GetHpModel(), [newIds], 100000);
 			if (deletedVersionProps)
 			{
-				Dialog.AddStatusLine(StatusMessage.SUCCESS, $"Deleted version properties: {string.Join(", ", newIds.ToArray())}");
+				Dialog?.AddStatusLine(StatusMessage.SUCCESS, $"Deleted version properties: {string.Join(", ", newIds.ToArray())}");
 			}
 			else
 			{
-				Dialog.AddStatusLine(StatusMessage.ERROR, $"Unable to delete version properties");
+				Dialog?.AddStatusLine(StatusMessage.ERROR, $"Unable to delete version properties");
 			}
 		}
 		else
 		{
 			deletedVersionProps = true;
-			Dialog.AddStatusLine(StatusMessage.SKIP, $"No version properties to delete");
+			Dialog?.AddStatusLine(StatusMessage.SKIP, $"No version properties to delete");
 		}
 #if DEBUG
 		Debug.WriteLine($"version properties deleted = {deletedVersionProps}");
@@ -2129,42 +2127,42 @@ public sealed partial class HackFileManager : Page
 			&& vRelationsParent.Count() > 0)
 		{
 			ArrayList newIds = vRelationsParent.GetIDs();
-			Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Deleting parent version relationships...");
+			Dialog?.AddStatusLine(StatusMessage.PROCESSING, $"Deleting parent version relationships...");
 			deletedVersionRelParent = OClient.Delete(HpVersionRelationship.GetHpModel(), [newIds], 100000);
 			if (deletedVersionRelParent)
 			{
-				Dialog.AddStatusLine(StatusMessage.SUCCESS, $"Deleted parent version relationships: {string.Join(", ", newIds.ToArray())}");
+				Dialog?.AddStatusLine(StatusMessage.SUCCESS, $"Deleted parent version relationships: {string.Join(", ", newIds.ToArray())}");
 			}
 			else
 			{
-				Dialog.AddStatusLine(StatusMessage.ERROR, $"Unable to delete parent version relationships");
+				Dialog?.AddStatusLine(StatusMessage.ERROR, $"Unable to delete parent version relationships");
 			}
 		}
 		else
 		{
 			deletedVersionRelParent = true;
-			Dialog.AddStatusLine(StatusMessage.SKIP, $"No version relationship parents to delete");
+			Dialog?.AddStatusLine(StatusMessage.SKIP, $"No version relationship parents to delete");
 		}
 
 		if (vRelationsChild is not null
 			&& vRelationsChild.Any())
 		{
 			ArrayList newIds = vRelationsChild.GetIDs();
-			Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Deleting child version relationships...");
+			Dialog?.AddStatusLine(StatusMessage.PROCESSING, $"Deleting child version relationships...");
 			deletedVersionRelChild = await OClient.DeleteAsync(HpVersionRelationship.GetHpModel(), [newIds], 100000);
 			if (deletedVersionRelChild)
 			{
-				Dialog.AddStatusLine(StatusMessage.SUCCESS, $"Deleted child version relationships: {string.Join(", ", newIds.ToArray())}");
+				Dialog?.AddStatusLine(StatusMessage.SUCCESS, $"Deleted child version relationships: {string.Join(", ", newIds.ToArray())}");
 			}
 			else
 			{
-				Dialog.AddStatusLine(StatusMessage.ERROR, $"Unable to delete child version relationships");
+				Dialog?.AddStatusLine(StatusMessage.ERROR, $"Unable to delete child version relationships");
 			}
 		}
 		else
 		{
 			deletedVersionRelChild = true;
-			Dialog.AddStatusLine(StatusMessage.SKIP, $"No version relationship children to delete");
+			Dialog?.AddStatusLine(StatusMessage.SKIP, $"No version relationship children to delete");
 		}
 
 #if DEBUG
@@ -2179,15 +2177,15 @@ public sealed partial class HackFileManager : Page
 		if (ids is null || ids.Count < 1) return false;
 
 		bool deletedVersions = await PermanentDeleteVersions(ids);
-		Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Deleting entries...");
+		Dialog?.AddStatusLine(StatusMessage.PROCESSING, $"Deleting entries...");
 		bool deletedEntries = deletedVersions && OClient.Delete(HpEntry.GetHpModel(), [ids]);
 		if (deletedEntries)
 		{
-			Dialog.AddStatusLine(StatusMessage.SUCCESS, $"Deleted entries");
+			Dialog?.AddStatusLine(StatusMessage.SUCCESS, $"Deleted entries");
 		}
 		else
 		{
-			Dialog.AddStatusLine(StatusMessage.ERROR, $"Unable to delete entries");
+			Dialog?.AddStatusLine(StatusMessage.ERROR, $"Unable to delete entries");
 		}
 #if DEBUG
 		Debug.WriteLine($"Entries deleted = {deletedEntries}");
@@ -2219,7 +2217,7 @@ public sealed partial class HackFileManager : Page
 				new ArrayList() { "res_field", "=", "file_contents"},
 			]);
 		}
-		Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Deleting IR Attachments...");
+		Dialog?.AddStatusLine(StatusMessage.PROCESSING, $"Deleting IR Attachments...");
 		deletedIrAttachments = deletedVersionsProps
 							   && deletedVersionsRel
 							   && (irAttachments is null
@@ -2228,24 +2226,24 @@ public sealed partial class HackFileManager : Page
 
 		if (deletedIrAttachments)
 		{
-			Dialog.AddStatusLine(StatusMessage.SUCCESS, $"Deleted IR Attachments");
+			Dialog?.AddStatusLine(StatusMessage.SUCCESS, $"Deleted IR Attachments");
 		}
 		else
 		{
-			Dialog.AddStatusLine(StatusMessage.INFO, $"unable to delete IR Attachments");
+			Dialog?.AddStatusLine(StatusMessage.INFO, $"unable to delete IR Attachments");
 		}
-		Dialog.AddStatusLine(StatusMessage.PROCESSING, $"Deleting versions...");
+		Dialog?.AddStatusLine(StatusMessage.PROCESSING, $"Deleting versions...");
 		deletedVersions = deletedIrAttachments
 						  && (vIds.Count <= 0
 							   || await OClient.DeleteAsync(HpVersion.GetHpModel(), [vIds], 100000));
 
 		if (deletedVersions)
 		{
-			Dialog.AddStatusLine(StatusMessage.SUCCESS, $"Deleted versions");
+			Dialog?.AddStatusLine(StatusMessage.SUCCESS, $"Deleted versions");
 		}
 		else
 		{
-			Dialog.AddStatusLine(StatusMessage.ERROR, $"Unable to delete versions");
+			Dialog?.AddStatusLine(StatusMessage.ERROR, $"Unable to delete versions");
 		}
 
 #if DEBUG
@@ -2257,7 +2255,7 @@ public sealed partial class HackFileManager : Page
 	//
 	internal async Task GetLatestInternal(ArrayList entryIDs)
 	{	
-		Dialog.AddStatusLine(StatusMessage.INFO, "Finding Entry Dependencies...");
+		Dialog?.AddStatusLine(StatusMessage.INFO, "Finding Entry Dependencies...");
 		HpEntry[]? entries = await HpEntry.GetRecordsByIdsAsync(entryIDs, includedFields: ["latest_version_id"]);
 		//HpEntry[] entries = HpEntry.GetRecordsByIDS(entryIDs, includedFields: ["latest_version_id"]);
 
@@ -2275,6 +2273,12 @@ public sealed partial class HackFileManager : Page
 	{
 		HpEntry[]? entries = await HpEntry.GetRecordsByIdsAsync(entryIDs, includedFields: ["latest_version_id"]);
 
+		// filter out entries with broken dependencies
+		
+		///////////
+		// FilterBrokenDepEntries(entries);
+		//////////
+		
 		object arguments = null;
 		HpEntry[]? allEntries = null;
 
@@ -2288,6 +2292,7 @@ public sealed partial class HackFileManager : Page
 
 		await AsyncHelper.AsyncRunner(() => Async_Commit((allEntries, hackFiles.ToList())), "Commit Files");
 	}
+	
 	internal async Task CheckoutInternal(ArrayList entryIDs)
 	{
 		HpEntry[]? entriesTemp = await HpEntry.GetRecordsByIdsAsync(entryIDs, includedFields: ["latest_version_id"]);

@@ -18,6 +18,8 @@ using HackPDM.Src.ClientUtils.Types;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
 using HackPDM.ClientUtils;
+using HackPDM.Hack;
+using HackPDM.Odoo;
 
 namespace HackPDM.Data;
 
@@ -55,12 +57,7 @@ public partial class EntryRow : DataGridData, IRowData<EntryRow>
 	public DateTime?    RemoteDate		{ get; set; }
 	public string?      FullName		{ get; set; }
 	public int?			LatestId		{ get; set; }
-	public int?			LatestReleaseId { get; set; }
-
-	public partial bool? IsLocal		{ get; set; }
-	public partial bool	 IsOnlyLocal	{ get; }
-	public bool			IsRemote		{ get; set; }
-	
+	public int?			LatestReleaseId { get; set; }	
 }
 public class HistoryRow : DataGridData, IRowData<HistoryRow>
 {
@@ -378,6 +375,38 @@ public partial class TreeData : IEnumerable<TreeData>
 	public partial bool IsLinked => Node is not null;
 	public partial bool HasChildren => Node?.HasChildren ?? false;
 	public partial int Depth => Node?.Depth ?? -1;
+	public bool? IsLocalOnly
+	{
+		get => Node is null
+			? null
+			: IsLocal is true && IsRemote is false;
+	}
+	public bool? IsLocal
+	{
+		get
+		{
+			if (Node is null) return null;
+			if (DirectoryId is null or 0) return true;
+			if (HpDirectory.NodePathToWindowsPath(FullPath, true) is not string path) return false;
+
+			DirectoryInfo folder = new(path);
+			return folder.Exists;
+		}
+	}
+	public bool? IsRemoteOnly
+	{
+		get => Node is null
+			? null
+			: IsRemote is true && IsLocal is false;
+	}
+	public bool? IsRemote
+	{
+		get =>
+			Node is null
+				? null
+				: DirectoryId is not null and not 0;
+		
+	}
 	public partial bool IsExpanded
 	{
 		get => Node?.IsExpanded ?? false;
@@ -420,15 +449,46 @@ public partial class TreeData : IEnumerable<TreeData>
 public partial class EntryRow : DataGridData
 {
 	// (MVVM) ViewModel
-	public partial bool? IsLocal
+	public EntryReprType? ReprType
+	{
+		get;
+		internal set;
+	}
+	public FileInfo? LocalFile
 	{
 		get
 		{
-			return Id is null or 0;
+			if (field is not null) return field;
+
+			string? path = ReprType switch
+			{
+				EntryReprType.Both or EntryReprType.Remote => HpDirectory.ConvertToWindowsPath(FullName, true),
+				EntryReprType.Local => FullName,
+				_ => null,
+			};
+			
+			FileInfo? file = string.IsNullOrEmpty(path) ? null : new(path);
+			field = file?.Exists is true ? file : null;
+			return field;
 		}
-		set => field = value;
 	}
-	public partial bool	IsOnlyLocal => (IsLocal ?? true) && !IsRemote;
+	public bool? IsLocal
+	{
+		get
+		{
+			field = Id switch
+			{
+				null => null,
+				0 => true,
+				_ => LocalFile?.Exists ?? false,
+			};
+			
+			return field;
+		}
+	}
+	public bool? IsRemote => Id is not null or 0;
+	public bool?	IsOnlyLocal => IsRemote is false && IsLocal is true;
+	public bool?	IsOnlyRemote => IsRemote is true && IsLocal is false;
 	public EntryRow Clone()
 	{
 		var cItem = new EntryRow
@@ -491,4 +551,5 @@ public class Wrap<T>(T value) where T : struct
 	public static implicit operator T(Wrap<T> wrap) => wrap.Value;
 	public static implicit operator Wrap<T>(T value) => new Wrap<T>(value);
 }
+
 

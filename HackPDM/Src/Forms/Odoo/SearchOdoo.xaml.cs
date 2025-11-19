@@ -33,7 +33,7 @@ namespace HackPDM.Forms.Settings
 	/// This is the converted WinUI 3 Page.
 	/// It no longer inherits from System.Windows.Forms.Form
 	/// </summary>
-	public sealed partial class SearchOdoo : Page
+	public sealed partial class SearchOdoo : Page, ISingletonPage<SearchOdoo>
 	{
 		// NOTE: The SearchWidths and SearchPropWidths dictionaries are no longer needed.
 		// All column widths are now defined directly in the XAML.

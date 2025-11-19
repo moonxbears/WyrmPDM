@@ -204,16 +204,7 @@ public static class OdooDefaults
         }
     }
 
-    private static async Task<HpNode?> TryAssignNewHpNode()
-    {
-	    HpNode? node = null;
-	    HpNode createdNode = new() { name = Environment.MachineName.ToLower(), };
-	    if (HpNodes.Any(n => n.name.Equals(createdNode.name)))
-		    return node;
-
-	    return await HpNode.GetRecordByIdAsync(await createdNode.CreateAsync());
-    }
-
+   
     public static int DownloadBatchSize
     {
         get
@@ -406,8 +397,16 @@ public static class OdooDefaults
         }
         set => field = value;
     }
+	private static async Task<HpNode?> TryAssignNewHpNode()
+	{
+		HpNode? node = null;
+		HpNode createdNode = new() { name = Environment.MachineName.ToLower(), };
+		if (HpNodes.Any(n => n.name.Equals(createdNode.name)))
+			return node;
 
-    private static Dictionary<string, HpEntryNameFilter> ExtensionMapFilter( HpEntryNameFilter [] hpEntryNameFilters )
+		return await HpNode.GetRecordByIdAsync(await createdNode.CreateAsync());
+	}
+	private static Dictionary<string, HpEntryNameFilter> ExtensionMapFilter( HpEntryNameFilter [] hpEntryNameFilters )
     {
         Dictionary<string, HpEntryNameFilter> dict = [];
 

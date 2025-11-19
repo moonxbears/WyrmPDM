@@ -53,7 +53,7 @@ public static partial class WindowHelper
         where TWindow : Window, new()
     {
         window = new TWindow();
-        var rootFrame = new Frame();
+        Frame rootFrame = new();
         if (activated) window.Activate();
         window.Content = rootFrame;
         string name = typeof(TPage).Name;
