@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="version_details_view_form" model="ir.ui.view">
-        <field name="name">version.detail.view.form</field>
+    <record id="hp_version_view_form" model="ir.ui.view">
+        <field name="name">hp.version.form</field>
         <field name="model">hp.version</field>
         <field name="arch" type="xml">
             <form string="Version Details">
@@ -41,6 +41,6 @@
     <record id="ir_actions_act_window_hp_version" model="ir.actions.act_window">
         <field name="name">Version</field>
         <field name="res_model">hp.version</field>
-        <field name="view_mode">kanban,list,graph,form,pivot</field>
+        <field name="view_mode">form</field>
     </record>
 </odoo>
