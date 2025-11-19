@@ -9,7 +9,7 @@
     'data': [
         'security/ir.model.access.csv',
         'views/hp_directory_views.xml',
-        'views/hp_entry_views.xml'
+        'views/hp_entry_views.xml',
         'views/hp_version_views.xml',
         'data/hp_settings_data.xml',
     ],
