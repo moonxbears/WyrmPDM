@@ -623,7 +623,7 @@ public partial class HpBaseModel<T> : HpBaseModel where T : HpBaseModel, new()
                 break;
             }
         }
-        if (record.HpModel == OdooDefaults.HP_VERSION
+        if ((record.HpModel is OdooDefaults.HP_VERSION or OdooDefaults.HP_ENTRY)
             && ht.TryGetValue("dir_id", out object value))
         {
             record.HashedValues.Add("dir_id", value);

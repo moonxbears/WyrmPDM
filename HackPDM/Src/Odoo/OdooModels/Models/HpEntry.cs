@@ -1,9 +1,13 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
+using System.Windows.Documents;
 
 using HackPDM.Extensions.General;
+using HackPDM.Forms.Hack;
 using HackPDM.Hack;
 using HackPDM.Odoo.Methods;
 
@@ -18,44 +22,136 @@ namespace HackPDM.Odoo.OdooModels.Models;
 public partial class HpEntry : HpBaseModel<HpEntry>
 {
 	public string name;
-        public string checkout_date;
-        public bool deleted;
-        public int latest_version_id;
-        public int dir_id;
-        public int type_id;
-        public int cat_id;
-        public int? checkout_user;
-        public int? checkout_node;
-        internal bool IsLatest { get; set; } = false;
+    public string checkout_date;
+    public bool deleted;
+    public int latest_version_id;
+    public int dir_id;
+    public int type_id;
+    public int cat_id;
+    public int? checkout_user;
+    public int? checkout_node;
+    internal bool IsLatest { get; set; } = false;
     
-        public HpEntry() {  }
-        public HpEntry(
-            string name,
-            string checkoutDate = null,
-            bool active = true,
-            int latestVersionId = 0,
-            int dirId = 0,
-            int typeId = 0,
-            int catId = 0,
-            int checkoutUser = 0,
-            int checkoutNode = 0)
-        {
-            this.name = name;
-            this.deleted = !active;
-            this.latest_version_id = latestVersionId;
-            this.dir_id = dirId;
-            this.type_id = typeId;
-            this.cat_id = catId;
-            this.checkout_node = checkoutNode;
+    public HpEntry() {  }
+    public HpEntry(
+        string name,
+        string checkoutDate = null,
+        bool active = true,
+        int latestVersionId = 0,
+        int dirId = 0,
+        int typeId = 0,
+        int catId = 0,
+        int checkoutUser = 0,
+        int checkoutNode = 0)
+    {
+        this.name = name;
+        this.deleted = !active;
+        this.latest_version_id = latestVersionId;
+        this.dir_id = dirId;
+        this.type_id = typeId;
+        this.cat_id = catId;
+        this.checkout_node = checkoutNode;
     
-            if (checkoutUser == 0) this.checkout_user = OdooDefaults.OdooId;
-            else this.checkout_user = checkoutUser;
-            if (checkoutDate == null) this.checkout_date = OdooDefaults.OdooDateFormat(DateTime.Now);
-            else this.checkout_date = checkoutDate;
-        }
+        this.checkout_user = checkoutUser == 0 ? OdooDefaults.OdooId : checkoutUser;
+		this.checkout_date = checkoutDate == null ? OdooDefaults.OdooDateFormat(DateTime.Now) : checkoutDate;
+	}
 }
 public partial class HpEntry : HpBaseModel<HpEntry>
 {
+	public HackFile? LocalFile
+	{
+		get => field = GetLocalFile();
+		set => field = value;
+	}
+	public HackFile? GetLocalFile()
+	{
+
+		if (HashedValues.TryGetValue("windows_complete_name", out string? path))
+		{
+			path = HpDirectory.NodePathToWindowsPath(path, true);
+			return new HackFile(path);
+		}
+		if (HashedValues.TryGetValue(nameof(dir_id), out ArrayList? arr2))
+		{
+			string? path2 = arr2?[1] as string;
+			path2 = HpDirectory.ConvertToWindowsPath(path2, true);
+			return new HackFile(path2);
+		}
+		return null;
+	}
+	public HashSet<string>? GetDependencyPaths()
+	{
+		HackFile? hack = null;
+		string? thisPath = null;
+		HashSet<string>? dependentPaths = [];
+		if (HashedValues.TryGetValue("windows_complete_name", out string? path))
+		{
+			thisPath = HpDirectory.NodePathToWindowsPath(path, true);
+			hack = new HackFile(thisPath);
+		} 
+		else if (HashedValues.TryGetValue(nameof(dir_id), out ArrayList? arr2))
+		{
+			string? path2 = arr2?[1] as string;
+			thisPath = HpDirectory.ConvertToWindowsPath(path2, true);
+			hack = new HackFile(thisPath);
+		}
+		else return null;
+
+		if (OdooDefaults.DependentExt.Contains(hack.Info.Extension))
+		{
+			var dependencies = HackDefaults.DocMgr.GetDependencies(thisPath);
+			if (dependencies is not null && dependencies.Count > 0)
+			{
+				foreach (string[] deps in dependencies)
+				{
+					string dpath = deps[1];
+					int index = dpath.IndexOf($"\\{HackDefaults.PwaPathRelative}\\");
+					if (index == -1) return null;
+					var splitPath = dpath[index..];
+					
+					dependentPaths.Add(Path.Combine([HackDefaults.PwaPathAbsolute, splitPath]));
+				}
+			}
+		}
+
+		return dependentPaths is not null and { Count: > 0 } ? dependentPaths : null;
+	}
+	public IEnumerable<EntryLocalPath> GetDependentPathways()
+	{
+		HackFile? hack = null;
+		string? thisPath = null;
+		HashSet<string>? dependentPaths = [];
+		if (HashedValues.TryGetValue("windows_complete_name", out string? path))
+		{
+			thisPath = HpDirectory.NodePathToWindowsPath(path, true);
+			hack = new HackFile(thisPath);
+		}
+		else if (HashedValues.TryGetValue(nameof(dir_id), out ArrayList? arr2))
+		{
+			string? path2 = arr2?[1] as string;
+			thisPath = HpDirectory.ConvertToWindowsPath(path2, true);
+			hack = new HackFile(thisPath);
+		}
+		else goto EndEmpty;
+
+		if (OdooDefaults.DependentExt.Contains(hack.Info.Extension))
+		{
+			var dependencies = HackDefaults.DocMgr.GetDependencies(thisPath);
+			if (dependencies is not null && dependencies.Count > 0)
+			{
+				foreach (string[] deps in dependencies)
+				{
+					string dpath = deps[1];
+					bool insidePwa = dpath.StartsWith(HackDefaults.PwaPathAbsolute);
+
+					yield return insidePwa ? new(dpath, this) : new(dpath, this, true);
+				}
+			}
+		}
+		EndEmpty:
+		DoNothing();
+	}
+	private static void DoNothing() { }
     public static ArrayList GetLatestIDs(ArrayList ids)
     {
         const string latest = "latest_version_id";

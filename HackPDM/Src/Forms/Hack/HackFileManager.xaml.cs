@@ -58,6 +58,7 @@ using Path = System.IO.Path;
 using System.Drawing;
 using Image = Microsoft.UI.Xaml.Controls.Image;
 using System.Runtime.CompilerServices;
+using HackPDM.Odoo.Methods;
 
 
 // To learn more about WinUI, the WinUI project structure,
@@ -415,10 +416,10 @@ public sealed partial class HackFileManager : Page
 
 
 		// testing filter hacks..
-		entries = entries is not null && !entries.IsEmpty ? await FilterCommitEntries(entries) : [];
+		entries = entries is not null && !entries.IsEmpty ? await Commit.FilterCommitEntries(entries) : [];
 
 		// section for checking if hack files have a checksum that matches the fullpath
-		hackFiles = hackFiles is not null && hackFiles.Count > 0 ? await FilterCommitHackFiles(hackFiles) : [];
+		hackFiles = hackFiles is not null && hackFiles.Count > 0 ? await Commit.FilterCommitHackFiles(hackFiles) : [];
 
 
 		HpVersion[] localConversions = new HpVersion[hackFiles.Count];
@@ -1206,7 +1207,18 @@ public sealed partial class HackFileManager : Page
 		ArrayList? entryIDs = await HpDirectory.GetDirectoryEntryIDsAsync(dat?.DirectoryId ?? 0, true);
 		if (statusToken.IsCancellationRequested) return;
 
-		// get all files in folder path to commit.
+
+
+		//
+		//
+		// TODO: fix recursiveness in checking dependencies because
+		// I forgot that local hack files can also have dependencies.
+		//
+		//
+
+
+
+
 		await CommitInternal(entryIDs, HackFile.FolderPathToHackWithDependencies(pathway));
 	}
 	private async void Tree_Click_Checkout(object sender, RoutedEventArgs e)
@@ -2053,7 +2065,7 @@ public sealed partial class HackFileManager : Page
 			}
 		}
 	}
-	private async Task<ArrayList> GetEntryList(int[] entryIds, bool update = false)
+	private async Task<ArrayList> GetAllEntriesAndDependenciesList(int[] entryIds, bool update = false)
 	{
 		ArrayList arr = await OClient.CommandAsync<ArrayList>(HpVersion.GetHpModel(), "get_recursive_dependency_entries", [entryIds.ToArrayList()], 1000000);
 		return arr;
@@ -2259,7 +2271,7 @@ public sealed partial class HackFileManager : Page
 		HpEntry[]? entries = await HpEntry.GetRecordsByIdsAsync(entryIDs, includedFields: ["latest_version_id"]);
 		//HpEntry[] entries = HpEntry.GetRecordsByIDS(entryIDs, includedFields: ["latest_version_id"]);
 
-		ArrayList newIds = await GetEntryList([.. entries.Select(entry => entry.latest_version_id)]);
+		ArrayList newIds = await GetAllEntriesAndDependenciesList([.. entries.Select(entry => entry.latest_version_id)]);
 
 		newIds.AddRange(entryIDs);
 		newIds = newIds.ToHashSet<int>().ToArrayList();
@@ -2271,33 +2283,83 @@ public sealed partial class HackFileManager : Page
 	}
 	internal async Task CommitInternal(ArrayList entryIDs, IEnumerable<HackFile> hackFiles)
 	{
-		HpEntry[]? entries = await HpEntry.GetRecordsByIdsAsync(entryIDs, includedFields: ["latest_version_id"]);
-
+		// get all files in folder path to commit.
+		HpEntry[]? entries = await HpEntry.GetRecordsByIdsAsync(entryIDs, includedFields: ["latest_version_id"], insertFields: ["windows_complete_name"]);
+		HackFile? hack = null;
+		HashSet<HpEntry> invalidEntries = [];
+		List<HpEntry> allEntries = [];
+		List<HackFile> hacks = [];
 		// filter out entries with broken dependencies
-		
+
+		// iterate through only local hack files and filter out entries with broken depenedencies
+		foreach (HackFile h in hackFiles)
+		{
+			bool isBroken = false;
+			if (h is null) continue;
+			if (OdooDefaults.DependentExt.Contains(h.Info.Extension))
+			{
+				var dependencies = HackDefaults.DocMgr.GetDependencies(h.FullPath);
+				if (dependencies is not null && dependencies.Count > 0)
+				{
+					foreach (string[] deps in dependencies)
+					{
+						string dpath = deps[1];
+						// check if inside pwa folder
+						if (!dpath.StartsWith(HackDefaults.PwaPathAbsolute))
+						{
+							Dialog?.AddStatusLine(StatusMessage.ERROR, $"Can't commit {h.Name} with broken depenedency. Outside of PWA: {dpath}");
+							isBroken = true;
+							//insidePwa ? new(dpath, null) : new(dpath, null, true);
+						}
+					}
+				}
+			}
+			if (!isBroken) hacks.Add(h);
+		}
+
+		// iterate through remote entries and filter out entries with broken depenedencies
+		foreach (var entry in entries)
+		{
+			bool isBroken = false;
+			hack = entry.GetLocalFile();
+			IEnumerable<EntryLocalPath>? paths = entry?.GetDependentPathways();
+			if (paths is null)
+			{
+				Dialog?.AddStatusLine(StatusMessage.INFO, $"{entry?.name} found no dependencies");
+			}
+			foreach (var path in paths!)
+			{
+				if (path.IsBroken) 
+				{
+					Dialog?.AddStatusLine(StatusMessage.ERROR, $"Broken depenedency. Outside of PWA: {path.Path}");
+					isBroken = true;
+					break;
+				}
+			}
+			if (!isBroken) allEntries.Add(entry);
+		}
+
+
 		///////////
 		// FilterBrokenDepEntries(entries);
 		//////////
-		
-		object arguments = null;
-		HpEntry[]? allEntries = null;
-
+		HpEntry[]? ent = null;
 		if (entries is not null && entries.Length > 0)
 		{
-			ArrayList newIds = await GetEntryList([.. entries.Select(e => e.latest_version_id)]);
+			ArrayList newIds = await GetAllEntriesAndDependenciesList([.. allEntries.Select(e => e.latest_version_id)]);
 			newIds.AddRange(entryIDs);
 			newIds = newIds.ToHashSet<int>().ToArrayList();
-			allEntries = await HpEntry.GetRecordsByIdsAsync(newIds, excludedFields: ["type_id", "cat_id", "checkout_node"], insertFields: ["directory_complete_name"]);
+			ent = await HpEntry.GetRecordsByIdsAsync(newIds, excludedFields: ["type_id", "cat_id", "checkout_node"], insertFields: ["directory_complete_name"]);
 		}
 
-		await AsyncHelper.AsyncRunner(() => Async_Commit((allEntries, hackFiles.ToList())), "Commit Files");
+		await AsyncHelper.AsyncRunner(() => Async_Commit((ent, hacks)), "Commit Files");
 	}
 	
 	internal async Task CheckoutInternal(ArrayList entryIDs)
 	{
 		HpEntry[]? entriesTemp = await HpEntry.GetRecordsByIdsAsync(entryIDs, includedFields: ["latest_version_id"]);
 
-		ArrayList newIds = await GetEntryList([.. entriesTemp.Select(e => e.latest_version_id)]);
+		ArrayList newIds = await GetAllEntriesAndDependenciesList([.. entriesTemp.Select(e => e.latest_version_id)]);
 
 		newIds.AddRange(entryIDs);
 		newIds = newIds.ToHashSet<int>().ToArrayList();
@@ -2318,7 +2380,7 @@ public sealed partial class HackFileManager : Page
 		if (entryIDs is null or { Count: < 1 }) return;
 
 		var entriesTemp = await HpEntry.GetRecordsByIdsAsync(entryIDs, includedFields: ["latest_version_id"]);
-		ArrayList newIds = await GetEntryList([.. entriesTemp.Select(e => e.latest_version_id)]);
+		ArrayList newIds = await GetAllEntriesAndDependenciesList([.. entriesTemp.Select(e => e.latest_version_id)]);
 
 		newIds.AddRange(entryIDs);
 		newIds = newIds.ToHashSet<int>().ToArrayList();
@@ -2343,7 +2405,7 @@ public sealed partial class HackFileManager : Page
 	{
 		HpEntry[]? entriesTemp = HpEntry.GetRecordsByIds(entryIDs, includedFields: ["latest_version_id"]);
 
-		ArrayList newIds = await GetEntryList([.. entriesTemp.Select(e => e.latest_version_id)]);
+		ArrayList newIds = await GetAllEntriesAndDependenciesList([.. entriesTemp.Select(e => e.latest_version_id)]);
 
 		newIds.AddRange(entryIDs);
 		newIds = newIds.ToHashSet<int>().ToArrayList();
@@ -2387,4 +2449,15 @@ public sealed partial class HackFileManager : Page
 	}
 
 	
+}
+public struct LocalPath(string path, bool isBroken = false)
+{
+	public string Path { get; set; } = path;
+	public bool IsBroken { get; set; } = isBroken;
+}
+public struct EntryLocalPath(string path, HpEntry? entry, bool isBroken = false)
+{
+	public HpEntry? Entry { get; set; } = entry;
+	public string Path { get; set; } = path;
+	public bool IsBroken { get; set; } = isBroken;
 }

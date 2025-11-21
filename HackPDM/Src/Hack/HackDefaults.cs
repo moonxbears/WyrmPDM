@@ -279,8 +279,8 @@ public class HackFile : HackBaseFile
         FileSize = file.Length;
         Checksum = FileOperations.FileChecksum( file.FullName, SHA1.Create() );
     }
-    public HackFile(string fullPath) => InitializeHackFromPath( fullPath );
-    public void InitializeHackFromPath(string path) => AssignToSelf(GetFromPath(path));
+    public HackFile(string? fullPath) => InitializeHackFromPath( fullPath );
+    public void InitializeHackFromPath(string? path) => AssignToSelf(GetFromPath(path));
     private void AssignToSelf(HackFile hack)
     {
         this.Info = hack?.Info;
@@ -311,8 +311,9 @@ public class HackFile : HackBaseFile
         };
         return hack;
     }
-    public static HackFile GetFromPath(string path, string directory = null)
+    public static HackFile? GetFromPath(string? path, string directory = null)
     {
+		if (path is null) return null;
         FileInfo file = new(path);
         if (!file.Exists) return null;
 

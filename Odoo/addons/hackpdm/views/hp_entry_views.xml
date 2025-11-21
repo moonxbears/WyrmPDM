@@ -27,7 +27,6 @@
                         <field name="checkout_node"/>
                         <field name="checkout_user"/>
                         <field name="deleted"/>
-                        <field name="mapped_properties"/>
                         <field name="version_property_ids"/>
                         <field name="release_ids"/>
                         <field name="version_ids"/>
