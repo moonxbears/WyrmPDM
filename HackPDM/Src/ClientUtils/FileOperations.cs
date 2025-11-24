@@ -113,6 +113,8 @@ public static class FileOperations
     public static byte[] ConvertFromBase64(string base64String )
         => Convert.FromBase64String( base64String );
 	
+	public static bool InPWAFolder(string? fullFileName) => fullFileName?.StartsWith(HackDefaults.PwaPathAbsolute) ?? false;
+
     public static bool WriteAllBytes(HackFile file)
     {
         if (file.FileContents == null)

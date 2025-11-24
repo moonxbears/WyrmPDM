@@ -9,7 +9,7 @@ namespace HackPDM.Hack;
 
 public abstract class HackBaseFile
 {
-    public string Name 
+    public string? Name 
     { 
         get => Info?.Name ?? field; 
         set
@@ -17,7 +17,7 @@ public abstract class HackBaseFile
             field = Info?.Name ?? value;
         }
     }
-    public string BasePath 
+    public string? BasePath 
     { 
         get => Info?.DirectoryName ?? field; 
         set
@@ -25,7 +25,7 @@ public abstract class HackBaseFile
             field = Info?.DirectoryName ?? value;
         }
     }
-    public string FullPath 
+    public string? FullPath 
     { 
         get => Info?.FullName ?? field ?? Path.Combine(HackDefaults.PwaPathAbsolute, BasePath, Name); 
         set
@@ -33,9 +33,9 @@ public abstract class HackBaseFile
             field = Info?.FullName ?? value;
         }
     }
-    public string RelativePath { get; set; }
-    internal byte[] FileContents { get; set; }
-    internal FileInfo Info { get; set; }
+    public string? RelativePath { get; set; }
+    internal byte[]? FileContents { get; set; }
+    internal FileInfo? Info { get; set; }
 
     public Hashtable ComputeHashtable(bool includeEmpty = true, in string[] excludedFieldNames = null)
     {

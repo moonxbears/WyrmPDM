@@ -5,12 +5,16 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
+
 using HackPDM.ClientUtils;
+using HackPDM.Forms.Hack;
 using HackPDM.Forms.Settings;
 using HackPDM.Odoo;
 using HackPDM.Odoo.OdooModels.Models;
 using HackPDM.Properties;
 using HackPDM.Src.ClientUtils.Types;
+
+using Microsoft.UI.Xaml.Controls;
 
 using SolidWorks.Interop.swdocumentmgr;
 
@@ -146,7 +150,7 @@ public static class HackDefaults
 public class HackFile : HackBaseFile
 {
     // file settings
-    public string TypeExt 
+    public string? TypeExt 
     {
         get => Info?.Extension ?? field;
         set
@@ -170,7 +174,7 @@ public class HackFile : HackBaseFile
             }
             else
             {
-                if (Exists)
+                if (Exists is true)
                 {
                     Info?.LastWriteTime = value;
                     field = Info?.LastWriteTime ?? value;
@@ -186,7 +190,7 @@ public class HackFile : HackBaseFile
     {
         if (_overwriteDate == default) return;
         Info ??= new(FullPath);
-        if (Exists)
+        if (Exists is true)
         {
             try
             {
@@ -197,13 +201,13 @@ public class HackFile : HackBaseFile
     }
     internal void ApplyNonOwnerReadOnly()
     {
-        Info ??= new(FullPath);
-        if (Owner) return;
-        if (Exists)
+		if (FullPath is not null) Info ??= new(FullPath);
+        if (Owner is true) return;
+        if (Exists is true)
         {
             try
             {
-                Info.Attributes |= FileAttributes.ReadOnly;
+                Info?.Attributes |= FileAttributes.ReadOnly;
             }
             catch { }
         }
@@ -213,7 +217,7 @@ public class HackFile : HackBaseFile
         _overwriteDate = date;
     }
     private DateTime _overwriteDate = default;
-    public string Checksum { get; set; }
+    public string? Checksum { get; set; }
     public long? FileSize 
     {
         get => Info?.Length ?? field;
@@ -226,8 +230,8 @@ public class HackFile : HackBaseFile
     // odoo settings
     public int? HpVersionId { get; set; }
     public bool? HasRemoteVersion { get; set; }
-    public bool Owner { get; set; } = false;
-    public bool Exists => Info?.Exists ?? false;
+    public bool? Owner { get; set; }
+    public bool? Exists => Info?.Exists;
 
     public HackFile() {}
     public HackFile(HackFile hack)
@@ -236,15 +240,15 @@ public class HackFile : HackBaseFile
     }
     public HackFile(
         string name,
-        string fullPath=null,
-        string typeExt=null, 
+        string? fullPath=null,
+        string? typeExt=null, 
         DateTime modifiedDate=default, 
-        string sha1Checksum=null,
+        string? sha1Checksum=null,
         long? fileSize=null,
         int? hpVersionId=null, 
         bool? hasRemoteVersion=null,
-        string basePath=null,
-        string relativePath=null)
+        string? basePath=null,
+        string? relativePath=null)
     {
         if (fullPath is not null and not "")
         {
@@ -268,23 +272,39 @@ public class HackFile : HackBaseFile
         this.HasRemoteVersion = hasRemoteVersion;
         this.FileSize = fileSize;
     }
-    public HackFile(FileInfo file)
+    public HackFile(FileInfo? file)
     {
+		if (file is null)
+		{
+			NullSelf();
+			return;
+		}
         Info = file;
         Name = file.Name;
-        BasePath = file.DirectoryName;
+        BasePath = file?.DirectoryName;
         FullPath = file.FullName;
         TypeExt = file.Extension;
         ModifiedDate = file.LastWriteTime;
         FileSize = file.Length;
         Checksum = FileOperations.FileChecksum( file.FullName, SHA1.Create() );
     }
+	private void NullSelf()
+	{
+		Info = null;
+		Name = null;
+		BasePath = null;
+		FullPath = null;
+		TypeExt = null;
+		ModifiedDate = default;
+		FileSize = null;
+		Checksum = null;
+	}
     public HackFile(string? fullPath) => InitializeHackFromPath( fullPath );
     public void InitializeHackFromPath(string? path) => AssignToSelf(GetFromPath(path));
-    private void AssignToSelf(HackFile hack)
+    private void AssignToSelf(HackFile? hack)
     {
         this.Info = hack?.Info;
-        this.FullPath = hack.FullPath;
+        this.FullPath = hack?.FullPath;
         this.Name = hack.Name;
         this.BasePath = hack.BasePath;
         this.RelativePath = hack.RelativePath;
@@ -311,13 +331,12 @@ public class HackFile : HackBaseFile
         };
         return hack;
     }
-    public static HackFile? GetFromPath(string? path, string directory = null)
+    public static HackFile? GetFromPath(string? path, string? directory = null)
     {
 		if (path is null) return null;
         FileInfo file = new(path);
-        if (!file.Exists) return null;
-
         HackFile hack = new(file);
+        if (!file.Exists) return hack;
 
         hack.RelativePath = Path.Combine("root", hack.BasePath[Math.Min(HackDefaults.PwaPathAbsolute.Length+1, hack.BasePath.Length)..]);
         return hack;
@@ -334,39 +353,121 @@ public class HackFile : HackBaseFile
 
 	// ////////////////////////////////////////
 	// ////////////////////////////////////////
-	public static bool TryFilePathsToHackWithDependencies(out List<HackFile> files, params string[] filePaths)
+	public static List<ResultHackFile> GetHackFileWithDependencies(string filePath, bool listOutputDialog)
 	{
-		HashSet<string> newFiles = [.. filePaths];
-		List<HackFile> hackFiles = [];
-		// find all dependencies
-		foreach (string file in filePaths)
+		List<HackResultTree.ResultNode> hackResults = [];
+		var hackResultCode = TryFilePathToHackWithDependencies(out var list, out var parentFile, filePath);
+		HackResultTree hackTree = new(parentFile);
+		HackResultTree.ResultNode hackTreeNode = hackTree.Root;
+		var queue = new Queue<HackResultTree.ResultNode>(list.SelectMany(r => new HackResultTree.ResultNode(r)));
+		
+		while (queue.TryDequeue(out HackResultTree.ResultNode result))
 		{
-			var fInfo = new FileInfo(file);
-			if (OdooDefaults.DependentExt.Contains(fInfo.Extension))
+			if (listOutputDialog)
 			{
-				var dependencies = HackDefaults.DocMgr.GetDependencies(file);
-				if (dependencies is not null && dependencies.Count > 0)
+				(StatusMessage status, string message) = hackResultCode switch
 				{
-					foreach (string[] deps in dependencies)
+					HackResult.Clean => (StatusMessage.FOUND, $"Found All Dependencies in file {parentFile.Hack?.FullPath}"),
+					HackResult.MissingFile => (StatusMessage.ERROR, "File couldn't be found"),
+					HackResult.MissingDepFile => (StatusMessage.ERROR, $"Missing dependency file {list.FirstOrDefault()?.Hack?.FullPath}"),
+					HackResult.OutOfPWA => (StatusMessage.ERROR, $"Dependency file is outside of PWA folder: {list.FirstOrDefault()?.Hack?.FullPath}"),
+					_ => (StatusMessage.ERROR, $"Other problem with file: {list.FirstOrDefault()?.Hack?.FullPath}"),
+				};
+				HackFileManager.Dialog?.AddStatusLine(status, message);
+			}
+
+			if (hackResultCode is not HackResult.Clean) continue;
+			
+			hackResults.Add(result);
+			foreach (ResultHackFile resultHack in list)
+			{
+				queue.Enqueue(new(resultHack));
+			}
+			hackResultCode = TryFilePathToHackWithDependencies(out list, result.Value);
+		}
+
+		return hackResults.Select(r => r.Value).ToList();
+	}
+	
+	public static bool TryFilePathsToHackWithDependencies(out (List<ResultHackFile> depAllInPWAorBrokenList, ResultHackFile parentFile)[] hackFiles, params string[] filePaths)
+	{
+		hackFiles = new (List<ResultHackFile>, ResultHackFile)[filePaths.Length];
+		bool hasErrors = false;
+		for (int i = 0; i < filePaths.Length; i++)
+		{
+			// once true, always true
+			hasErrors |= TryFilePathToHackWithDependencies(out var hd, out var pf, filePaths[i]) is not HackResult.Clean;
+			hackFiles[i] = (hd, pf);
+		}
+		return hasErrors;
+	}
+	public static HackResult TryFilePathToHackWithDependencies(out List<ResultHackFile> depAllInPWAorBrokenList, ResultHackFile parentFile)
+	{
+		List<string> newFiles = [];
+		depAllInPWAorBrokenList = [];
+		HackResult hackResultCode = HackResult.Clean;
+
+		// find all dependencies
+		if (parentFile.Result is not HackResult.Clean)
+		{
+			hackResultCode = parentFile.Result;
+			goto brokenDependencyPath;
+		}
+
+		if (OdooDefaults.DependentExt.Contains(parentFile.Hack?.TypeExt))
+		{
+			var dependencies = HackDefaults.DocMgr.GetDependencies(parentFile.Hack?.FullPath);
+			if (dependencies is not null && dependencies.Count > 0)
+			{
+				foreach (string[] deps in dependencies)
+				{
+					string path = deps[1];
+					if (FileOperations.InPWAFolder(path))
 					{
-						string path = deps[1];
-						var splitPath = path.Split([$"\\{HackDefaults.PwaPathRelative}\\"], StringSplitOptions.RemoveEmptyEntries);
-						if (splitPath.Length == 2)
-						{
-							newFiles.Add(Path.Combine([HackDefaults.PwaPathAbsolute, splitPath[1]]));
-						}
+						newFiles.Add(path);
+					}
+					else
+					{
+						depAllInPWAorBrokenList = GetFromPath(path, FileOperations.GetRelativePath(path)) is HackFile hFile
+							? [
+								new(hFile, true, HackResult.OutOfPWA),
+							]
+							: [
+								new(null, true, HackResult.MissingDepFile),
+							];
+						hackResultCode = depAllInPWAorBrokenList[0].Result;
+						goto brokenDependencyPath;
 					}
 				}
 			}
+			else
+			{
+				return hackResultCode;
+			}
+
 		}
+
 		foreach (string item in newFiles)
 		{
-			HackFile hack = GetFromPath(item, FileOperations.GetRelativePath(item));
-			if (hack != null)
-				hackFiles.Add(hack);
+			HackFile? hack = GetFromPath(item, FileOperations.GetRelativePath(item));
+
+			ResultHackFile hackResult = new(hack, hack is null or { Exists: false } ? HackResult.MissingDepFile : HackResult.Clean);
+			if (hackResult.Result == HackResult.Clean) depAllInPWAorBrokenList.Add(hackResult);
+			else
+			{
+				depAllInPWAorBrokenList = [hackResult];
+				goto brokenDependencyPath;
+			}
 		}
-		files = hackFiles;
-		return true;
+
+		brokenDependencyPath:
+		return hackResultCode;
+	}
+	public static HackResult TryFilePathToHackWithDependencies(out List<ResultHackFile> depAllInPWAorBrokenList, out ResultHackFile parentFile, string filePath)
+	{
+		var fInfo = new HackFile(new FileInfo(filePath));
+		parentFile = new(fInfo);
+		return TryFilePathToHackWithDependencies(out depAllInPWAorBrokenList, parentFile);
 	}
 
 	// ///////////////////////////////////////////////////////
@@ -653,28 +754,61 @@ public struct HackFileResults
 
 	}
 }
-public struct ResultHackFile
+public class HackResultTree(ResultHackFile value)
+{
+	public class ResultNode : IList<ResultNode>
+	{
+		public ResultNode? Parent { get; set; }
+		public ResultHackFile Value { get; set; }
+		public List<ResultNode> Children { get; set; }
+		public ResultNode(ResultHackFile result)
+		{
+			Value = result;
+		}
+
+		public int Count { get; }
+		public bool IsReadOnly { get; }
+		public ResultNode this[int index]
+		{
+			get => Children[index];
+			set => Children[index] = value;
+		}
+		public IEnumerator<ResultNode> GetEnumerator() => Children.GetEnumerator();
+		IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+		public void Add(ResultNode item) => Children.Add(item);
+		public void Clear() => Children.Clear();
+		public bool Contains(ResultNode item) => Children.Contains(item);
+		public void CopyTo(ResultNode[] array, int arrayIndex) => Children.CopyTo(array, arrayIndex);
+		public bool Remove(ResultNode item) => Children.Remove(item);
+
+		public int IndexOf(ResultNode item) => Children.IndexOf(item);
+		public void Insert(int index, ResultNode item) =>  Children.Insert(index, item);
+		public void RemoveAt(int index) => Children.RemoveAt(index);
+	}
+	public ResultNode Root { get; set; } = new(value);
+}
+public class ResultHackFile
 {
 	public bool IsBroken { get; private set; } = false;
 	public HackResult Result { get; private set; } = HackResult.NotTested;
-	public HackFile Hack { get; private set; }
+	public HackFile? Hack { get; private set; }
 
-	public ResultHackFile(HackFile hack) : this(hack, false, HackResult.NotTested) {}
-	public ResultHackFile(HackFile hack, HackResult result) : this(hack, result is HackResult.Clean or HackResult.NotTested ? false : true, result) { }
-	public ResultHackFile(HackFile hack, bool isBroken, HackResult result) 
+	public ResultHackFile(HackFile? hack) : this(hack, hack is null or {Exists: false }, hack is null or { Exists: false } ? HackResult.MissingFile : FileOperations.InPWAFolder(hack?.FullPath) ? HackResult.Clean : HackResult.OutOfPWA) {}
+	public ResultHackFile(HackFile? hack, HackResult result) : this(hack, result is not HackResult.Clean and not HackResult.NotTested, result) { }
+	public ResultHackFile(HackFile? hack, bool isBroken, HackResult result) 
 	{
 		this.Hack = hack;
 		this.IsBroken = isBroken;
 		this.Result = result;
 	}
-
 }
 public enum HackResult
 {
 	NotTested,
 	Clean,
 	OutOfPWA,
-	BrokenDep,
+	PropogatedFailure,
+	CorruptDepFile,
 	MissingFile,
 	MissingDepFile,
 }

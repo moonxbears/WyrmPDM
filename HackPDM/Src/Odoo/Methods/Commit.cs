@@ -198,7 +198,7 @@ public static class Commit
                     return entry;
                 }
 
-                if (!hack.Exists)
+                if (hack?.Exists is null or false)
                 {
                     lock (lockObject)
                     {
