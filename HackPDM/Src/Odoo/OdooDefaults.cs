@@ -52,6 +52,8 @@ public static class OdooDefaults
     public const string RESTRICT_TYPES_NAME = "restrict_types";
 
     public static readonly string[] DependentExt = [".SLDPRT", ".SLDASM", ".SLDDRW"];
+
+    public static readonly string DependentExtRegex = "(?i)(" + string.Join("|", DependentExt.Select(s => $"(\\{s}$)")) + ")";
     public static string[] EntryFilterPatterns = [.. HpEntryNameFilters?.Select(eFilter => eFilter.name_regex) ?? []];
     // lock asynchonous operations
     private static readonly object MLockObject = new();

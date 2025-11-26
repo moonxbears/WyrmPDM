@@ -1219,7 +1219,7 @@ public sealed partial class HackFileManager : Page
 
 
 
-		await CommitInternal(entryIDs, HackFile.FolderPathToHackWithDependencies(pathway));
+		await CommitInternal(entryIDs, HackFile.GetHackFolderWithDependencies(pathway, true));
 	}
 	private async void Tree_Click_Checkout(object sender, RoutedEventArgs e)
 	{
@@ -1309,19 +1309,35 @@ public sealed partial class HackFileManager : Page
 
 		var entryItem = OdooEntryList.SelectedItems as List<EntryRow>;
 		var locals = entryItem?.Where(e => e.IsOnlyLocal is true);
-		var entryIDs = entryItem?.Where(e => !e.IsOnlyLocal is true).ToArrayList();
+		var entryIDs = entryItem?.Where(e => !e.IsOnlyLocal is true);
 		HashSet<HackFile> hackFiles = [];
 		//int fullNameColumnIndex = OdooEntryList.Columns["FullName"].Index;
-		if (locals is not null)
-		{
-			foreach (var item in locals)
-			{
-				string? file = item.FullName;
-				if (file is null) continue;
-				hackFiles.AddAll(HackFile.FilePathsToHackWithDependencies(file));
-			}
-		}
+		hackFiles.AddAll(ProcessHacks(locals));
+		hackFiles.AddAll(ProcessHacks(entryIDs));
 		await CommitInternal(entryIDs, hackFiles);
+	}
+	private static HashSet<HackFile> ProcessHacks(IEnumerable<EntryRow>? entries)
+	{
+		HashSet<HackFile> hackFiles = [];
+		if (entries is null) return hackFiles;
+		
+        foreach (var item in entries)
+        {
+        	string? file = item.FullName;
+        	if (file is null) continue;
+        	Regex rxSearch = new Regex(OdooDefaults.DependentExtRegex, RegexOptions.IgnoreCase);
+        	if (rxSearch.IsMatch(item.Type))
+        	{
+        		hackFiles.AddAll(HackFile.GetHackFileWithDependencies(file, true));
+        	}
+        	else
+        	{
+        		HackFile? hack = HackFile.GetFromPath(file, FileOperations.GetRelativePath(file))!; 
+        		if (hack is {} h) hackFiles.Add(h);
+        	}
+        }
+        
+		return hackFiles;
 	}
 	internal async void List_Click_Checkout(object sender, RoutedEventArgs e)
 	{
@@ -2318,25 +2334,28 @@ public sealed partial class HackFileManager : Page
 		}
 
 		// iterate through remote entries and filter out entries with broken depenedencies
-		foreach (var entry in entries)
+		if (entries is not null)
 		{
-			bool isBroken = false;
-			hack = entry.GetLocalFile();
-			IEnumerable<EntryLocalPath>? paths = entry?.GetDependentPathways();
-			if (paths is null)
+			foreach (var entry in entries)
 			{
-				Dialog?.AddStatusLine(StatusMessage.INFO, $"{entry?.name} found no dependencies");
-			}
-			foreach (var path in paths!)
-			{
-				if (path.IsBroken) 
+				bool isBroken = false;
+				hack = entry.GetLocalFile();
+				IEnumerable<EntryLocalPath>? paths = entry?.GetDependentPathways();
+				if (paths is null)
 				{
-					Dialog?.AddStatusLine(StatusMessage.ERROR, $"Broken depenedency. Outside of PWA: {path.Path}");
-					isBroken = true;
-					break;
+					Dialog?.AddStatusLine(StatusMessage.INFO, $"{entry?.name} found no dependencies");
 				}
+				foreach (var path in paths!)
+				{
+					if (path.IsBroken) 
+					{
+						Dialog?.AddStatusLine(StatusMessage.ERROR, $"Broken depenedency. Outside of PWA: {path.Path}");
+						isBroken = true;
+						break;
+					}
+				}
+				if (!isBroken) allEntries.Add(entry);
 			}
-			if (!isBroken) allEntries.Add(entry);
 		}
 
 

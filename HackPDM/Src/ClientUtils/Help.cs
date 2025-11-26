@@ -9,6 +9,7 @@ using System.Text;
 using HackPDM.Data;
 using HackPDM.Extensions.General;
 using HackPDM.Forms.Hack;
+using HackPDM.Hack;
 using HackPDM.Odoo.OdooModels;
 using HackPDM.Odoo.OdooModels.Models;
 using HackPDM.Src.ClientUtils.Types;
@@ -428,6 +429,29 @@ public static class Help
 		if (model == null) return false;
 		return false;
 	}
+	internal static ResultHackFile ValidateDependency(string path)
+	{
+		if (!FileOperations.InPWAFolder(path))
+		{
+			HackFile? hFile = HackFile.GetFromPath(path, FileOperations.GetRelativePath(path));
+			return hFile is not null
+				? new(hFile, true, HackResult.OutOfPWA)
+				: new(null, true, HackResult.MissingDepFile);
+		}
+
+		HackFile? hack = HackFile.GetFromPath(path, FileOperations.GetRelativePath(path));
+		return new(hack, hack is null or { Exists: false } ? HackResult.MissingDepFile : HackResult.Clean);
+	}
+	internal static (StatusMessage status, string message) GetStatusMessage(HackResult result, ResultHackFile? parentFile, List<ResultHackFile> list)
+		=> result switch
+		{
+			HackResult.Clean => (StatusMessage.FOUND, $"Found All Dependencies in file {parentFile?.Hack?.FullPath}"),
+			HackResult.MissingFile => (StatusMessage.ERROR, "File couldn't be found"),
+			HackResult.MissingDepFile => (StatusMessage.ERROR, $"Missing dependency file {list.FirstOrDefault()?.Hack?.FullPath}"),
+			HackResult.OutOfPWA => (StatusMessage.ERROR, $"Dependency file is outside of PWA folder: {list.FirstOrDefault()?.Hack?.FullPath}"),
+			_ => (StatusMessage.ERROR, $"Other problem with file: {list.FirstOrDefault()?.Hack?.FullPath}"),
+		};
+	
 }
 
 public class Kwargs<T>(T obj)

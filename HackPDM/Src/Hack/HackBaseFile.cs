@@ -11,27 +11,18 @@ public abstract class HackBaseFile
 {
     public string? Name 
     { 
-        get => Info?.Name ?? field; 
-        set
-        {
-            field = Info?.Name ?? value;
-        }
+        get => field ??= Info?.Name; 
+        set => field = value ?? Info?.Name;
     }
     public string? BasePath 
     { 
-        get => Info?.DirectoryName ?? field; 
-        set
-        {
-            field = Info?.DirectoryName ?? value;
-        }
+        get => field ??= Info?.DirectoryName; 
+        set => field = Info?.DirectoryName ?? value;
     }
     public string? FullPath 
     { 
-        get => Info?.FullName ?? field ?? Path.Combine(HackDefaults.PwaPathAbsolute, BasePath, Name); 
-        set
-        {
-            field = Info?.FullName ?? value;
-        }
+        get => field ??= Info?.FullName ?? Path.Combine(HackDefaults.PwaPathAbsolute, BasePath, Name); 
+        set => field = tester ?? value;
     }
     public string? RelativePath { get; set; }
     internal byte[]? FileContents { get; set; }
