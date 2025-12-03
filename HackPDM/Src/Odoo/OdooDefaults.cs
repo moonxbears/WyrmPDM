@@ -8,10 +8,13 @@ using System.Windows;
 using System.Windows.Forms;
 
 using HackPDM.Extensions.General;
+using HackPDM.Forms.Hack;
 using HackPDM.Hack;
 using HackPDM.Odoo.OdooModels;
 using HackPDM.Odoo.OdooModels.Models;
 using HackPDM.Properties;
+using HackPDM.Src.ClientUtils.Types;
+
 using Meziantou.Framework.Win32;
 
 using MessageBox = System.Windows.Forms.MessageBox;
@@ -471,28 +474,61 @@ public static class OdooDefaults
         }
         return dict;
     }
-    public async static Task<HpVersion> ConvertHackFile(HackFile hackFile)
+    public async static Task<(EntryReturnType, HpVersion?)> ConvertHackFile(HackFile hackFile)
     {
         Hashtable ht = [];
             
         ArrayList paths = hackFile.RelativePath.Split<ArrayList>("\\", StringSplitOptions.RemoveEmptyEntries);
 
-        try
+		EntryReturnType entryReturn = EntryReturnType.Failed;
+		try
         {
-            // create directories that don't exist in odoo
+			// create directories that don't exist in odoo
             HpDirectory[] directories = await HpDirectory.CreateNew(paths);
             HpDirectory lastDirectory = directories.Last() ?? throw new Exception($"{HpDirectory.GetHpModel()} didn't create any records");
             // create an HpEntry that doesn't exist in odoo
-            HpEntry entry = await HpEntry.CreateNew(hackFile, lastDirectory.Id) ?? throw new Exception($"{HpEntry.GetHpModel()} was unable to create record");
-            // create an HpVersion that doesn't exist in odoo
-            HpVersion version = await CreateNewVersion(hackFile, entry) ?? throw new Exception($"{HpVersion.GetHpModel()} was unable to create record");
-            return version;
+            (entryReturn, HpEntry? entry) = await HpEntry.GetFallbackCreateEntryAsync(hackFile, lastDirectory.Id);
+
+			switch (entryReturn)
+			{
+				case EntryReturnType.Created:
+				{
+					HackFileManager.Dialog?.AddStatusLine(StatusMessage.SUCCESS, $"Created new entry for {hackFile.Name}"); 
+					break;
+				}
+				case EntryReturnType.GotExisting:
+				{
+					HackFileManager.Dialog?.AddStatusLine(StatusMessage.FOUND, $"Found existing entry for {hackFile.Name}"); 
+					break;
+				}
+				case EntryReturnType.Failed:
+				{
+					HackFileManager.Dialog?.AddStatusLine(StatusMessage.ERROR, $"Failed to create entry for {hackFile.Name}"); 
+					throw new Exception($"{hackFile.Name} was unable to create or get record");
+				}
+				case EntryReturnType.InvalidType:
+				{
+					if (RestrictTypes)
+					{
+						HackFileManager.Dialog?.AddStatusLine(StatusMessage.ERROR, $"Found invalid type for {hackFile.Name}, file extension {hackFile.TypeExt}");
+						throw new Exception($"found invalid type for {hackFile.Name}, file extension {hackFile.TypeExt}");
+					}
+					else
+						HackFileManager.Dialog?.AddStatusLine(StatusMessage.WARNING, $"Found invalid type for file extension {hackFile.TypeExt}, but continuing due to unrestricted types");
+					break;
+				}
+			}
+
+			// create an HpVersion that doesn't exist in odoo
+			HpVersion version = await CreateNewVersion(hackFile, entry);
+			if (version.Id is 0) entryReturn = EntryReturnType.Failed;
+			return (entryReturn, version);
         }
         catch (Exception e)
         {
             Debug.WriteLine($"{e.Message}\n{e.StackTrace}");
         }
-        return null;
+        return (entryReturn, null);
     }
     public async static Task<HpVersion> CreateNewVersion( HackFile hack, HpEntry entry )
     {

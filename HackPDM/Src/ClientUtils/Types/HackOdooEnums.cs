@@ -27,6 +27,15 @@ public enum DomainOperators
     Or,
     Not,
 }
+
+public enum EntryReturnType
+{
+	Created,
+	GotExisting,
+	Failed,
+	InvalidType,
+}
+
 public enum Operators
 {
     Equal,

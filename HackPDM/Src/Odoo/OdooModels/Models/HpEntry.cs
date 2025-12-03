@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Documents;
 
@@ -10,6 +11,8 @@ using HackPDM.Extensions.General;
 using HackPDM.Forms.Hack;
 using HackPDM.Hack;
 using HackPDM.Odoo.Methods;
+using HackPDM.Src.ClientUtils.Types;
+
 
 //using static System.Net.Mime.MediaTypeNames;
 
@@ -220,7 +223,7 @@ public partial class HpEntry : HpBaseModel<HpEntry>
             }
         }
     }
-    internal static async Task<HpEntry> CreateNew( HackFile hackFile, int dirId )
+    internal static async Task<HpEntry?> CreateNew( HackFile hackFile, int dirId )
     {
         if (OdooDefaults.RestrictTypes & !OdooDefaults.ExtToType.TryGetValue( hackFile.TypeExt.ToLower(), out HpType type ) )
             return null;
@@ -236,10 +239,38 @@ public partial class HpEntry : HpBaseModel<HpEntry>
             newEntry.cat_id = type.cat_id;
             newEntry.type_id = type.Id;
         }
+	
         await newEntry.CreateAsync( false );
 
         return newEntry.Id == 0 ? null : newEntry;
     }
+	internal static async Task<(EntryReturnType, HpEntry?)> GetFallbackCreateEntryAsync( HackFile hackFile, int dirId )
+	{
+		HpEntry? entry = null;
+
+		if (OdooDefaults.RestrictTypes & !OdooDefaults.ExtToType.TryGetValue( hackFile.TypeExt.ToLower(), out HpType type ) )
+			return (EntryReturnType.InvalidType, null);
+
+		entry = (await GetRecordsBySearchAsync( [("name", "=", hackFile.Name), ("dir_id", "=", dirId), ("deleted", "=", false)] ))?.FirstOrDefault();
+		if (entry is not null)
+			return (EntryReturnType.GotExisting, entry);
+
+
+		HpEntry newEntry = new()
+		{
+			name = hackFile.Name,
+			deleted = false,
+			dir_id = dirId,
+		};
+		if (type is not null)
+		{
+			newEntry.cat_id = type.cat_id;
+			newEntry.type_id = type.Id;
+		}
+		await newEntry.CreateAsync( false );
+		return entry?.Id == 0 ? (EntryReturnType.Failed, null) : (EntryReturnType.Created, entry);
+	}
+	
     internal static async Task<ArrayList> GetEntryList(int[] entryIds, bool update = false)
     {
         ArrayList arr = await OClient.CommandAsync<ArrayList>(HpVersion.GetHpModel(), "get_recursive_dependency_entries", [entryIds.ToArrayList()], 1000000);

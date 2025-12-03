@@ -218,8 +218,9 @@ public static class FileOperations
         // SHA1 or default
         _                       => SHA1.Create(),
     };
-    public static string FileChecksum(string filePath, HashAlgorithm alg)
+    public static string? FileChecksum(string? filePath, HashAlgorithm alg)
     {
+		if (string.IsNullOrEmpty(filePath)) return null;
         string fileChecksum = "";
         try
         {
@@ -402,11 +403,13 @@ public static class FileOperations
         }
         return [.. hacks];
     }
-    public static string GetRelativePath( string fullPath )
+    public static string? GetRelativePath( string fullPath )
     {
         // Get the directory of the full path
-        string directoryPath = Path.GetDirectoryName(fullPath);
-        return directoryPath[(HackDefaults.PwaPathAbsolute.Length - HackDefaults.PwaPathRelative.Length)..];
+        string? directoryPath = Path.GetDirectoryName(fullPath);
+		return directoryPath?.StartsWith(HackDefaults.PwaPathAbsolute) is true
+			? directoryPath[(HackDefaults.PwaPathAbsolute.Length - HackDefaults.PwaPathRelative.Length)..]
+			: null;
     }
     public static string FileSizeReformat(int? bytesize)
         => FileSizeReformat((long?)bytesize);

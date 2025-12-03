@@ -363,7 +363,7 @@ namespace HackPDM.Src.Helper.Xaml
 			//item.SubItems.Add(((int)table["id"]).ToString());
 			item.Name = pair.Key.ToString();
 
-			item.Type = table["type"] is string ttypeString ? ttypeString : StorageBox.EMPTY_PLACEHOLDER;
+			item.Type = table["type"] is string ttypeString ? ttypeString : null;
 
 			//double size = (double)( Convert.ToDouble(table["size"]) * HackDefaults.ByteSizeMultiplier );
 			item.Size = Convert.ToInt64(table["size"]);
@@ -384,7 +384,7 @@ namespace HackPDM.Src.Helper.Xaml
 
 			//string latest = EmptyPlaceholder;
 			item.LatestId = table["latest"] as int?;
-			string datePlace = table["latest_date"] is not string latest ? StorageBox.EMPTY_PLACEHOLDER : latest;
+			string datePlace = table["latest_date"] is not string latest ? null : latest;
 
 			item.RemoteDate = DateTime.TryParse(datePlace, out DateTime remoteDate) && remoteDate != default ? remoteDate : null;
 			// 2006-12-15 01:43:49.623

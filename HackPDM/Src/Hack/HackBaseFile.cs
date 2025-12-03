@@ -22,7 +22,7 @@ public abstract class HackBaseFile
     public string? FullPath 
     { 
         get => field ??= Info?.FullName ?? Path.Combine(HackDefaults.PwaPathAbsolute, BasePath, Name); 
-        set => field = tester ?? value;
+        set => field = value;
     }
     public string? RelativePath { get; set; }
     internal byte[]? FileContents { get; set; }

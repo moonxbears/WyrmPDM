@@ -80,8 +80,6 @@ public static class Commit
 
         List<HpVersion> versions = new(entries.Count + hackFiles.Count);
 		
-        
-
         var datas = new List<(HackFile, HpEntry, HashedValueStoring)>(entries.Count);
 
         entries = entries.TakeOutLatest(out IEnumerable<HpEntry> latestRecommit).ToConcurrentBag();
@@ -106,7 +104,16 @@ public static class Commit
 
 		while (hackFiles.TryTake(out HackFile result))
 		{
-			HpVersion newVersion = await OdooDefaults.ConvertHackFile(result);
+			(EntryReturnType entryReturn, HpVersion? newVersion) = await OdooDefaults.ConvertHackFile(result);
+			if (entryReturn is not EntryReturnType.GotExisting and not EntryReturnType.Created && (entryReturn != EntryReturnType.InvalidType || OdooDefaults.RestrictTypes is true))
+			{ HackFileManager.Dialog?.AddStatusLine(StatusMessage.ERROR, $"unable to commit file: {result.FullPath}"); continue; }
+			else
+			{
+				lock (lockObject)
+				{
+					HackFileManager.Dialog?.AddStatusLine(StatusMessage.PROCESSING, $"commiting new version for local only file: {result.FullPath}");
+				}
+			}
 			versions.Add(newVersion);
 		}
 		for (int i = 0; i < versionBatches.Count; i++)

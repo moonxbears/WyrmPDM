@@ -486,9 +486,22 @@ public partial class EntryRow : DataGridData
 			return field;
 		}
 	}
-	public bool? IsRemote => Id is not null or 0;
-	public bool?	IsOnlyLocal => IsRemote is false && IsLocal is true;
-	public bool?	IsOnlyRemote => IsRemote is true && IsLocal is false;
+	public bool? IsRemote
+	{
+		get
+		{
+			field = Id switch
+			{
+				null => null,
+				not 0 => true,
+				_ => false,
+			};
+			return field;
+		}
+	}
+	// need IsLocal to be hit so that LocalFile is evaluated
+	public bool?	IsOnlyLocal => IsRemote is false & IsLocal is true;
+	public bool?	IsOnlyRemote => IsRemote is true & IsLocal is false;
 	public EntryRow Clone()
 	{
 		var cItem = new EntryRow

@@ -430,18 +430,8 @@ public static class Help
 		return false;
 	}
 	internal static ResultHackFile ValidateDependency(string path)
-	{
-		if (!FileOperations.InPWAFolder(path))
-		{
-			HackFile? hFile = HackFile.GetFromPath(path, FileOperations.GetRelativePath(path));
-			return hFile is not null
-				? new(hFile, true, HackResult.OutOfPWA)
-				: new(null, true, HackResult.MissingDepFile);
-		}
-
-		HackFile? hack = HackFile.GetFromPath(path, FileOperations.GetRelativePath(path));
-		return new(hack, hack is null or { Exists: false } ? HackResult.MissingDepFile : HackResult.Clean);
-	}
+		=> new(HackFile.GetFromPath(path, FileOperations.GetRelativePath(path)));
+	
 	internal static (StatusMessage status, string message) GetStatusMessage(HackResult result, ResultHackFile? parentFile, List<ResultHackFile> list)
 		=> result switch
 		{
