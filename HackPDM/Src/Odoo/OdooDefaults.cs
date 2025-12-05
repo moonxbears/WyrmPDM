@@ -277,6 +277,7 @@ public static class OdooDefaults
     public static string SwApi = HpSettings?.First(sett => sett.name == SW_KEY_NAME).char_value ?? "";
     public static bool RestrictProperties = HpSettings?.First(sett => sett.name == RESTRICT_PROP_NAME).bool_value ?? true;
     public static bool RestrictTypes = HpSettings?.First(sett => sett.name == RESTRICT_TYPES_NAME).bool_value ?? true;
+	
     public static HpEntryNameFilter[] HpEntryNameFilters
     {
         get

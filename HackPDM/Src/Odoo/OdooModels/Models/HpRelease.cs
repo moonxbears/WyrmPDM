@@ -7,9 +7,10 @@ namespace HackPDM.Odoo.OdooModels.Models;
 
 public partial class HpRelease : HpBaseModel<HpRelease>
 {
-    public string release_note;
-    public DateTime? release_stamp;
+	public int version_id;
     public int release_user_id;
+    public DateTime? release_stamp;
+    public string release_note;
 
     public HpRelease() { }
     public HpRelease(

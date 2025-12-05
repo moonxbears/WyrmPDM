@@ -7,14 +7,13 @@ class hp_release(models.Model):
     _inherit = 'hp.common.model'
 
     release_note = fields.Char(
+        related='release_review_id.release_note',
         string='release note',
     )
-
     release_stamp = fields.Datetime(
         string='time stamp',
         default=lambda self:fields.Datetime.now(),
     )
-
     release_version_id = fields.Many2one(
         comodel_name='hp.version',
     )
@@ -22,9 +21,18 @@ class hp_release(models.Model):
         comodel_name='res.users',
         string='release user',
     )
+    reviewer_user_id = fields.Many2one(
+        comodel_name='res.users',
+        string='reviewed by'
+    )
     entry_id = fields.Many2one(
+        related='release_version_id.entry_id',
         comodel_name='hp.entry',
         string='entry'
+    )
+    release_review_id = fields.Many2one(
+        comodel_name='hp.release.review',
+        string='release review',
     )
 
 

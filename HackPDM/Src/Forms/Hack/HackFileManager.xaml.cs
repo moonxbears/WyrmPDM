@@ -420,13 +420,16 @@ public sealed partial class HackFileManager : Page
 		hackFiles = hackFiles is not null && hackFiles.Count > 0 ? await Commit.FilterCommitHackFiles(hackFiles) : [];
 
 
-		HpVersion[] localConversions = new HpVersion[hackFiles.Count];
-
+		//HpVersion[] localConversions = new HpVersion[hackFiles.Count];
+		List<HpVersion> localConversions = [];
 		int index = 0;
 		while (hackFiles.TryTake(out HackFile result))
 		{
-			(EntryReturnType entryReturn, HpVersion newVersion) = await OdooDefaults.ConvertHackFile(result);
-			localConversions[index++] = newVersion;
+			(EntryReturnType entryReturn, HpVersion? newVersion) = await OdooDefaults.ConvertHackFile(result);
+			if ((entryReturn 
+				is EntryReturnType.Created 
+				or EntryReturnType.GotExisting)
+				&& newVersion is { }) localConversions.Add(newVersion);
 		}
 		var localVersions = Help.BatchArray(localConversions, DownloadBatchSize);
 

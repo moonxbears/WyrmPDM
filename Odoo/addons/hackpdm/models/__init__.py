@@ -8,3 +8,4 @@ from . import hp_version
 from . import hp_node
 from . import hp_directory
 from . import hp_settings
+from . import hp_release_review
